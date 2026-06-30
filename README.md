@@ -1,3 +1,13 @@
+---
+title: MatrixFlow AI API
+emoji: 🐳
+colorFrom: indigo
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # MatrixFlow AI
 
 > **给中小企业雇一整支 AI 团队的操作系统。**
