@@ -1,0 +1,35 @@
+{
+  "name": "@matrixflow/worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MatrixFlow AI · BullMQ Worker（工作流/解析/向量化）",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "lint": "eslint \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@matrixflow/ai-gateway": "workspace:*",
+    "@matrixflow/db": "workspace:*",
+    "@matrixflow/shared": "workspace:*",
+    "@matrixflow/workflow-engine": "workspace:*",
+    "@prisma/client": "^6.19.3",
+    "bullmq": "^5.34.0",
+    "ioredis": "5.4.2",
+    "minio": "^8.0.4",
+    "nestjs-pino": "^4.1.0",
+    "pino": "^9.5.0",
+    "pino-pretty": "^13.0.0",
+    "reflect-metadata": "^0.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

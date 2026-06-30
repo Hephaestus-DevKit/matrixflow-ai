@@ -1,0 +1,32 @@
+{
+  "name": "@matrixflow/ai-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MatrixFlow AI · 多 Provider 抽象 + Prompt 模板 + token 计量",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "require": "./dist/index.js" },
+    "./providers": { "types": "./dist/providers/index.d.ts", "import": "./dist/providers/index.js", "require": "./dist/providers/index.js" },
+    "./prompt": { "types": "./dist/prompt/index.d.ts", "import": "./dist/prompt/index.js", "require": "./dist/prompt/index.js" }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
+    "lint": "eslint \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@matrixflow/shared": "workspace:*",
+    "eventsource-parser": "^3.0.0",
+    "ioredis": "5.4.2",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.6.3"
+  }
+}

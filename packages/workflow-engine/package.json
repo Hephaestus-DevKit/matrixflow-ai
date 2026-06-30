@@ -1,0 +1,25 @@
+{
+  "name": "@matrixflow/workflow-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MatrixFlow AI · 工作流 DSL + DAG 执行器",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
+    "lint": "eslint \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@matrixflow/shared": "workspace:*",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.6.3"
+  }
+}

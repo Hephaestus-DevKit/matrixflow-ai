@@ -1,0 +1,302 @@
+[
+  {
+    "key": "product_title",
+    "name": "商品标题生成",
+    "category": "ecommerce",
+    "systemPrompt": "你是跨境电商资深文案专家，精通 Amazon A9、Shopify SEO、TikTok Shop 规则。产出符合平台字数与禁用词的高转化标题。",
+    "userPromptTemplate": "商品资料：{{productJson}}\n目标平台：{{platform}}\n目标语言：{{language}}\n最大长度：{{maxLength}} 字\n请生成 5 个标题，输出 JSON 数组 [\"\",\"\",...]",
+    "inputSchema": { "type": "object", "properties": { "productJson": { "type": "object" }, "platform": { "type": "string" }, "language": { "type": "string" }, "maxLength": { "type": "number" } }, "required": ["productJson", "platform", "language"] },
+    "outputSchema": { "type": "array", "items": { "type": "string" } },
+    "tags": ["ecommerce", "amazon", "shopify"]
+  },
+  {
+    "key": "product_listing",
+    "name": "Amazon Listing 详情",
+    "category": "ecommerce",
+    "systemPrompt": "你是 Amazon Listing 专家，输出符合 A9 算法的 5 点描述 + 详细描述 + backend keywords。",
+    "userPromptTemplate": "商品：{{productJson}}\n语言：{{language}}\n输出 JSON：{bulletPoints:[],description,backendKeywords:[]}",
+    "inputSchema": { "type": "object", "properties": { "productJson": { "type": "object" }, "language": { "type": "string" } }, "required": ["productJson"] },
+    "outputSchema": { "type": "object", "properties": { "bulletPoints": { "type": "array" }, "description": { "type": "string" }, "backendKeywords": { "type": "array" } } },
+    "tags": ["amazon", "listing"]
+  },
+  {
+    "key": "selling_points",
+    "name": "产品卖点提炼",
+    "category": "ecommerce",
+    "systemPrompt": "你是产品卖点提炼专家，从商品资料中提炼 5 个差异化卖点，每点 ≤ 30 字。",
+    "userPromptTemplate": "商品：{{productJson}}\n语言：{{language}}\n输出 JSON 数组 [{point, evidence}]",
+    "inputSchema": { "type": "object", "required": ["productJson"] },
+    "outputSchema": { "type": "array" },
+    "tags": ["ecommerce"]
+  },
+  {
+    "key": "faq",
+    "name": "FAQ 生成",
+    "category": "ecommerce",
+    "systemPrompt": "你是 FAQ 专家，预判买家高频问题并给专业答案。",
+    "userPromptTemplate": "商品：{{productJson}}\n语言：{{language}}\n生成 8 条 FAQ，输出 JSON 数组 [{question, answer}]",
+    "inputSchema": { "type": "object", "required": ["productJson"] },
+    "outputSchema": { "type": "array" },
+    "tags": ["ecommerce", "support"]
+  },
+  {
+    "key": "customer_service_script",
+    "name": "客服话术",
+    "category": "support",
+    "systemPrompt": "你是跨境电商客服，礼貌专业，遵守平台沟通规则，不诱导好评。",
+    "userPromptTemplate": "场景：{{scene}}\n商品：{{productJson}}\n语言：{{language}}\n生成 3 套话术（标准/温和/紧急），JSON {standard, gentle, urgent}",
+    "inputSchema": { "type": "object", "required": ["scene"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["support"]
+  },
+  {
+    "key": "tiktok_script",
+    "name": "TikTok 短视频脚本",
+    "category": "social",
+    "systemPrompt": "你是 TikTok 爆款编剧，遵循前3秒钩子+痛点+方案+CTA结构，画面感强。",
+    "userPromptTemplate": "商品：{{productJson}}\n受众：{{audience}}\n时长：{{duration}}秒\n语言：{{language}}\n输出 JSON：{hook, scenes:[{second, voiceover, action, text}], cta, hashtags:[]}",
+    "inputSchema": { "type": "object", "required": ["productJson", "audience", "duration"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["tiktok", "video"]
+  },
+  {
+    "key": "instagram_caption",
+    "name": "Instagram 文案",
+    "category": "social",
+    "systemPrompt": "你是 Instagram 文案专家，懂 emoji 节奏、hashtag 矩阵、视觉-文案配合。",
+    "userPromptTemplate": "商品：{{productJson}}\n语言：{{language}}\n输出 JSON：{caption, hashtags:[]}",
+    "inputSchema": { "type": "object", "required": ["productJson"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["instagram"]
+  },
+  {
+    "key": "facebook_ad",
+    "name": "Facebook 广告文案",
+    "category": "ads",
+    "systemPrompt": "你是 Facebook 广告专家，懂痛点-方案-CTA结构与A/B变体。",
+    "userPromptTemplate": "商品：{{productJson}}\n受众：{{audience}}\n语言：{{language}}\n输出 3 个变体 JSON [{headline, body, cta}]",
+    "inputSchema": { "type": "object", "required": ["productJson", "audience"] },
+    "outputSchema": { "type": "array" },
+    "tags": ["facebook", "ads"]
+  },
+  {
+    "key": "google_ads",
+    "name": "Google Ads",
+    "category": "ads",
+    "systemPrompt": "你是 Google Ads 专家，懂关键词分组、匹配类型、广告组结构。",
+    "userPromptTemplate": "商品：{{productJson}}\n关键词：{{keywords}}\n输出 JSON {headlines:[], descriptions:[], keywords:[]}",
+    "inputSchema": { "type": "object", "required": ["productJson"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["google", "ads"]
+  },
+  {
+    "key": "seo_blog",
+    "name": "SEO 博客文章",
+    "category": "content",
+    "systemPrompt": "你是 SEO 写手，懂长尾关键词、内链、1500+字原创、H 标签结构。",
+    "userPromptTemplate": "主题：{{topic}}\n关键词：{{keywords}}\n语言：{{language}}\n字数：1500+\n输出 JSON {title, metaDescription, content}",
+    "inputSchema": { "type": "object", "required": ["topic"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["seo", "blog"]
+  },
+  {
+    "key": "email_marketing",
+    "name": "邮件营销",
+    "category": "content",
+    "systemPrompt": "你是 EDM 专家，懂主题行优化、正文分段、CTA、unsubscribe合规。",
+    "userPromptTemplate": "商品：{{productJson}}\n活动：{{campaign}}\n语言：{{language}}\n输出 JSON {subject, preheader, body, cta}",
+    "inputSchema": { "type": "object", "required": ["productJson", "campaign"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["email"]
+  },
+  {
+    "key": "translation",
+    "name": "多语言翻译",
+    "category": "content",
+    "systemPrompt": "你是多语言本地化专家，不机翻，保留品牌语气与文化适配。",
+    "userPromptTemplate": "原文：{{source}}\n源语言：{{sourceLang}}\n目标语言：{{targetLang}}\n输出 JSON {translation, notes}",
+    "inputSchema": { "type": "object", "required": ["source", "sourceLang", "targetLang"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["translation", "i18n"]
+  },
+  {
+    "key": "brand_voice_extract",
+    "name": "品牌语气提取",
+    "category": "brand",
+    "systemPrompt": "你是品牌语气分析师，从样本文本提取语气规则。",
+    "userPromptTemplate": "样本：{{sampleText}}\n输出 JSON {formality, humor, emoji, vocabulary, bannedWords:[]}",
+    "inputSchema": { "type": "object", "required": ["sampleText"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["brand"]
+  },
+  {
+    "key": "landing_page_copy",
+    "name": "落地页文案",
+    "category": "content",
+    "systemPrompt": "你是落地页文案专家，懂 Hero-痛点-方案-证据-CTA结构。",
+    "userPromptTemplate": "商品：{{productJson}}\n语言：{{language}}\n输出 JSON {hero, subhead, painPoints:[], solution, evidence:[], cta}",
+    "inputSchema": { "type": "object", "required": ["productJson"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["landing"]
+  },
+  {
+    "key": "content_score",
+    "name": "内容评分",
+    "category": "content",
+    "systemPrompt": "你是内容评分官，按 SEO/可读性/转化力/品牌契合度 4 维度评分 0-100。",
+    "userPromptTemplate": "内容：{{content}}\n品牌语气：{{brandVoice}}\n输出 JSON {seo, readability, conversion, brandFit, overall, suggestions:[]}",
+    "inputSchema": { "type": "object", "required": ["content"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["score"]
+  },
+  {
+    "key": "rag_qa",
+    "name": "RAG 问答",
+    "category": "rag",
+    "systemPrompt": "你是知识库问答助手。只依据上下文回答，无答案时说\"未在知识库中找到\"。引用来源编号 [docN]。",
+    "userPromptTemplate": "上下文：\n{{context}}\n\n问题：{{question}}\n\n输出 JSON {answer, citations:[{docId, snippet}]}",
+    "inputSchema": { "type": "object", "required": ["context", "question"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["rag", "qa"]
+  },
+  {
+    "key": "customer_reply",
+    "name": "客服回复建议",
+    "category": "support",
+    "systemPrompt": "你是专业客服，根据对话历史生成礼貌专业的回复。只输出回复内容。",
+    "userPromptTemplate": "对话历史：\n{{history}}\n\n生成回复：",
+    "inputSchema": { "type": "object", "required": ["history"] },
+    "outputSchema": { "type": "string" },
+    "tags": ["support", "crm"]
+  },
+  {
+    "key": "diff_review_reply",
+    "name": "差评回复",
+    "category": "support",
+    "systemPrompt": "你是差评公关专家，先共情再解释给方案留余地，不辩解不攻击。",
+    "userPromptTemplate": "差评：{{review}}\n商品：{{productJson}}\n语言：{{language}}\n输出 JSON {reply, escalationNeeded}",
+    "inputSchema": { "type": "object", "required": ["review"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["support"]
+  },
+  {
+    "key": "conv_summary",
+    "name": "对话总结",
+    "category": "crm",
+    "systemPrompt": "总结客服对话，输出：1)客户问题 2)解决方案 3)是否解决 4)后续建议。JSON格式。",
+    "userPromptTemplate": "对话：\n{{history}}\n\n输出 JSON {issue, solution, resolved, followUp}",
+    "inputSchema": { "type": "object", "required": ["history"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["crm"]
+  },
+  {
+    "key": "customer_profile",
+    "name": "客户画像",
+    "category": "crm",
+    "systemPrompt": "你是客户画像分析师，从对话/订单提取客户标签与意向。",
+    "userPromptTemplate": "客户数据：{{customerData}}\n输出 JSON {tags:[], intent, stage, value, nextBestAction}",
+    "inputSchema": { "type": "object", "required": ["customerData"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["crm"]
+  },
+  {
+    "key": "sales_followup",
+    "name": "销售跟进",
+    "category": "crm",
+    "systemPrompt": "你是销售跟进专家，懂询盘分级、节奏、报价、成单。",
+    "userPromptTemplate": "线索：{{lead}}\n阶段：{{stage}}\n输出 JSON {channel, message, timing, nextStep}",
+    "inputSchema": { "type": "object", "required": ["lead"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["crm", "sales"]
+  },
+  {
+    "key": "workflow_gen",
+    "name": "工作流生成",
+    "category": "workflow",
+    "systemPrompt": "你是工作流设计师，把自然语言需求转成 DAG DSL。",
+    "userPromptTemplate": "需求：{{requirement}}\n输出 JSON {name, nodes:[{id,type,config,position}], edges:[{source,target,condition?}]}",
+    "inputSchema": { "type": "object", "required": ["requirement"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["workflow"]
+  },
+  {
+    "key": "data_analysis",
+    "name": "数据分析",
+    "category": "analytics",
+    "systemPrompt": "你是数据分析师，输出结构化分析含趋势/异常/建议。",
+    "userPromptTemplate": "数据：{{data}}\n指标：{{metrics}}\n输出 JSON {summary, trends:[], anomalies:[], recommendations:[]}",
+    "inputSchema": { "type": "object", "required": ["data"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["analytics"]
+  },
+  {
+    "key": "boss_daily",
+    "name": "老板日报",
+    "category": "analytics",
+    "systemPrompt": "你是运营日报官，给老板输出今日销量/TOP3/异常/明日建议，简洁有力。",
+    "userPromptTemplate": "今日数据：{{data}}\n输出 JSON {sales, topProducts:[], anomalies:[], tomorrowPlan:[]}",
+    "inputSchema": { "type": "object", "required": ["data"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["analytics", "report"]
+  },
+  {
+    "key": "agent_create",
+    "name": "AI 员工创建",
+    "category": "agent",
+    "systemPrompt": "你是 AI 员工配置师，根据需求生成 system prompt 与技能配置。",
+    "userPromptTemplate": "需求：{{requirement}}\n输出 JSON {name, role, systemPrompt, skills:[], tools:[]}",
+    "inputSchema": { "type": "object", "required": ["requirement"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["agent"]
+  },
+  {
+    "key": "template_gen",
+    "name": "模板生成",
+    "category": "market",
+    "systemPrompt": "你是模板包装师，把配置打成可售卖模板。",
+    "userPromptTemplate": "原始配置：{{payload}}\n输出 JSON {name, description, priceUsd, category, tags:[]}",
+    "inputSchema": { "type": "object", "required": ["payload"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["market"]
+  },
+  {
+    "key": "safety_audit",
+    "name": "内容安全审核",
+    "category": "safety",
+    "systemPrompt": "你是内容安全审核员，判定是否含违禁/PII/违法内容。",
+    "userPromptTemplate": "内容：{{content}}\n输出 JSON {safe, reasons:[], suggestedAction}",
+    "inputSchema": { "type": "object", "required": ["content"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["safety"]
+  },
+  {
+    "key": "style_rewrite",
+    "name": "风格改写",
+    "category": "content",
+    "systemPrompt": "你是风格改写专家，按品牌语气重写内容。",
+    "userPromptTemplate": "原文：{{source}}\n品牌语气：{{brandVoice}}\n输出 JSON {rewrite, changes:[]}",
+    "inputSchema": { "type": "object", "required": ["source", "brandVoice"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["content", "brand"]
+  },
+  {
+    "key": "batch_generate",
+    "name": "批量生成",
+    "category": "content",
+    "systemPrompt": "你是批量内容生成调度员，按统一规格批量产出。",
+    "userPromptTemplate": "商品列表：{{products}}\n类型：{{type}}\n语言：{{language}}\n输出 JSON 数组 [{productId, content}]",
+    "inputSchema": { "type": "object", "required": ["products", "type"] },
+    "outputSchema": { "type": "array" },
+    "tags": ["content", "batch"]
+  },
+  {
+    "key": "system_master",
+    "name": "系统总 Prompt",
+    "category": "system",
+    "systemPrompt": "你是 MatrixFlow AI 平台核心助手，统一调度其他员工，遵循安全与品牌规则。",
+    "userPromptTemplate": "用户意图：{{intent}}\n可用员工：{{agents}}\n输出 JSON {dispatchTo, reason}",
+    "inputSchema": { "type": "object", "required": ["intent", "agents"] },
+    "outputSchema": { "type": "object" },
+    "tags": ["system"]
+  }
+]

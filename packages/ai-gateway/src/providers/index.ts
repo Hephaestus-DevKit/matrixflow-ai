@@ -1,0 +1,18 @@
+import { GlmProvider } from './glm';
+import { OpenAIProvider } from './openai';
+import type { ProviderClient } from '../types';
+import { Provider } from '@matrixflow/shared';
+
+export { GlmProvider, OpenAIProvider };
+
+export function createProviders(opts: {
+  glm?: { apiKey: string; baseUrl?: string; defaultModel?: string };
+  openai?: { apiKey: string; baseUrl?: string; defaultModel?: string };
+}): Record<Provider, ProviderClient | null> {
+  return {
+    [Provider.GLM]: opts.glm?.apiKey ? new GlmProvider(opts.glm) : null,
+    [Provider.OPENAI]: opts.openai?.apiKey ? new OpenAIProvider(opts.openai) : null,
+    [Provider.ANTHROPIC]: null, // P1
+    [Provider.GEMINI]: null,    // P1
+  };
+}

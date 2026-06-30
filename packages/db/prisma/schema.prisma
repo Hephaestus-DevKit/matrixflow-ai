@@ -1,0 +1,1148 @@
+// ============================================================
+// MatrixFlow AI · Prisma schema
+// 对应主文档 §5 数据库设计
+// 多租户：所有业务表带 organization_id（系统表除外）
+// 软删除：deleted_at TIMESTAMPTZ NULL
+// 审计：created_at / updated_at / created_by / updated_by
+// 向量：embeddings 表用 Unsupported("vector")，迁移时手写 SQL 加 pgvector
+// ============================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../src/generated/client"
+  previewFeatures = ["driverAdapters"]
+  binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------
+// 1. 用户与团队域 (§5.2)
+// ------------------------------------------------------------
+
+model User {
+  id              String   @id @default(uuid()) @db.Uuid
+  email           String   @unique
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  passwordHash    String?  @map("password_hash")
+  name            String
+  avatarUrl       String?  @map("avatar_url")
+  locale          String   @default("en-US")
+  status          UserStatus @default(ACTIVE)
+  lastLoginAt     DateTime? @map("last_login_at")
+  twoFactorSecret String?  @map("two_factor_secret")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  accounts        Account[]
+  sessions        Session[]
+  memberships     OrganizationMember[]
+  apiKeys         ApiKey[]
+  auditLogs       AuditLog[]
+
+  @@map("users")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING
+}
+
+model Account {
+  // OAuth 账户关联 (provider + providerAccountId 唯一)
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  provider          String   // google | github | email
+  providerAccountId String   @map("provider_account_id")
+  refreshToken      String?  @map("refresh_token")
+  accessToken       String?  @map("access_token")
+  expiresAt         Int?     @map("expires_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  refreshToken String   @unique @map("refresh_token")
+  userAgent    String?  @map("user_agent")
+  ip           String?
+  expiresAt    DateTime @map("expires_at")
+  revokedAt    DateTime? @map("revoked_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Organization {
+  id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @unique
+  name        String
+  logoUrl     String?  @map("logo_url")
+  plan        PlanTier @default(FREE)
+  status      OrgStatus @default(ACTIVE)
+  seatsUsed   Int      @default(1) @map("seats_used")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  members        OrganizationMember[]
+  roles          Role[]
+  agents         Agent[]
+  contentProjects ContentProject[]
+  brandVoices    BrandVoice[]
+  knowledgeBases KnowledgeBase[]
+  workflows      Workflow[]
+  customers      Customer[]
+  marketplaceItems MarketplaceItem[]
+  leads           Lead[]
+  deals           Deal[]
+  auditLogs       AuditLog[]
+  subscriptions  Subscription[]
+  usageRecords   UsageRecord[]
+  apiKeys        ApiKey[]
+  notifications  Notification[]
+  webhooks       Webhook[]
+  integrationAccounts IntegrationAccount[]
+
+  @@map("organizations")
+}
+
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
+  TRIALING
+}
+
+model OrganizationMember {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  roleId         String   @map("role_id") @db.Uuid
+  invitedByEmail String?  @map("invited_by_email")
+  joinedAt       DateTime @default(now()) @map("joined_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         Role          @relation(fields: [roleId], references: [id])
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+model Role {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String   // owner | admin | member
+  description    String?
+  isSystem       Boolean  @default(false) @map("is_system")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  permissions  Permission[]
+  members      OrganizationMember[]
+
+  @@unique([organizationId, name])
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid()) @db.Uuid
+  roleId      String   @map("role_id") @db.Uuid
+  action      String   // e.g. "agent:read", "content:write"
+  resource    String?  // 可选资源限定
+  effect      String   @default("allow") // allow | deny
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, action, resource])
+  @@map("permissions")
+}
+
+model ApiKey {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  userId          String?  @map("user_id") @db.Uuid
+  name            String
+  keyPrefix       String   @map("key_prefix") // 显示用前缀 mfa_live_xxxx
+  hashedKey       String   @unique @map("hashed_key") // bcrypt hash
+  scopes          String[] @default([]) // ["agent:run","content:write"]
+  lastUsedAt      DateTime? @map("last_used_at")
+  expiresAt       DateTime? @map("expires_at")
+  revokedAt       DateTime? @map("revoked_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@map("api_keys")
+}
+
+// ------------------------------------------------------------
+// 2. AI 员工域 (§5.3)
+// ------------------------------------------------------------
+
+model Agent {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  name            String
+  role            String   // customer_service | copywriter | seo_writer | analyst ...
+  description     String?
+  systemPrompt    Json     @map("system_prompt") // {templateKey, variables, raw}
+  model           String   @default("glm-4-plus")
+  temperature     Float    @default(0.7)
+  maxTokens       Int      @default(2000) @map("max_tokens")
+  status          AgentStatus @default(DRAFT)
+  memoryMode      String   @default("short") // short | long | none
+  metadata        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  skills       AgentSkill[]
+  tools        AgentTool[]
+  memories     AgentMemory[]
+  runs         AgentRun[]
+
+  @@index([organizationId])
+  @@map("agents")
+}
+
+enum AgentStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+model AgentSkill {
+  id        String   @id @default(uuid()) @db.Uuid
+  agentId   String   @map("agent_id") @db.Uuid
+  skillKey  String   @map("skill_key") // content:product_title, rag:qa, ...
+  config    Json?
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, skillKey])
+  @@map("agent_skills")
+}
+
+model AgentTool {
+  id         String   @id @default(uuid()) @db.Uuid
+  agentId    String   @map("agent_id") @db.Uuid
+  toolKey    String   @map("tool_key") // web_search, send_email, query_kb ...
+  config     Json?
+  allowed    Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, toolKey])
+  @@map("agent_tools")
+}
+
+model AgentMemory {
+  id        String   @id @default(uuid()) @db.Uuid
+  agentId   String   @map("agent_id") @db.Uuid
+  kind      String   // short | long
+  content   String
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime? @map("expires_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId, kind])
+  @@map("agent_memories")
+}
+
+model AgentRun {
+  id            String   @id @default(uuid()) @db.Uuid
+  agentId       String   @map("agent_id") @db.Uuid
+  organizationId String  @map("organization_id") @db.Uuid
+  input         Json
+  output        Json?
+  status        RunStatus @default(PENDING)
+  tokensUsed    Int      @default(0) @map("tokens_used")
+  costUsd       Float    @default(0) @map("cost_usd")
+  durationMs    Int?     @map("duration_ms")
+  error         String?
+  startedAt     DateTime? @map("started_at")
+  finishedAt    DateTime? @map("finished_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  logs  AgentRunLog[]
+
+  @@index([organizationId, createdAt])
+  @@index([agentId])
+  @@map("agent_runs")
+}
+
+enum RunStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+  CANCELED
+}
+
+model AgentRunLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  runId     String   @map("run_id") @db.Uuid
+  level     String   // info | warn | error | debug
+  message   String
+  data      Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  run AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+  @@map("agent_run_logs")
+}
+
+model AgentTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  role        String
+  description String?
+  systemPrompt Json    @map("system_prompt")
+  defaultSkills String[] @default([]) @map("default_skills")
+  defaultTools  String[] @default([]) @map("default_tools")
+  category    String?
+  tags        String[] @default([])
+  iconUrl     String?  @map("icon_url")
+  isPublished Boolean  @default(false) @map("is_published")
+  installs    Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([category, isPublished])
+  @@map("agent_templates")
+}
+
+// ------------------------------------------------------------
+// 3. 内容工厂域 (§5.4)
+// ------------------------------------------------------------
+
+model ContentProject {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  name            String
+  description     String?
+  productData     Json?    @map("product_data") // 商品原始资料
+  brandVoiceId    String?  @map("brand_voice_id") @db.Uuid
+  status          String   @default("active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  items        ContentItem[]
+
+  @@index([organizationId])
+  @@map("content_projects")
+}
+
+model ContentItem {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @map("project_id") @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  type            String   // product_title | listing | faq | tiktok_script | ...
+  title           String?
+  body            Json     // {markdown, html, plain}
+  language        String   @default("en")
+  metadata        Json?
+  agentRunId      String?  @map("agent_run_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  project   ContentProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versions  ContentVersion[]
+  scores    ContentScore[]
+
+  @@index([organizationId, type])
+  @@index([projectId])
+  @@map("content_items")
+}
+
+model ContentVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  itemId      String   @map("item_id") @db.Uuid
+  version     Int
+  body        Json
+  changeNote  String?  @map("change_note")
+  createdBy   String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  item ContentItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, version])
+  @@map("content_versions")
+}
+
+model BrandVoice {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  name            String
+  description     String?
+  toneRules       Json     @map("tone_rules") // {formality, humor, emoji, bannedWords...}
+  sampleText      String?  @map("sample_text")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("brand_voices")
+}
+
+model PromptTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique // product_title, tiktok_script, ...
+  name        String
+  description String?
+  category    String?
+  systemPrompt String  @map("system_prompt")
+  userPromptTemplate String @map("user_prompt_template")
+  inputSchema Json     @map("input_schema") // Zod-compatible JSON schema
+  outputSchema Json?   @map("output_schema")
+  version     Int      @default(1)
+  isLatest    Boolean  @default(true) @map("is_latest")
+  tags        String[] @default([])
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([key, isLatest])
+  @@index([category])
+  @@map("prompt_templates")
+}
+
+model ContentScore {
+  id          String   @id @default(uuid()) @db.Uuid
+  itemId      String   @map("item_id") @db.Uuid
+  dimension   String   // seo | readability | conversion | brand_fit
+  score       Float    // 0-100
+  reason      String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  item ContentItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, dimension])
+  @@map("content_scores")
+}
+
+// ------------------------------------------------------------
+// 4. 知识库域 (§5.5)
+// ------------------------------------------------------------
+
+model KnowledgeBase {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  name            String
+  description     String?
+  embeddingModel  String   @default("embedding-3") @map("embedding_model")
+  embeddingDim    Int      @default(1536) @map("embedding_dim")
+  status          String   @default("active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  documents    KnowledgeDocument[]
+
+  @@index([organizationId])
+  @@map("knowledge_bases")
+}
+
+model KnowledgeDocument {
+  id              String   @id @default(uuid()) @db.Uuid
+  knowledgeBaseId String   @map("knowledge_base_id") @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  title           String
+  sourceType      String   @map("source_type") // pdf | docx | txt | url | manual
+  sourceUrl       String?  @map("source_url")
+  objectKey       String?  @map("object_key") // MinIO key
+  mimeType        String?  @map("mime_type")
+  sizeBytes       Int?     @map("size_bytes")
+  content         String?  // 解析后纯文本
+  status          String   @default("pending") // pending | parsing | chunking | embedding | ready | failed
+  error           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  knowledgeBase KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+  chunks        DocumentChunk[]
+
+  @@index([knowledgeBaseId])
+  @@index([organizationId, status])
+  @@map("knowledge_documents")
+}
+
+model DocumentChunk {
+  id              String   @id @default(uuid()) @db.Uuid
+  documentId      String   @map("document_id") @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  chunkIndex      Int      @map("chunk_index")
+  content         String
+  tokenCount      Int?     @map("token_count")
+  metadata        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  document   KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  embeddings Embedding[]
+
+  @@unique([documentId, chunkIndex])
+  @@index([organizationId])
+  @@map("document_chunks")
+}
+
+// pgvector 字段 Unsupported("vector")，迁移后用 SQL 建表/加列
+model Embedding {
+  id          String   @id @default(uuid()) @db.Uuid
+  chunkId     String   @map("chunk_id") @db.Uuid
+  model       String   @default("embedding-3")
+  vector      Unsupported("vector")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  chunk DocumentChunk @relation(fields: [chunkId], references: [id], onDelete: Cascade)
+
+  @@index([chunkId])
+  @@map("embeddings")
+}
+
+model DocumentSource {
+  id              String   @id @default(uuid()) @db.Uuid
+  knowledgeBaseId String   @map("knowledge_base_id") @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  kind            String   // product | faq | conversation_history | webpage
+  reference       String?
+  metadata        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([knowledgeBaseId])
+  @@map("document_sources")
+}
+
+// ------------------------------------------------------------
+// 5. 工作流域 (§5.6)
+// ------------------------------------------------------------
+
+model Workflow {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  name            String
+  description     String?
+  status          String   @default("draft") // draft | active | archived
+  currentVersion  Int      @default(1) @map("current_version")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  versions     WorkflowVersion[]
+  runs         WorkflowRun[]
+  triggers     WorkflowTrigger[]
+
+  @@index([organizationId])
+  @@map("workflows")
+}
+
+model WorkflowVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  workflowId  String   @map("workflow_id") @db.Uuid
+  version     Int
+  dsl         Json     // 完整 DAG DSL (nodes + edges)
+  changeNote  String?  @map("change_note")
+  createdBy   String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  nodes    WorkflowNode[]
+  edges    WorkflowEdge[]
+
+  @@unique([workflowId, version])
+  @@map("workflow_versions")
+}
+
+model WorkflowNode {
+  id            String   @id @default(uuid()) @db.Uuid
+  versionId     String   @map("version_id") @db.Uuid
+  nodeKey       String   @map("node_key") // 前端 node id
+  type          String   // trigger | ai | condition | transform | webhook | email | content | human | schedule | loop
+  label         String?
+  config        Json
+  positionX     Float    @map("position_x")
+  positionY     Float    @map("position_y")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  version WorkflowVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, nodeKey])
+  @@map("workflow_nodes")
+}
+
+model WorkflowEdge {
+  id          String   @id @default(uuid()) @db.Uuid
+  versionId   String   @map("version_id") @db.Uuid
+  sourceKey   String   @map("source_key")
+  targetKey   String   @map("target_key")
+  condition   String?  // 条件分支表达式
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  version WorkflowVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, sourceKey, targetKey])
+  @@map("workflow_edges")
+}
+
+model WorkflowRun {
+  id              String   @id @default(uuid()) @db.Uuid
+  workflowId      String   @map("workflow_id") @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  version         Int
+  status          RunStatus @default(PENDING)
+  triggerType     String   @map("trigger_type")
+  input           Json?
+  output          Json?
+  error           String?
+  startedAt       DateTime? @map("started_at")
+  finishedAt      DateTime? @map("finished_at")
+  durationMs      Int?     @map("duration_ms")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  logs     WorkflowRunLog[]
+
+  @@index([organizationId, createdAt])
+  @@index([workflowId])
+  @@map("workflow_runs")
+}
+
+model WorkflowRunLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  runId       String   @map("run_id") @db.Uuid
+  nodeKey     String   @map("node_key")
+  level       String
+  message     String
+  data        Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  run WorkflowRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId, nodeKey])
+  @@map("workflow_run_logs")
+}
+
+model WorkflowTrigger {
+  id          String   @id @default(uuid()) @db.Uuid
+  workflowId  String   @map("workflow_id") @db.Uuid
+  type        String   // manual | webhook | schedule | event
+  config      Json
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@map("workflow_triggers")
+}
+
+// ------------------------------------------------------------
+// 6. CRM域 (§5.7)
+// ------------------------------------------------------------
+
+model Customer {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  name            String?
+  email           String?
+  phone           String?
+  avatarUrl       String?  @map("avatar_url")
+  stage           String   @default("lead") // lead | contacted | qualified | proposal | won | lost
+  source          String?  // shopify | manual | import | webhook
+  externalId      String?  @map("external_id")
+  metadata        Json?
+  lastActivityAt  DateTime? @map("last_activity_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tags         CustomerTag[]
+  notes        CustomerNote[]
+  conversations Conversation[]
+  leads        Lead[]
+  deals        Deal[]
+  followUps    FollowUp[]
+
+  @@unique([organizationId, externalId])
+  @@index([organizationId, stage])
+  @@map("customers")
+}
+
+model CustomerTag {
+  id          String   @id @default(uuid()) @db.Uuid
+  customerId  String   @map("customer_id") @db.Uuid
+  tag         String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, tag])
+  @@map("customer_tags")
+}
+
+model CustomerNote {
+  id          String   @id @default(uuid()) @db.Uuid
+  customerId  String   @map("customer_id") @db.Uuid
+  authorId    String?  @map("author_id") @db.Uuid
+  content     String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("customer_notes")
+}
+
+model Conversation {
+  id              String   @id @default(uuid()) @db.Uuid
+  customerId      String   @map("customer_id") @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  channel         String   // email | webchat | instagram | tiktok | whatsapp
+  status          String   @default("open") // open | pending | closed
+  assignedTo      String?  @map("assigned_to") @db.Uuid
+  summary         String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([organizationId, status])
+  @@index([customerId])
+  @@map("conversations")
+}
+
+model Message {
+  id              String   @id @default(uuid()) @db.Uuid
+  conversationId  String   @map("conversation_id") @db.Uuid
+  role            String   // customer | agent | ai | system
+  content         String
+  tokensUsed      Int      @default(0) @map("tokens_used")
+  metadata        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model Lead {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  customerId      String   @map("customer_id") @db.Uuid
+  source          String?
+  score           Int      @default(0) // 0-100
+  stage           String   @default("new")
+  metadata        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, stage])
+  @@map("leads")
+}
+
+model Deal {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  customerId      String   @map("customer_id") @db.Uuid
+  title           String
+  value           Float    @default(0)
+  currency        String   @default("USD")
+  stage           String   @default("open")
+  expectedCloseAt DateTime? @map("expected_close_at")
+  closedAt        DateTime? @map("closed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, stage])
+  @@map("deals")
+}
+
+model FollowUp {
+  id          String   @id @default(uuid()) @db.Uuid
+  customerId  String   @map("customer_id") @db.Uuid
+  assignedTo  String?  @map("assigned_to") @db.Uuid
+  type        String   // email | call | meeting | task
+  content     String
+  dueAt       DateTime @map("due_at")
+  status      String   @default("pending") // pending | done | skipped
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, dueAt])
+  @@map("follow_ups")
+}
+
+// ------------------------------------------------------------
+// 7. 模板市场域 (§5.8)
+// ------------------------------------------------------------
+
+model MarketplaceItem {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String?  @map("organization_id") @db.Uuid // 发布方组织
+  type            String   // agent | workflow | prompt | content | solution
+  name            String
+  slug            String   @unique
+  description     String?
+  longDescription String?  @map("long_description")
+  category        String?
+  tags            String[] @default([])
+  priceUsd        Float    @default(0) @map("price_usd")
+  payload         Json     // 模板内容（agent 配置/workflow DSL/prompt）
+  iconUrl         String?  @map("icon_url")
+  coverUrl        String?  @map("cover_url")
+  status          String   @default("pending") // pending | approved | rejected | delisted
+  installs        Int      @default(0)
+  ratingAvg       Float    @default(0) @map("rating_avg")
+  ratingCount     Int      @default(0) @map("rating_count")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  purchases    MarketplacePurchase[]
+  reviews      MarketplaceReview[]
+
+  @@index([type, status, category])
+  @@map("marketplace_items")
+}
+
+model MarketplaceCategory {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  slug        String   @unique
+  parentId    String?  @map("parent_id") @db.Uuid
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("marketplace_categories")
+}
+
+model MarketplacePurchase {
+  id              String   @id @default(uuid()) @db.Uuid
+  itemId          String   @map("item_id") @db.Uuid
+  buyerOrgId      String   @map("buyer_org_id") @db.Uuid
+  priceUsd        Float    @map("price_usd")
+  platformFeeUsd  Float    @map("platform_fee_usd") // 平台抽成
+  developerRevenueUsd Float @map("developer_revenue_usd")
+  status          String   @default("paid") // paid | refunded
+  stripePaymentId String?  @map("stripe_payment_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  item MarketplaceItem @relation(fields: [itemId], references: [id])
+
+  @@index([buyerOrgId])
+  @@index([itemId])
+  @@map("marketplace_purchases")
+}
+
+model MarketplaceReview {
+  id          String   @id @default(uuid()) @db.Uuid
+  itemId      String   @map("item_id") @db.Uuid
+  authorId    String   @map("author_id") @db.Uuid
+  rating      Int      // 1-5
+  comment     String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  item MarketplaceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, authorId])
+  @@map("marketplace_reviews")
+}
+
+model DeveloperProfile {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @unique @map("organization_id") @db.Uuid
+  displayName     String   @map("display_name")
+  bio             String?
+  websiteUrl      String?  @map("website_url")
+  totalRevenue    Float    @default(0) @map("total_revenue")
+  verified        Boolean  @default(false)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  payouts Payout[]
+
+  @@map("developer_profiles")
+}
+
+model Payout {
+  id              String   @id @default(uuid()) @db.Uuid
+  developerId     String   @map("developer_id") @db.Uuid
+  amountUsd       Float    @map("amount_usd")
+  status          String   @default("pending") // pending | paid | failed
+  periodStart     DateTime @map("period_start")
+  periodEnd       DateTime @map("period_end")
+  createdAt       DateTime @default(now()) @map("created_at")
+  paidAt          DateTime? @map("paid_at")
+
+  developer DeveloperProfile @relation(fields: [developerId], references: [id], onDelete: Cascade)
+
+  @@index([developerId, status])
+  @@map("payouts")
+}
+
+// ------------------------------------------------------------
+// 8. 计费域 (§5.9)
+// ------------------------------------------------------------
+
+enum PlanTier {
+  FREE
+  STARTER
+  PRO
+  BUSINESS
+  ENTERPRISE
+}
+
+model Plan {
+  id              String   @id @default(uuid()) @db.Uuid
+  tier            PlanTier @unique
+  name            String
+  priceMonthlyUsd Float    @map("price_monthly_usd")
+  priceYearlyUsd  Float    @map("price_yearly_usd")
+  seats           Int
+  aiCallsPerMonth Int      @map("ai_calls_per_month")
+  workflowLimit   Int      @map("workflow_limit")
+  kbLimit         Int      @map("kb_limit")
+  kbDocLimit      Int      @map("kb_doc_limit")
+  features        Json     // 功能开关位图
+  isActive        Boolean  @default(true) @map("is_active")
+  subscriptions  Subscription[]
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("plans")
+}
+
+model Subscription {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  planId          String   @map("plan_id") @db.Uuid
+  status          String   @default("active") // active | canceled | past_due | trialing
+  interval        String   @default("month") // month | year
+  currentPeriodStart DateTime @map("current_period_start")
+  currentPeriodEnd   DateTime @map("current_period_end")
+  cancelAt       DateTime? @map("cancel_at")
+  canceledAt     DateTime? @map("canceled_at")
+  stripeSubscriptionId String? @unique @map("stripe_subscription_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan         Plan         @relation(fields: [planId], references: [id])
+
+  @@index([organizationId])
+  @@map("subscriptions")
+}
+
+model UsageRecord {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  metric          String   // ai_call | token_input | token_output | workflow_run | kb_doc | storage
+    value           Int
+  metadata        Json?
+  recordedAt      DateTime @default(now()) @map("recorded_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, metric, recordedAt])
+  @@map("usage_records")
+}
+
+model Invoice {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  subscriptionId  String?  @map("subscription_id") @db.Uuid
+  amountUsd       Float    @map("amount_usd")
+  currency        String   @default("USD")
+  status          String   @default("open") // open | paid | void | uncollectible
+  dueAt           DateTime? @map("due_at")
+  paidAt          DateTime? @map("paid_at")
+  stripeInvoiceId String?  @unique @map("stripe_invoice_id")
+  pdfUrl          String?  @map("pdf_url")
+  lineItems       Json     @map("line_items")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([organizationId])
+  @@map("invoices")
+}
+
+model Payment {
+  id              String   @id @default(uuid()) @db.Uuid
+  invoiceId       String?  @map("invoice_id") @db.Uuid
+  amountUsd       Float    @map("amount_usd")
+  currency        String   @default("USD")
+  provider        String   @default("stripe")
+  providerPaymentId String? @unique @map("provider_payment_id")
+  status          String   // succeeded | pending | failed
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("payments")
+}
+
+model TokenUsage {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  agentId         String?  @map("agent_id") @db.Uuid
+  provider        String   // glm | openai | anthropic | gemini
+  model           String
+  inputTokens     Int      @map("input_tokens")
+  outputTokens    Int      @map("output_tokens")
+  cacheHit        Boolean  @default(false) @map("cache_hit")
+  costUsd         Float    @default(0) @map("cost_usd")
+  metadata        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([organizationId, createdAt])
+  @@index([provider, model])
+  @@map("token_usage")
+}
+
+model ModelCost {
+  // 模型成本价目表（可定期更新）
+  id          String   @id @default(uuid()) @db.Uuid
+  provider    String
+  model       String
+  inputPer1kUsd  Float @map("input_per_1k_usd")
+  outputPer1kUsd Float @map("output_per_1k_usd")
+  effectiveFrom DateTime @map("effective_from")
+  effectiveTo   DateTime? @map("effective_to")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([provider, model, effectiveFrom])
+  @@map("model_costs")
+}
+
+// ------------------------------------------------------------
+// 9. 系统域 (§5.10)
+// ------------------------------------------------------------
+
+model AuditLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String?  @map("organization_id") @db.Uuid
+  userId          String?  @map("user_id") @db.Uuid
+  action          String   // user.login, agent.run, content.create...
+  resource        String?
+  resourceId      String?  @map("resource_id")
+  ip              String?
+  userAgent       String?  @map("user_agent")
+  metadata        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  value       Json
+  description String?
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedBy   String?  @map("updated_by") @db.Uuid
+
+  @@map("system_settings")
+}
+
+model Notification {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  userId          String?  @map("user_id") @db.Uuid
+  type            String   // info | success | warning | error
+  title           String
+  body            String?
+  link            String?
+  readAt          DateTime? @map("read_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, userId, readAt])
+  @@map("notifications")
+}
+
+model Webhook {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  url             String
+  events          String[] @default([])
+  secret          String   // 用于签名校验
+  enabled         Boolean  @default(true)
+  lastFiredAt     DateTime? @map("last_fired_at")
+  failureCount    Int      @default(0) @map("failure_count")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("webhooks")
+}
+
+model IntegrationAccount {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  provider        String   // shopify | amazon | tiktok | gmail | slack
+  externalAccountId String @map("external_account_id")
+  accessToken     String   @map("access_token") // 应加密存储
+  refreshToken    String?  @map("refresh_token")
+  scopes          String[] @default([])
+  metadata        Json?
+  expiresAt       DateTime? @map("expires_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, provider, externalAccountId])
+  @@index([organizationId, provider])
+  @@map("integration_accounts")
+}

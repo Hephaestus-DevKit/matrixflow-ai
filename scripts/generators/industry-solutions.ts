@@ -1,0 +1,18 @@
+// 行业解决方案 seed（15 个）
+export const industrySolutions = [
+  { name: '跨境电商全链路', industry: 'ecommerce', description: '商品文案+多语言+广告+客服+数据分析', agentCount: 5, workflowCount: 3, priceSuggestion: 99 },
+  { name: '本地餐饮运营', industry: 'restaurant', description: '菜单文案+外卖平台+评价回复+会员营销', agentCount: 3, workflowCount: 2, priceSuggestion: 49 },
+  { name: '教育培训自动化', industry: 'education', description: '课程文案+自动答疑+学员跟进+社群运营', agentCount: 3, workflowCount: 2, priceSuggestion: 59 },
+  { name: '房产中介数字化', industry: 'real_estate', description: '房源描述+客户跟进+市场分析+邮件营销', agentCount: 3, workflowCount: 2, priceSuggestion: 69 },
+  { name: '律所智能助理', industry: 'legal', description: '文书摘要+客户初筛+知识问答+日程管理', agentCount: 2, workflowCount: 1, priceSuggestion: 79 },
+  { name: '健身房会员运营', industry: 'fitness', description: '训练计划+会员跟进+社媒内容+活动推广', agentCount: 3, workflowCount: 2, priceSuggestion: 39 },
+  { name: '美容院客户管理', industry: 'beauty', description: '产品推荐+护肤问答+社媒种草+预约提醒', agentCount: 3, workflowCount: 2, priceSuggestion: 49 },
+  { name: 'SaaS 增长引擎', industry: 'saas', description: '落地页+邮件序列+用户激活+数据分析', agentCount: 4, workflowCount: 3, priceSuggestion: 89 },
+  { name: '招聘自动化', industry: 'hr', description: 'JD生成+候选人筛选+面试安排+入职跟进', agentCount: 3, workflowCount: 2, priceSuggestion: 59 },
+  { name: '咨询公司知识库', industry: 'consulting', description: '报告摘要+客户提案+知识问答+项目跟进', agentCount: 3, workflowCount: 2, priceSuggestion: 79 },
+  { name: '旅游产品运营', industry: 'travel', description: '行程文案+酒店描述+客户咨询+评价管理', agentCount: 3, workflowCount: 2, priceSuggestion: 49 },
+  { name: '宠物行业全案', industry: 'pet', description: '产品推荐+知识问答+社媒内容+客户跟进', agentCount: 2, workflowCount: 1, priceSuggestion: 39 },
+  { name: '财税服务自动化', industry: 'finance', description: '知识问答+客户咨询+报告生成+合规检查', agentCount: 3, workflowCount: 2, priceSuggestion: 69 },
+  { name: '自媒体矩阵运营', industry: 'media', description: '多平台内容+排期发布+数据分析+粉丝互动', agentCount: 4, workflowCount: 3, priceSuggestion: 59 },
+  { name: '保险顾问套装', industry: 'insurance', description: '产品说明+客户问答+方案对比+续保提醒', agentCount: 3, workflowCount: 2, priceSuggestion: 69 },
+];
