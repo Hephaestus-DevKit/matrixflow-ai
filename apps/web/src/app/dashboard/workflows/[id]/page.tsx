@@ -23,7 +23,7 @@ export default function WorkflowEditorPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">{wf?.name ?? '工作流'}</h1>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => router.push(`/dashboard/workflows/${id}/logs`)}>日志</Button>
+          <Button variant="outline" onClick={() => router.push(`/dashboard/workflows/${id}/logs` as any)}>日志</Button>
           <Button onClick={() => run.mutate()} disabled={run.isPending}>{run.isPending ? '运行中...' : '▶ 运行'}</Button>
         </div>
       </div>
