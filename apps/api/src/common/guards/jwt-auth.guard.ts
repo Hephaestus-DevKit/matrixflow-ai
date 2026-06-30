@@ -45,6 +45,7 @@ export class JwtAuthGuard implements CanActivate {
         permissions: syncedUser.permissions ?? [],
       };
     } catch (err) {
+      console.error('Appwrite verification error:', err);
       throw new UnauthorizedException(ErrorCode.TOKEN_INVALID);
     }
 
