@@ -16,8 +16,8 @@ RUN npx -p prisma@6.19.3 prisma generate --schema packages/db/prisma/schema.pris
 # Copy generated client into db/dist
 RUN mkdir -p packages/db/dist/generated/client && cp -r packages/db/src/generated/client/* packages/db/dist/generated/client/ || true
 
-# Compile all workspace packages (NestJS backend API and dependencies)
-RUN pnpm build
+# Compile NestJS API backend and all its workspace dependencies (skips frontend next.js build)
+RUN pnpm --filter @matrixflow/api... build
 
 ENV NODE_ENV=production
 EXPOSE 7860
