@@ -14,7 +14,7 @@ async function bootstrap() {
   app.setGlobalPrefix(API_PREFIX);
   app.enableShutdownHooks();
   app.enableCors({
-    origin: (process.env.CORS_ORIGINS ?? 'http://localhost:3000').split(','),
+    origin: true,
     credentials: true,
   });
   app.use(helmet({
