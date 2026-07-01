@@ -19,6 +19,10 @@ export class AuthService {
     private audit: AuditService,
   ) {}
 
+  verifyToken(token: string) {
+    return this.jwt.verify(token);
+  }
+
   async syncUser(appwriteUser: { $id: string; email: string; name?: string }, targetOrgId?: string) {
     const appwriteId = appwriteUser.$id;
     const email = appwriteUser.email;

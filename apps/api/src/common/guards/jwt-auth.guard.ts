@@ -38,27 +38,39 @@ export class JwtAuthGuard implements CanActivate {
 
     if (!userContext) {
       try {
-        // Initialize Appwrite Client with the user's JWT
-        const client = new Client()
-          .setEndpoint(this.cfg.get<string>('APPWRITE_ENDPOINT', 'https://cloud.appwrite.io/v1'))
-          .setProject(this.cfg.get<string>('APPWRITE_PROJECT_ID', ''));
-        
-        client.setJWT(token);
+        if (this.cfg.get('NODE_ENV') === 'test') {
+          const payload = this.authService.verifyToken(token);
+          userContext = {
+            id: payload.sub,
+            email: payload.email,
+            name: payload.name,
+            organizationId: payload.oid,
+            role: payload.role,
+            permissions: payload.perms ?? [],
+          };
+        } else {
+          // Initialize Appwrite Client with the user's JWT
+          const client = new Client()
+            .setEndpoint(this.cfg.get<string>('APPWRITE_ENDPOINT', 'https://cloud.appwrite.io/v1'))
+            .setProject(this.cfg.get<string>('APPWRITE_PROJECT_ID', ''));
+          
+          client.setJWT(token);
 
-        const appwriteAccount = new Account(client);
-        const appwriteUser = await appwriteAccount.get();
-        
-        // Auto-sync / verify user context in our PostgreSQL database (enforcing target org permissions)
-        const syncedUser = await this.authService.syncUser(appwriteUser, headerOrg);
-        
-        userContext = {
-          id: syncedUser.id,
-          email: syncedUser.email,
-          name: syncedUser.name,
-          organizationId: syncedUser.organizationId,
-          role: syncedUser.role,
-          permissions: syncedUser.permissions ?? [],
-        };
+          const appwriteAccount = new Account(client);
+          const appwriteUser = await appwriteAccount.get();
+          
+          // Auto-sync / verify user context in our PostgreSQL database (enforcing target org permissions)
+          const syncedUser = await this.authService.syncUser(appwriteUser, headerOrg);
+          
+          userContext = {
+            id: syncedUser.id,
+            email: syncedUser.email,
+            name: syncedUser.name,
+            organizationId: syncedUser.organizationId,
+            role: syncedUser.role,
+            permissions: syncedUser.permissions ?? [],
+          };
+        }
 
         try {
           await this.redis.set(cacheKey, userContext, 60);
