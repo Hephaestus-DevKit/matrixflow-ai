@@ -46,7 +46,47 @@ export class ContentService {
     const promptKey = CONTENT_PROMPT_MAP[type];
     if (!promptKey) throw new NotFoundException(`Unknown content type: ${type}`);
 
-    const vars = { ...variables, productJson: project.productData, brandVoiceId: project.brandVoiceId };
+    // 基于项目商品信息动态生成智能缺省变量
+    const pData: any = project.productData || {};
+    const pTitle = pData.title || project.name || 'Product';
+    const pDesc = pData.description || 'Quality product';
+
+    const defaultVariables: Record<string, any> = {};
+    if (type === 'product_title') {
+      defaultVariables.brand = pData.brand || 'Generic';
+      defaultVariables.platform = variables.platform || 'amazon';
+      defaultVariables.maxLength = 150;
+    } else if (type === 'listing') {
+      defaultVariables.platform = variables.platform || 'amazon';
+    } else if (type === 'tiktok_script') {
+      defaultVariables.audience = 'social media shoppers';
+      defaultVariables.duration = 30;
+    } else if (type === 'instagram') {
+      defaultVariables.style = 'engaging and trendy';
+    } else if (type === 'facebook_ad') {
+      defaultVariables.audience = 'online shoppers';
+      defaultVariables.objective = 'conversion';
+    } else if (type === 'email_marketing') {
+      defaultVariables.emailType = 'promotional discount';
+      defaultVariables.audience = 'subscribers';
+    } else if (type === 'seo_blog') {
+      defaultVariables.topic = `Why ${pTitle} is the best choice for your daily needs`;
+      defaultVariables.keywords = `${pTitle}, best ${pTitle}, ${pTitle} review`;
+      defaultVariables.audience = 'consumers';
+    } else if (type === 'customer_service') {
+      defaultVariables.history = `Customer: Hi, I saw ${pTitle} and wanted to ask about its features.\nAgent: Hello! I'd be happy to tell you about ${pTitle}. It has several key features including: ${pDesc}`;
+    } else if (type === 'landing_page') {
+      defaultVariables.audience = 'potential buyers';
+    } else if (type === 'multilingual') {
+      defaultVariables.sourceText = `${pTitle}: ${pDesc}`;
+      defaultVariables.sourceLanguage = 'Chinese';
+      defaultVariables.targetLanguage = 'English';
+    } else if (type === 'brand_voice') {
+      defaultVariables.sourceText = `${pTitle}: ${pDesc}`;
+      defaultVariables.brandVoiceRules = { formality: 3, humor: 3, emojiFrequency: 'medium', toneDescription: 'Friendly, warm, and professional' };
+    }
+
+    const vars = { ...defaultVariables, ...variables, productJson: project.productData, brandVoiceId: project.brandVoiceId };
     const result = await this.ai.runPrompt({ promptKey, variables: vars, organizationId, userId, responseFormat: 'json_object' });
 
     let parsed: any = result.content;
