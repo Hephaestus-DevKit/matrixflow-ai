@@ -112,7 +112,10 @@ export default function NewAgentPage() {
           })}
         </div>
       ) : (
-        <div className="max-w-md space-y-4 border border-border/60 rounded-xl bg-card p-5">
+        <form 
+          onSubmit={(e) => { e.preventDefault(); if (name.trim()) createCustom(); }}
+          className="max-w-md space-y-4 border border-border/60 rounded-xl bg-card p-5"
+        >
           <h3 className="text-sm font-bold flex items-center gap-1.5 text-primary">
             <Sparkles className="h-4 w-4" /> 自定义 AI 员工参数
           </h3>
@@ -135,7 +138,7 @@ export default function NewAgentPage() {
             />
           </div>
           <Button 
-            onClick={createCustom} 
+            type="submit" 
             disabled={loading || !name.trim()} 
             className="w-full text-xs"
           >
@@ -145,7 +148,7 @@ export default function NewAgentPage() {
               '创建自定义 AI 员工'
             )}
           </Button>
-        </div>
+        </form>
       )}
     </div>
   );

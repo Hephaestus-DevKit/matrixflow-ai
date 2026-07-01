@@ -14,10 +14,10 @@ export default function NewWorkflowPage() {
   const router = useRouter();
   async function create() { await apiClient.post('/workflows', { name, dsl: DEFAULT_DSL }); router.push('/dashboard/workflows'); }
   return (
-    <div className="max-w-md space-y-4">
+    <form onSubmit={(e) => { e.preventDefault(); if (name) create(); }} className="max-w-md space-y-4">
       <h1 className="text-xl font-bold">新建工作流</h1>
       <div className="space-y-2"><Label>名称</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-      <Button onClick={create} disabled={!name}>创建</Button>
-    </div>
+      <Button type="submit" disabled={!name}>创建</Button>
+    </form>
   );
 }
