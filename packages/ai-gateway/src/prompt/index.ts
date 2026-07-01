@@ -21,7 +21,7 @@ export function compilePrompt(
   vars: Variables,
 ): CompiledPrompt {
   return {
-    systemPrompt: tpl.systemPrompt,
+    systemPrompt: renderTemplate(tpl.systemPrompt, vars),
     userPrompt: renderTemplate(tpl.userPromptTemplate, vars),
   };
 }

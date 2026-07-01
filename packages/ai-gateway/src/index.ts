@@ -17,6 +17,9 @@ export class AiGateway {
   private onUsage?: (res: ChatResponse, req: ChatRequest) => void;
 
   constructor(opts: GatewayOptions) {
+    if (!opts || Object.keys(opts).length === 0) {
+      throw new AiGatewayError('AI_PROVIDER_ERROR', 'No AI provider configured');
+    }
     this.providers = createProviders(opts);
     this.onUsage = opts.onUsage;
     this.chain = opts.fallbackChain ?? [Provider.GLM, Provider.OPENAI].filter((p) => this.providers[p]);
