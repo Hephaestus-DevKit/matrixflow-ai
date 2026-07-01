@@ -31,5 +31,19 @@ echo "Symlinks verified"
 echo "Pushing database schema..."
 npx -p prisma@6.19.3 prisma db push --schema packages/db/prisma/schema.prisma --accept-data-loss --skip-generate 2>/dev/null || true
 
+echo "Starting Python Sidecar..."
+export SIDECAR_PYTHON_URL=${SIDECAR_PYTHON_URL:-http://localhost:8001}
+python3 apps/sidecar/main.py > /dev/null 2>&1 &
+
+# Wait for sidecar to become ready
+echo "Waiting for Python Sidecar..."
+for i in $(seq 1 10); do
+  if wget -qO- http://localhost:8001/health > /dev/null 2>&1; then
+    echo "Python Sidecar is ready"
+    break
+  fi
+  sleep 1
+done
+
 echo "Starting MatrixFlow API..."
 exec node apps/api/dist/main.js

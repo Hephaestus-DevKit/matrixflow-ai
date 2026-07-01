@@ -93,9 +93,19 @@ services:
       JWT_SECRET: dev-secret-32chars-minimum!
       PORT: "3001"
       NODE_ENV: development
+      SIDECAR_PYTHON_URL: http://sidecar:8001
     ports:
       - "3001:3001"
     command: ["sh", "-c", "npx -p prisma@6.19.3 prisma db push --schema packages/db/prisma/schema.prisma --accept-data-loss --skip-generate 2>/dev/null; node apps/api/dist/main.js"]
+
+  sidecar:
+    build:
+      context: ./apps/sidecar
+      dockerfile: Dockerfile
+    container_name: mfa-sidecar
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
 
   mailhog:
     image: mailhog/mailhog:latest

@@ -55,12 +55,32 @@ export class KbService {
       await this.prisma.knowledgeDocument.update({ where: { id: docId }, data: { status: 'parsing' } });
       // 从 MinIO 拉取
       const buf = await this.file.download(doc.objectKey!);
-      // 简化：纯文本提取（生产用 Tika / Unstructured sidecar）
-      const text = buf.toString('utf-8');
+
+      // 调用 Python Sidecar 进行解析与分块
+      const sidecarUrl = process.env.SIDECAR_PYTHON_URL || 'http://localhost:8001';
+      const formData = new FormData();
+      const blob = new Blob([buf], { type: doc.mimeType || 'application/octet-stream' });
+      formData.append('file', blob, doc.title || 'document');
+
+      const response = await fetch(
+        `${sidecarUrl}/parse?chunk_size=${CHUNK_SIZE}&overlap=${CHUNK_OVERLAP}`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Sidecar parser failed with status ${response.status}: ${errText}`);
+      }
+
+      const parsedData = (await response.json()) as { text: string; chunks: string[] };
+      const text = parsedData.text;
+      const chunks = parsedData.chunks;
+
       await this.prisma.knowledgeDocument.update({ where: { id: docId }, data: { content: text, status: 'chunking' } });
 
-      // 分块
-      const chunks = this.chunk(text);
       for (let i = 0; i < chunks.length; i++) {
         const c = await this.prisma.documentChunk.create({ data: { documentId: docId, organizationId: doc.organizationId, chunkIndex: i, content: chunks[i], tokenCount: Math.ceil(chunks[i].length / 4) } });
         // 向量化
