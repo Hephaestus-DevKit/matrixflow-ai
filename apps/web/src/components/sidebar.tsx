@@ -33,17 +33,17 @@ export function Sidebar() {
   const { user } = useAuth();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 flex w-56 flex-col border-r border-border bg-card">
+    <aside className="fixed inset-y-0 left-0 z-40 flex w-56 flex-col border-r border-border bg-card/90 backdrop-blur-md shadow-dark-sm">
       {/* Logo */}
-      <div className="flex h-14 items-center gap-2 border-b border-border px-4">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold shadow-glow-sm">
+      <div className="flex h-14 items-center gap-2.5 border-b border-border/80 px-4">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-primary via-indigo-500 to-primary text-primary-foreground text-xs font-black shadow-glow-sm hover:rotate-6 transition-transform duration-300">
           M
         </div>
-        <span className="font-semibold tracking-tight">MatrixFlow AI</span>
+        <span className="font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground/90 to-primary bg-clip-text text-transparent text-sm">MatrixFlow AI</span>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 py-4">
         {NAV.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
@@ -52,13 +52,13 @@ export function Sidebar() {
               key={item.href}
               href={item.href as any}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-200',
+                'flex items-center gap-3 rounded-xl px-3.5 py-2 text-xs transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]',
                 isActive
-                  ? 'bg-primary/10 text-primary font-medium shadow-sm'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  ? 'bg-primary/10 text-primary font-bold shadow-glow-sm border border-primary/20'
+                  : 'text-muted-foreground hover:bg-muted/65 hover:text-foreground',
               )}
             >
-              <Icon className={cn('h-4 w-4', isActive ? 'text-primary' : 'text-muted-foreground')} />
+              <Icon className={cn('h-4 w-4 transition-transform duration-200 group-hover:scale-105', isActive ? 'text-primary' : 'text-muted-foreground')} />
               <span>{item.label}</span>
             </Link>
           );

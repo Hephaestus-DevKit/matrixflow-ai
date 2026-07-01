@@ -4,59 +4,103 @@
 
 @layer base {
   :root {
-    --background: 40 20% 97%;
-    --foreground: 210 15% 24%;
-    --card: 40 15% 99%;
-    --card-foreground: 210 15% 24%;
-    --popover: 40 15% 99%;
-    --popover-foreground: 210 15% 24%;
-    --primary: 200 16% 45%;
-    --primary-foreground: 40 20% 98%;
-    --secondary: 40 10% 91%;
-    --secondary-foreground: 210 15% 24%;
-    --muted: 40 10% 93%;
-    --muted-foreground: 210 8% 48%;
-    --accent: 40 10% 91%;
-    --accent-foreground: 210 15% 24%;
-    --destructive: 355 15% 54%;
-    --destructive-foreground: 0 0% 98%;
-    --success: 90 10% 48%;
-    --success-foreground: 0 0% 98%;
-    --warning: 35 22% 52%;
-    --warning-foreground: 0 0% 98%;
-    --border: 40 12% 87%;
-    --input: 40 12% 87%;
-    --ring: 200 16% 45%;
+    --background: 240 14% 97%;
+    --foreground: 224 71.4% 4.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 220 14.3% 95.9%;
+    --accent-foreground: 220.9 39.3% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 48 96% 89%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 262.1 83.3% 57.8%;
     --radius: 0.75rem;
   }
   .dark {
-    --background: 240 10% 3.9%;
+    --background: 240 20% 4.5%;
     --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
+    --card: 240 18% 7.5%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
+    --popover: 240 18% 7.5%;
     --popover-foreground: 0 0% 98%;
-    --primary: 245 58% 51%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 3.7% 15.9%;
+    --primary: 250 88% 68%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 12% 12%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
+    --muted: 240 12% 11%;
+    --muted-foreground: 240 5% 72%;
+    --accent: 240 12% 12%;
     --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 355 88% 54%;
     --destructive-foreground: 0 0% 98%;
-    --success: 160 84% 39%;
+    --success: 155 88% 46%;
     --success-foreground: 0 0% 98%;
-    --warning: 38 92% 50%;
+    --warning: 32 96% 56%;
     --warning-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 245 58% 51%;
+    --border: 240 12% 12.5%;
+    --input: 240 12% 12.5%;
+    --ring: 250 88% 68%;
   }
 }
 
 @layer base {
   * { @apply border-border; }
-  body { @apply bg-background text-foreground; font-feature-settings: "rlig" 1, "calt" 1; }
+  body { 
+    @apply bg-background text-foreground; 
+    font-feature-settings: "rlig" 1, "calt" 1; 
+  }
+
+  /* Silky smooth custom scrollbar for sleek cyber look */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.4);
+  }
 }
+
+/* Glassmorphism & Cyber Glow utilities */
+.glass-panel {
+  background: rgba(13, 13, 21, 0.45);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.text-glow-primary {
+  text-shadow: 0 0 12px hsl(var(--primary) / 0.5);
+}
+
+.shadow-glow-indigo {
+  box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.35);
+}
+
+/* Custom ReactFlow node & edge aesthetics overrides */
+.react-flow__node {
+  @apply rounded-xl border border-border bg-card p-4 text-xs font-semibold shadow-dark-sm transition-all duration-200 hover:border-primary/40 hover:shadow-glow-sm !important;
+}
+
+.react-flow__handle {
+  @apply bg-primary border-2 border-background w-2 h-2 rounded-full !important;
+}
+
