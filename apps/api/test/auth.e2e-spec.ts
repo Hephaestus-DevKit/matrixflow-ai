@@ -63,7 +63,7 @@ describe('Auth (e2e)', () => {
       .get('/api/v1/auth/me')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
-    expect(res.body.user.email).toBe(testEmail);
+    expect(res.body.email).toBe(testEmail);
   });
 
   it('GET /agents without token → 401', async () => {
