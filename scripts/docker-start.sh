@@ -29,7 +29,7 @@ echo "Symlinks verified"
 
 # Push schema if needed
 echo "Pushing database schema..."
-npx -p prisma@6.19.3 prisma db push --schema packages/db/prisma/schema.prisma --accept-data-loss --skip-generate 2>/dev/null || true
+npx -p prisma@6.19.3 prisma db push --schema packages/db/prisma/schema.prisma --accept-data-loss --skip-generate || echo "Prisma db push failed! Please check connection to database."
 
 echo "Starting Python Sidecar..."
 export SIDECAR_PYTHON_URL=${SIDECAR_PYTHON_URL:-http://localhost:8001}
