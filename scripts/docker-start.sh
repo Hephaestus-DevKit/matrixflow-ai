@@ -27,6 +27,9 @@ done
 
 echo "Symlinks verified"
 
+# Run database pre-initialization (enable pgvector)
+node scripts/db-init.js || true
+
 # Push schema if needed
 echo "Pushing database schema..."
 npx -p prisma@6.19.3 prisma db push --schema packages/db/prisma/schema.prisma --accept-data-loss --skip-generate || echo "Prisma db push failed! Please check connection to database."
