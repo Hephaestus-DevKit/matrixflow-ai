@@ -29,6 +29,8 @@ export class KbService {
   }
 
   async uploadDocument(organizationId: string, userId: string, kbId: string, file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('File is required');
+
     const kb = await this.prisma.knowledgeBase.findFirst({ where: { id: kbId, organizationId } });
     if (!kb) throw new NotFoundException('Knowledge base not found');
 

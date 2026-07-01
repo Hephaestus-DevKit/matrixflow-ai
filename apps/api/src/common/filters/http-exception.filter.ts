@@ -17,15 +17,22 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let message = 'Internal server error';
     let details: unknown;
 
-    if (e instanceof ZodError) { status = 400; code = ErrorCode.BAD_REQUEST; message = 'Validation failed'; details = e.errors; }
-    else if (e && typeof e === 'object' && 'getResponse' in e && 'getStatus' in e) {
+    if (e instanceof ZodError) { 
+      status = 400; 
+      code = ErrorCode.BAD_REQUEST; 
+      message = e.errors.map((err) => `${err.path.join('.')}: ${err.message}`).join(', ') || 'Validation failed'; 
+      details = e.errors; 
+    } else if (e && typeof e === 'object' && 'getResponse' in e && 'getStatus' in e) {
       const r = (e as any).getResponse();
       status = (e as any).getStatus();
-      const body = typeof r === 'string' ? r : r;
+      const body = r;
       code = body?.code ?? (typeof body === 'string' ? body : ErrorCode.BAD_REQUEST);
-      message = body?.message ?? (typeof body === 'string' ? body : 'Error');
-      details = body?.details;
-    } else if (e instanceof Error) { message = e.message; }
+      const rawMsg = body?.message ?? (typeof body === 'string' ? body : 'Error');
+      message = Array.isArray(rawMsg) ? rawMsg.join(', ') : String(rawMsg);
+      details = body?.details ?? (Array.isArray(rawMsg) ? rawMsg : undefined);
+    } else if (e instanceof Error) { 
+      message = e.message; 
+    }
 
     if (status >= 500) this.log.error(`[${rid}] ${req.method} ${req.url} ${status} ${message}`, e instanceof Error ? e.stack : e);
     else this.log.warn(`[${rid}] ${req.method} ${req.url} ${status} ${code}: ${message}`);

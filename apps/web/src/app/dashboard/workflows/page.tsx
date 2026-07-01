@@ -24,9 +24,23 @@ export default function WorkflowListPage() {
       </div>
 
       {isLoading && (
-        <div className="flex items-center justify-center p-12 text-muted-foreground text-sm gap-2">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-          加载中...
+        <div className="grid gap-4 sm:grid-cols-2">
+          {[1, 2].map((i) => (
+            <div key={i} className="rounded-xl border border-border/60 bg-card p-5 space-y-4 animate-pulse">
+              <div className="flex items-center justify-between">
+                <div className="h-9 w-9 rounded-lg bg-muted"></div>
+                <div className="h-5 w-12 rounded-full bg-muted"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 w-1/3 rounded bg-muted"></div>
+                <div className="h-3.5 w-2/3 rounded bg-muted"></div>
+              </div>
+              <div className="border-t border-border/40 pt-3 flex items-center justify-between">
+                <div className="h-4 w-16 rounded bg-muted"></div>
+                <div className="h-4 w-8 rounded bg-muted"></div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

@@ -1,4 +1,4 @@
-# ESLint 根配置 (扁平配置)
+// ESLint 根配置 (扁平配置)
 import js from '@eslint/js';
 import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
@@ -21,6 +21,10 @@ export default [
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'warn',
       'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-undef': 'off',
+      'no-redeclare': 'off',
+      'no-unused-vars': 'off',
+      'no-empty': 'warn',
     },
     ignores: ['**/dist/**', '**/.next/**', '**/node_modules/**', '**/generated/**'],
   },

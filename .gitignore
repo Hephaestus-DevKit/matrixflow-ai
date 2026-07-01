@@ -49,3 +49,6 @@ docker-data/
 .tmp/
 *.local
 nul
+
+.vercel
+.env*

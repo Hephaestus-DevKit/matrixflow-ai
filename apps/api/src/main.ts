@@ -13,8 +13,13 @@ async function bootstrap() {
 
   app.setGlobalPrefix(API_PREFIX);
   app.enableShutdownHooks();
+  const allowedOriginsStr = process.env.CORS_ALLOWED_ORIGINS;
+  const allowedOrigins = allowedOriginsStr
+    ? allowedOriginsStr.split(',').map((o) => o.trim())
+    : true;
+
   app.enableCors({
-    origin: true,
+    origin: allowedOrigins,
     credentials: true,
   });
   app.use(helmet({

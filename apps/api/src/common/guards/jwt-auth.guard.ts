@@ -6,6 +6,8 @@ import { PERMS_KEY } from '../interceptors/org.interceptor';
 import { AuthService } from '../../auth/auth.service';
 import { ConfigService } from '@nestjs/config';
 import { Client, Account } from 'node-appwrite';
+import { RedisService } from '../../redis/redis.service';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -13,6 +15,7 @@ export class JwtAuthGuard implements CanActivate {
     private reflector: Reflector,
     private authService: AuthService,
     private cfg: ConfigService,
+    private redis: RedisService,
   ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
@@ -22,32 +25,53 @@ export class JwtAuthGuard implements CanActivate {
     const token = this.extract(req);
     if (!token) throw new UnauthorizedException(ErrorCode.UNAUTHORIZED);
 
-    try {
-      // Initialize Appwrite Client with the user's JWT
-      const client = new Client()
-        .setEndpoint(this.cfg.get<string>('APPWRITE_ENDPOINT', 'https://cloud.appwrite.io/v1'))
-        .setProject(this.cfg.get<string>('APPWRITE_PROJECT_ID', ''));
-      
-      client.setJWT(token);
+    const headerOrg = req.headers['x-organization-id'] as string | undefined;
+    let userContext: any = null;
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const cacheKey = `jwt:${tokenHash}:${headerOrg || 'default'}`;
 
-      const appwriteAccount = new Account(client);
-      const appwriteUser = await appwriteAccount.get();
-      
-      // Auto-sync / verify user context in our PostgreSQL database
-      const syncedUser = await this.authService.syncUser(appwriteUser);
-      
-      req.user = {
-        id: syncedUser.id,
-        email: syncedUser.email,
-        name: syncedUser.name,
-        organizationId: syncedUser.organizationId,
-        role: syncedUser.role,
-        permissions: syncedUser.permissions ?? [],
-      };
-    } catch (err) {
-      console.error('Appwrite verification error:', err);
-      throw new UnauthorizedException(ErrorCode.TOKEN_INVALID);
+    try {
+      userContext = await this.redis.get<any>(cacheKey);
+    } catch (cacheErr) {
+      console.warn('JWT cache read error:', cacheErr);
     }
+
+    if (!userContext) {
+      try {
+        // Initialize Appwrite Client with the user's JWT
+        const client = new Client()
+          .setEndpoint(this.cfg.get<string>('APPWRITE_ENDPOINT', 'https://cloud.appwrite.io/v1'))
+          .setProject(this.cfg.get<string>('APPWRITE_PROJECT_ID', ''));
+        
+        client.setJWT(token);
+
+        const appwriteAccount = new Account(client);
+        const appwriteUser = await appwriteAccount.get();
+        
+        // Auto-sync / verify user context in our PostgreSQL database (enforcing target org permissions)
+        const syncedUser = await this.authService.syncUser(appwriteUser, headerOrg);
+        
+        userContext = {
+          id: syncedUser.id,
+          email: syncedUser.email,
+          name: syncedUser.name,
+          organizationId: syncedUser.organizationId,
+          role: syncedUser.role,
+          permissions: syncedUser.permissions ?? [],
+        };
+
+        try {
+          await this.redis.set(cacheKey, userContext, 60);
+        } catch (cacheErr) {
+          console.warn('JWT cache write error:', cacheErr);
+        }
+      } catch (err) {
+        console.error('Appwrite verification error:', err);
+        throw new UnauthorizedException(ErrorCode.TOKEN_INVALID);
+      }
+    }
+
+    req.user = userContext;
 
     const required = this.reflector.getAllAndOverride<string[]>(PERMS_KEY, [ctx.getHandler(), ctx.getClass()]);
     if (required?.length && !required.some((p) => req.user?.permissions?.includes(p))) {

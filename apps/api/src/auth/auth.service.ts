@@ -19,7 +19,7 @@ export class AuthService {
     private audit: AuditService,
   ) {}
 
-  async syncUser(appwriteUser: { $id: string; email: string; name?: string }) {
+  async syncUser(appwriteUser: { $id: string; email: string; name?: string }, targetOrgId?: string) {
     const appwriteId = appwriteUser.$id;
     const email = appwriteUser.email;
     const name = appwriteUser.name || email.split('@')[0] || 'User';
@@ -98,10 +98,23 @@ export class AuthService {
     }
 
     // 4. User exists, load membership and permissions
-    let membership = await this.prisma.organizationMember.findFirst({
-      where: { userId: user.id },
-      include: { role: { include: { permissions: true } }, organization: true }
-    });
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let membership: any = null;
+
+    if (targetOrgId && isUuid.test(targetOrgId)) {
+      membership = await this.prisma.organizationMember.findFirst({
+        where: { userId: user.id, organizationId: targetOrgId },
+        include: { role: { include: { permissions: true } }, organization: true }
+      });
+      if (!membership) {
+        throw new UnauthorizedException(ErrorCode.FORBIDDEN);
+      }
+    } else {
+      membership = await this.prisma.organizationMember.findFirst({
+        where: { userId: user.id },
+        include: { role: { include: { permissions: true } }, organization: true }
+      });
+    }
 
     if (!membership) {
       // Fallback: provision organization

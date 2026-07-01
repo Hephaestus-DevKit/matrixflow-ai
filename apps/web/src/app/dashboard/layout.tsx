@@ -13,20 +13,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    // Client-side optimistic check: if user is already cached in state, unblock rendering instantly
+    if (useAuth.getState().user) {
+      setChecking(false);
+    }
     fetchMe().then(() => {
       setChecking(false);
       if (!useAuth.getState().user) {
         router.replace('/login');
       }
     });
-  }, []);
+  }, [fetchMe, router]);
 
   // Sync logout action: when initialized and user becomes null, immediately redirect to login page
   useEffect(() => {
     if (!checking && !user) {
       router.replace('/login');
     }
-  }, [user, checking]);
+  }, [user, checking, router]);
 
   if (checking || !user) {
     return (
