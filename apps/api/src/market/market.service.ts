@@ -33,7 +33,7 @@ export class MarketService {
     const platformFee = item.priceUsd * 0.2;
     const devRevenue = item.priceUsd - platformFee;
     const purchase = await this.prisma.$transaction(async (tx: any) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`market-purchase:${organizationId}:${itemId}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`market-purchase:${organizationId}:${itemId}`}))`;
       const existing = await tx.marketplacePurchase.findFirst({ where: { itemId, buyerOrgId: organizationId, status: 'paid' } });
       if (existing) throw new ConflictException('Item already purchased');
       const created = await tx.marketplacePurchase.create({ data: { itemId, buyerOrgId: organizationId, priceUsd: item.priceUsd, platformFeeUsd: platformFee, developerRevenueUsd: devRevenue } });

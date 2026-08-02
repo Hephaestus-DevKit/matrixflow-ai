@@ -30,7 +30,7 @@ export class AuthService {
     const email = appwriteUser.email.trim().toLowerCase();
     const name = appwriteUser.name || email.split('@')[0] || 'User';
     const user = await this.prisma.$transaction(async (tx: any) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`appwrite:${appwriteId}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`appwrite:${appwriteId}`}))`;
       const linked = await tx.account.findUnique({
         where: { provider_providerAccountId: { provider: 'appwrite', providerAccountId: appwriteId } },
         include: { user: true },
@@ -67,7 +67,7 @@ export class AuthService {
     let provisionedOrgId: string | undefined;
     if (!membership && !targetOrgId) {
       const provisioned = await this.prisma.$transaction(async (tx: any) => {
-        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`provision:${user.id}`}))`;
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`provision:${user.id}`}))`;
         const existing = await tx.organizationMember.findFirst({
           where: { userId: user.id, organization: { deletedAt: null, status: { not: 'SUSPENDED' } } },
           include: { role: { include: { permissions: true } }, organization: true },
@@ -201,7 +201,7 @@ export class AuthService {
   private async createDefaultOrganization(tx: any, userId: string, organizationName: string) {
     let slugLock = organizationName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'team';
     if (slugLock.length < 3) slugLock = slugLock.padEnd(3, '0');
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`org-slug:${slugLock}`}))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`org-slug:${slugLock}`}))`;
     const slug = await this.uniqueSlug(organizationName, tx);
     const organization = await tx.organization.create({ data: { slug, name: organizationName, plan: 'FREE' } });
     const owner = await tx.role.create({ data: { organizationId: organization.id, name: RoleName.OWNER, isSystem: true } });

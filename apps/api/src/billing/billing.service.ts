@@ -18,7 +18,7 @@ export class BillingService {
     if (price > 0) throw new HttpException('Paid subscription checkout is not configured', HttpStatus.PAYMENT_REQUIRED);
     const start = new Date(); const end = new Date(); end.setMonth(end.getMonth() + (interval === 'year' ? 12 : 1));
     return this.prisma.$transaction(async (tx: any) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`subscription:${organizationId}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`subscription:${organizationId}`}))`;
       const existing = await tx.subscription.findFirst({ where: { organizationId, status: { in: ['active', 'trialing'] } }, orderBy: { createdAt: 'desc' } });
       if (existing) {
         return tx.subscription.update({ where: { id: existing.id }, data: { planId, interval, status: 'active', currentPeriodStart: start, currentPeriodEnd: end, cancelAt: null, canceledAt: null } });

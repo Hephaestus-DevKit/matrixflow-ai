@@ -15,7 +15,7 @@ export class OrgService {
   async create(userId: string, input: unknown) {
     const dto = createOrgSchema.parse(input);
     const org = await this.prisma.$transaction(async (tx: any) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`org-slug:${dto.slug}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`org-slug:${dto.slug}`}))`;
       const exists = await tx.organization.findUnique({ where: { slug: dto.slug } });
       if (exists) throw new ConflictException(ErrorCode.CONFLICT);
       const created = await tx.organization.create({ data: { slug: dto.slug, name: dto.name, plan: 'FREE' } });
@@ -60,7 +60,7 @@ export class OrgService {
   async changeRole(userId: string, orgId: string, targetUserId: string, roleName: string) {
     if (userId === targetUserId) throw new ForbiddenException('Cannot change own role');
     await this.prisma.$transaction(async (tx: any) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`org-owners:${orgId}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`org-owners:${orgId}`}))`;
       const role = await tx.role.findFirst({ where: { organizationId: orgId, name: roleName } });
       if (!role) throw new NotFoundException('Role not found');
       const member = await tx.organizationMember.findUnique({ where: { organizationId_userId: { organizationId: orgId, userId: targetUserId } } });
@@ -75,7 +75,7 @@ export class OrgService {
   async remove(userId: string, orgId: string, targetUserId: string) {
     if (userId === targetUserId) throw new ForbiddenException('Cannot remove self');
     await this.prisma.$transaction(async (tx: any) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`org-owners:${orgId}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`org-owners:${orgId}`}))`;
       const member = await tx.organizationMember.findUnique({ where: { organizationId_userId: { organizationId: orgId, userId: targetUserId } } });
       if (!member) throw new NotFoundException('Member not found');
       await this.assertOwnerRemains(tx, orgId, member.roleId);

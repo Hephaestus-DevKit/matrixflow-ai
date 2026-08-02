@@ -38,7 +38,7 @@ export class WorkflowService {
     const wf = await this.prisma.workflow.findFirst({ where: { id, organizationId } });
     if (!wf) throw new NotFoundException();
     return this.prisma.$transaction(async (tx: any) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`workflow-version:${id}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`workflow-version:${id}`}))`;
       const count = await tx.workflowVersion.count({ where: { workflowId: id } });
       const v = await tx.workflowVersion.create({ data: { workflowId: id, version: count + 1, dsl, changeNote, createdBy: userId } });
       await tx.workflow.update({ where: { id }, data: { currentVersion: v.version } });
