@@ -6,11 +6,15 @@ export class AdminService {
   constructor(private prisma: PrismaService) {}
 
   async users(page = 1, pageSize = 20, q?: string) {
+    page = Math.max(1, Number(page) || 1);
+    pageSize = Math.min(100, Math.max(1, Number(pageSize) || 20));
     const where = q ? { OR: [{ email: { contains: q } }, { name: { contains: q } }] } : {};
-    const [data, total] = await Promise.all([this.prisma.user.findMany({ where, skip: (page - 1) * pageSize, take: pageSize, orderBy: { createdAt: 'desc' } }), this.prisma.user.count({ where })]);
+    const [data, total] = await Promise.all([this.prisma.user.findMany({ where, select: { id: true, email: true, name: true, avatarUrl: true, locale: true, status: true, lastLoginAt: true, createdAt: true, updatedAt: true }, skip: (page - 1) * pageSize, take: pageSize, orderBy: { createdAt: 'desc' } }), this.prisma.user.count({ where })]);
     return { data, total, page, pageSize };
   }
   async orgs(page = 1, pageSize = 20) {
+    page = Math.max(1, Number(page) || 1);
+    pageSize = Math.min(100, Math.max(1, Number(pageSize) || 20));
     const [data, total] = await Promise.all([this.prisma.organization.findMany({ skip: (page - 1) * pageSize, take: pageSize, orderBy: { createdAt: 'desc' } }), this.prisma.organization.count()]);
     return { data, total, page, pageSize };
   }
@@ -32,6 +36,8 @@ export class AdminService {
   async approveItem(id: string) { return this.prisma.marketplaceItem.update({ where: { id }, data: { status: 'approved' } }); }
   async rejectItem(id: string, reason: string) { return this.prisma.marketplaceItem.update({ where: { id }, data: { status: 'rejected', metadata: { reason } } as any }); }
   async auditLogs(page = 1, pageSize = 50) {
+    page = Math.max(1, Number(page) || 1);
+    pageSize = Math.min(100, Math.max(1, Number(pageSize) || 50));
     const [data, total] = await Promise.all([this.prisma.auditLog.findMany({ skip: (page - 1) * pageSize, take: pageSize, orderBy: { createdAt: 'desc' } }), this.prisma.auditLog.count()]);
     return { data, total, page, pageSize };
   }

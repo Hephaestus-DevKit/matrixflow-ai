@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
-import { Bot, Plus, Loader2, ArrowRight } from 'lucide-react';
+import { Bot, Plus } from 'lucide-react';
 
 export default function AgentListPage() {
   const { data: agents, isLoading } = useQuery({ queryKey: ['agents'], queryFn: () => apiClient.get<any[]>('/agents') });

@@ -8,6 +8,7 @@ build/
 .next/
 out/
 .turbo/
+.tmp/
 *.tsbuildinfo
 
 # env
@@ -40,13 +41,20 @@ Thumbs.db
 packages/db/prisma/migrations/dev.db*
 packages/db/src/generated/
 
+# python
+__pycache__/
+*.py[cod]
+.venv/
+
+# local generated datasets
+data/*.jsonl
+
 # docker
 docker-data/
 .npm-cache/
 
 # misc
 .cache/
-.tmp/
 *.local
 nul
 

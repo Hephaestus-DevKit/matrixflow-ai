@@ -8,88 +8,126 @@ app_port: 7860
 pinned: false
 ---
 
-# MatrixFlow AI 🚀
+# MatrixFlow AI
 
-> **面向中小企业、出海团队与创作者的一站式 AI 员工操作系统与工作流自动化中心。**
-> 允许团队在几分钟内创建、部署并管理具备专业技能的 AI 员工，支持可视化拖拽工作流画布、向量知识库（RAG）、内容工厂、客户关系管理（CRM）与模板市场。
+面向中小团队的 AI 员工、内容生成、知识库 RAG、CRM 与可视化工作流平台。
 
-[![Status](https://img.shields.io/badge/status-production--ready-success)]()
-[![Stack](https://img.shields.io/badge/stack-Next.js%2014%20%7C%20NestJS%2010-blue)]()
+[![Status](https://img.shields.io/badge/status-beta-yellow)]()
+[![Stack](https://img.shields.io/badge/stack-Next.js%2015%20%7C%20NestJS%2011-blue)]()
+[![Runtime](https://img.shields.io/badge/runtime-Node.js%2022%20%7C%20pnpm%2011-indigo)]()
 [![Database](https://img.shields.io/badge/database-PostgreSQL%20%7C%20Redis%20%7C%20MinIO-indigo)]()
-[![Security](https://img.shields.io/badge/security-enterprise--grade-red)]()
 
----
+## 当前能力
 
-## 🌟 核心产品特性
+- AI 员工、内容工厂、CRM、组织与 RBAC。
+- PostgreSQL + pgvector 知识库，支持 PDF、DOCX、TXT、Markdown、CSV。
+- React Flow 工作流编辑器；AI、条件、转换和受 SSRF 防护的 Webhook 节点可执行。
+- BullMQ 文档与工作流异步任务，带重试、退避和数据库执行租约。
+- Appwrite 生产认证、本地开发认证、原子 Refresh Token 轮换和多租户隔离。
+- 全局限流、AI 超时、私有 MinIO、真实 readiness、版本化 Prisma migration。
 
-* **📊 实时数据看板 (Analytics Dashboard)**：全维度监控系统级与团队级指标，如总执行耗时、接口吞吐量、活跃 AI 员工数与会话分析。
-* **🤖 智能 AI 员工群 (AI Staffs)**：支持多模态 AI 岗位定制、技能树绑定与自动同步，配备高保真 Skeleton 卡片渐变闪烁交互。
-* **⚙️ 可视化工作流引擎 (Visual Workflows)**：基于 React Flow 拖拽式画布，支持将 AI 决策节点、分支条件判定与第三方 API 粘合为多任务队列自动化管线。
-* **📖 向量知识库 (Knowledge Base / RAG)**：深度集成 PostgreSQL + pgvector 向量检索，支持私有 PDF/Word 等多格式文档批量解析、智能分块与向量化。
-* **🏬 模板交易市场 (Marketplace)**：预设丰富的官方/第三方商业化岗位与工作流模板，支持一键购买、克隆并热部署。
+邮件、人工审批、调度和循环工作流节点尚未接入适配器。Stripe 上线前，付费订阅和付费市场交易返回 HTTP 402，不会生成虚假支付状态。
 
----
+## 仓库结构
 
-## 🛡️ 企业级高并发与安全架构
-
-* **🔐 严格多租户数据隔离**：在 JWT 拦截层与 API 守卫自动提取并深度校验租户成员资格，配合 UUID 校验阻止一切数据跨越权漏洞。
-* **⚡ 极速 JWT 验证缓存**：将 Appwrite 认证上下文基于 SHA-256 哈希缓存于 Redis 中（按租户隔离），使 API 接口鉴权延迟从 **~200ms 降至 <2ms**。
-* **🔎 全链路 Request ID 链路追踪**：生成全局唯一追踪号 `mfa_req_*` 并通过响应头与 Pino 结构化日志串联，异常报错可在百万行日志中瞬间定位。
-* **💎 鲁棒性与异常规整**：
-  * **Zod 校验格式化**：将参数校验报错自动聚合成清晰友好的路径提示（如 `name: Required`），极大提升开发与交互体验。
-  * **数据库连接池自愈**：通过 Prisma pg-Pool 显式在容器生命周期销毁时安全释放连接，防 Neon Serverless 数据库连接被撑爆。
-  * **CORS 域限制**：支持在生产环境下限制跨域白名单（`CORS_ALLOWED_ORIGINS`）。
-
----
-
-## 🛠️ 技术选型与仓库结构
-
-```
+```text
 matrixflow-ai/
-├── apps/
-│   ├── web/              # Next.js 14 前端 (Zustand + TanStack Query)
-│   ├── api/              # NestJS 10 后端 (Express + Prisma 5 + Pino)
-│   └── worker/           # BullMQ Background Workers (Redis 7)
-├── packages/
-│   ├── shared/           # 共享数据校验、Zod Schema 与常量定义
-│   ├── db/               # Prisma Schema、自动生成客户端与迁移脚本
-│   ├── ui/               # shadcn/ui 核心业务组件库
-│   ├── ai-gateway/       # 统一 AI 大模型网关抽象 (流式输出 + 计量)
-│   └── workflow-engine/  # 工作流 DSL + DAG 执行引擎
+├─ apps/
+│  ├─ web/                 Next.js 前端
+│  ├─ api/                 NestJS HTTP API 与业务模块
+│  ├─ worker/              BullMQ 消费者
+│  └─ sidecar/             Python 文档解析服务
+├─ packages/
+│  ├─ shared/              常量、Schema 与 DTO
+│  ├─ db/                  Prisma Client、Schema、migration、seed
+│  ├─ ai-gateway/          模型 Provider 与 Prompt 网关
+│  ├─ workflow-engine/     与框架无关的 DAG 校验/执行核心
+│  └─ ui/                  共享 UI 组件
+├─ scripts/                构建辅助、容器启动、测试数据工具
+├─ data/                   产品模板源数据
+├─ infra/                  独立生产镜像定义
+└─ docs/                   架构、安全、运维与产品资料
 ```
 
----
+详细职责、依赖方向和扩展约定见 [架构说明](docs/architecture.md)。文档入口见 [docs/README.md](docs/README.md)。
 
-## ⚡ 极速本地启动
+## 本地开发
 
-### 1. 克隆与安装依赖
+要求：Node.js ≥ 22.13、pnpm 11.9、Docker Compose。
+
 ```bash
-pnpm install
-```
-
-### 2. 启动 Docker 基础设施
-```bash
+pnpm install --frozen-lockfile
 cp .env.example .env
-docker compose up -d   # 包含 Postgres+pgvector, Redis, MinIO, MailHog
 ```
 
-### 3. 初始化并写入种子数据
+至少配置：
+
+```dotenv
+APPWRITE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_APPWRITE_PROJECT_ID=your-project-id
+INTERNAL_JOB_SECRET=generate-a-random-secret-at-least-32-characters
+GLM_API_KEY=your-key
+```
+
+启动基础设施并初始化数据库：
+
 ```bash
-pnpm db:generate       # 生成 Prisma Client 客户端
-pnpm db:migrate        # 应用数据库迁移 schema
-pnpm db:seed           # 预植系统全局角色、菜单权限与 Prompt 模板
+docker compose up -d postgres redis minio minio-init sidecar mailhog
+pnpm db:generate
+pnpm db:migrate
+pnpm db:seed
+pnpm dev
 ```
 
-### 4. 启动多端开发服务器
+服务地址：
+
+- Web：http://localhost:3000
+- API：http://localhost:3001/api/v1
+- Swagger（非生产）：http://localhost:3001/api/v1/docs
+- MinIO Console：http://localhost:9001
+- MailHog：http://localhost:8025
+
+需要完整容器化环境时运行：
+
 ```bash
-pnpm dev               # 并行热启动前端 (3000)、API (3001) 与 Worker 进程
+docker compose up -d --build
 ```
 
-* 访问前端：[http://localhost:3000](http://localhost:3000)
-* 后端文档（开发环境）：[http://localhost:3001/api/v1/docs](http://localhost:3001/api/v1/docs)
+## 常用命令
 
----
+| 命令 | 用途 |
+|---|---|
+| `pnpm dev` | 启动 Web、API、Worker 和各包 watch |
+| `pnpm build` | 构建全部 workspace |
+| `pnpm typecheck` | TypeScript 类型检查 |
+| `pnpm lint` | ESLint 检查 |
+| `pnpm test` | Node 单元测试 |
+| `pnpm db:migrate` | 应用版本化 migration |
+| `pnpm db:seed` | 写入基础套餐与模板 |
+| `pnpm audit --prod --audit-level=high` | 生产依赖审计 |
 
-## 📃 License
+## 发布门禁
+
+```bash
+pnpm install --frozen-lockfile
+pnpm db:generate
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+pnpm audit --prod --audit-level=high
+```
+
+CI 会额外启动 PostgreSQL/pgvector 和 Redis，执行 migration、API E2E 与生产 API 镜像构建。生产配置、部署顺序和剩余外部依赖见 [生产就绪说明](docs/production-readiness.md)；已实现和待实现的安全控制见 [安全状态](docs/security.md)。
+
+## 维护约定
+
+- API 业务按 `controller → service → infrastructure` 组织；跨域复用逻辑下沉到 `packages/`。
+- 所有数据库变更必须新增 migration，禁止生产使用 `prisma db push`。
+- Worker 只负责消费队列；受保护的业务执行仍由 API 内部端点完成。
+- 新环境变量必须同步更新 `.env.example` 和生产环境校验。
+- 不提交 `.env`、生成 Client、构建产物、缓存、Python 字节码或临时数据集。
+
+## License
 
 Private. © 2026 MatrixFlow AI. 保留所有权利。

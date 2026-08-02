@@ -1,7 +1,7 @@
 import { Body, Controller, Post, Req, Sse, MessageEvent } from '@nestjs/common';
 import { Request } from 'express';
 import { AiService } from './ai.service';
-import { RequireAction, ReqUser } from '../common/interceptors/org.interceptor';
+import { RequireAction, ReqUser } from '../common/auth-context';
 import { Action } from '@matrixflow/shared';
 import { Observable } from 'rxjs';
 

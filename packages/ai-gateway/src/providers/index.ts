@@ -6,8 +6,8 @@ import { Provider } from '@matrixflow/shared';
 export { GlmProvider, OpenAIProvider };
 
 export function createProviders(opts: {
-  glm?: { apiKey: string; baseUrl?: string; defaultModel?: string };
-  openai?: { apiKey: string; baseUrl?: string; defaultModel?: string };
+  glm?: { apiKey: string; baseUrl?: string; defaultModel?: string; timeoutMs?: number };
+  openai?: { apiKey: string; baseUrl?: string; defaultModel?: string; timeoutMs?: number };
 }): Record<Provider, ProviderClient | null> {
   return {
     [Provider.GLM]: opts.glm?.apiKey ? new GlmProvider(opts.glm) : null,

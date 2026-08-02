@@ -5,8 +5,9 @@ import { useAuth } from '@/lib/auth-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, Key, LogOut, Check, Save, Sparkles, ShieldCheck } from 'lucide-react';
+import { Key, LogOut, Check, Save, Sparkles, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import Image from 'next/image';
 
 const PRESET_AVATARS = [
   { id: 'slate', color: '#607987', label: '柔蓝' },
@@ -24,7 +25,7 @@ function makeSvgAvatar(color: string): string {
 }
 
 export default function SettingsPage() {
-  const { user, updateProfile, logout, loading } = useAuth();
+  const { user, updateProfile, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'enterprise'>('profile');
   const [name, setName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -114,9 +115,12 @@ export default function SettingsPage() {
               {/* Avatar Preview */}
               <div className="relative">
                 {avatarUrl ? (
-                  <img
+                  <Image
                     src={avatarUrl}
                     alt="Preview"
+                    width={64}
+                    height={64}
+                    unoptimized
                     className="h-16 w-16 rounded-full object-cover border border-border bg-muted/40 shadow-sm"
                   />
                 ) : (

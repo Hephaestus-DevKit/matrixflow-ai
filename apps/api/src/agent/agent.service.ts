@@ -30,6 +30,8 @@ export class AgentService {
     const dto = createAgentSchema.partial().parse(input);
     const { skills, tools, ...data } = dto;
     return this.prisma.$transaction(async (tx: any) => {
+      const existing = await tx.agent.findFirst({ where: { id, organizationId, deletedAt: null } });
+      if (!existing) throw new NotFoundException();
       const agent = await tx.agent.update({ where: { id }, data: { ...data, systemPrompt: data.systemPrompt as any } });
       if (skills) { await tx.agentSkill.deleteMany({ where: { agentId: id } }); await tx.agentSkill.createMany({ data: skills.map((s) => ({ agentId: id, skillKey: s.skillKey, config: s.config as any })) }); }
       if (tools) { await tx.agentTool.deleteMany({ where: { agentId: id } }); await tx.agentTool.createMany({ data: tools.map((t) => ({ agentId: id, toolKey: t.toolKey, config: t.config as any })) }); }
@@ -39,7 +41,8 @@ export class AgentService {
   }
 
   async remove(organizationId: string, userId: string, id: string) {
-    await this.prisma.agent.update({ where: { id }, data: { deletedAt: new Date() } });
+    const result = await this.prisma.agent.updateMany({ where: { id, organizationId, deletedAt: null }, data: { deletedAt: new Date() } });
+    if (result.count === 0) throw new NotFoundException();
     await this.audit.log({ action: 'agent.delete', userId, organizationId, resource: 'agent', resourceId: id });
     return { ok: true };
   }

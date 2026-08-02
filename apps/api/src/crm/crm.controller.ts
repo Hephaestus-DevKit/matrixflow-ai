@@ -1,7 +1,7 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req } from '@nestjs/common';
 import { Request } from 'express';
 import { CrmService } from './crm.service';
-import { RequireAction, ReqUser } from '../common/interceptors/org.interceptor';
+import { RequireAction, ReqUser } from '../common/auth-context';
 import { Action } from '@matrixflow/shared';
 
 @Controller('crm')

@@ -1,15 +1,21 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
-import { ErrorCode, RoleName } from '@matrixflow/shared';
-import { ReqUser } from '../common/interceptors/org.interceptor';
+import { ErrorCode } from '@matrixflow/shared';
+import { ReqUser } from '../common/auth-context';
 
 @Injectable()
 export class AdminGuard implements CanActivate {
+  constructor(private readonly config: ConfigService) {}
+
   canActivate(ctx: ExecutionContext): boolean {
     const req = ctx.switchToHttp().getRequest<Request>();
     const u = req.user as ReqUser;
-    // 简化：role=owner 视为平台管理员。生产应有独立 platform_admin 标志位。
-    if (u?.role !== RoleName.OWNER) throw new ForbiddenException(ErrorCode.FORBIDDEN);
+    const ids = this.config.get<string>('PLATFORM_ADMIN_IDS', '').split(',').map((v) => v.trim()).filter(Boolean);
+    const emails = this.config.get<string>('PLATFORM_ADMIN_EMAILS', '').split(',').map((v) => v.trim().toLowerCase()).filter(Boolean);
+    if (!u || !ids.includes(u.id) && !emails.includes(u.email.toLowerCase())) {
+      throw new ForbiddenException(ErrorCode.FORBIDDEN);
+    }
     return true;
   }
 }

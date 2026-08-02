@@ -6,7 +6,7 @@ const nextConfig = {
     unoptimized: true,
     remotePatterns: [{ protocol: 'https', hostname: '**' }] 
   },
-  experimental: { typedRoutes: true },
+  typedRoutes: true,
   transpilePackages: ['@matrixflow/shared', '@matrixflow/ui'],
 };
 

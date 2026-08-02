@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth-store';
 import { apiClient } from '@/lib/api-client';
 import { useQuery } from '@tanstack/react-query';
 import { Bot, Factory, Zap, FolderOpen, ArrowRight, Sparkles } from 'lucide-react';
+import Link from 'next/link';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -52,7 +53,7 @@ export default function DashboardPage() {
       <div className="space-y-4">
         <h2 className="text-base font-bold tracking-tight">快捷入口</h2>
         <div className="grid gap-4 sm:grid-cols-3">
-          <a
+          <Link
             href="/dashboard/content/new"
             className="group rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md"
           >
@@ -65,9 +66,9 @@ export default function DashboardPage() {
             <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
               导入商品细节，一键批量产出标题、Listing 描述、TikTok 脚本等 15 种文案。
             </p>
-          </a>
+          </Link>
 
-          <a
+          <Link
             href="/dashboard/agents/new"
             className="group rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md"
           >
@@ -80,9 +81,9 @@ export default function DashboardPage() {
             <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
               从行业标杆模板库快速创建客服、文案策划、竞品分析或SEO优化员工。
             </p>
-          </a>
+          </Link>
 
-          <a
+          <Link
             href="/dashboard/knowledge/new"
             className="group rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md"
           >
@@ -95,7 +96,7 @@ export default function DashboardPage() {
             <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
               上传私域商品资料、历史邮件或客服Q&A，赋能 AI 员工以实现精确回答。
             </p>
-          </a>
+          </Link>
         </div>
       </div>
     </div>

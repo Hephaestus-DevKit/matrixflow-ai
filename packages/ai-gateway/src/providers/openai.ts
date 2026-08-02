@@ -3,18 +3,21 @@ import { BaseProvider } from './base';
 import type { ChatRequest, ChatResponse, StreamChunk } from '../types';
 import { AiGatewayError } from '../types';
 import { Provider } from '@matrixflow/shared';
+import { ChatCompletionPayload, EmbeddingPayload, providerErrorMessage } from './openai-compatible.types';
 
 export class OpenAIProvider extends BaseProvider {
   name = Provider.OPENAI;
   protected baseUrl: string;
   protected apiKey: string;
   private defaultModel: string;
+  private timeoutMs: number;
 
-  constructor(opts: { apiKey: string; baseUrl?: string; defaultModel?: string }) {
+  constructor(opts: { apiKey: string; baseUrl?: string; defaultModel?: string; timeoutMs?: number }) {
     super();
     this.apiKey = opts.apiKey;
     this.baseUrl = (opts.baseUrl ?? 'https://api.openai.com/v1').replace(/\/$/, '');
     this.defaultModel = opts.defaultModel ?? 'gpt-4o-mini';
+    this.timeoutMs = opts.timeoutMs ?? 60_000;
   }
 
   async chat(req: ChatRequest): Promise<ChatResponse> {
@@ -22,12 +25,13 @@ export class OpenAIProvider extends BaseProvider {
       const res = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST', headers: this.headers(),
         body: JSON.stringify(this.toPayload(req, false)),
+        signal: AbortSignal.timeout(this.timeoutMs),
       });
       if (!res.ok) throw await this.toError(res);
-      const j = await res.json() as any;
+      const j = await res.json() as ChatCompletionPayload;
       const u = j.usage ?? {};
       return {
-        id: j.id, model: req.model, content: j.choices?.[0]?.message?.content ?? '',
+        id: j.id ?? crypto.randomUUID(), model: req.model, content: j.choices?.[0]?.message?.content ?? '',
         usage: { inputTokens: u.prompt_tokens ?? 0, outputTokens: u.completion_tokens ?? 0, totalTokens: u.total_tokens ?? 0 },
         costUsd: 0, provider: this.name,
       };
@@ -37,6 +41,7 @@ export class OpenAIProvider extends BaseProvider {
   async *chatStream(req: ChatRequest): AsyncIterable<StreamChunk> {
     const res = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST', headers: this.headers(), body: JSON.stringify(this.toPayload(req, true)),
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
     if (!res.ok || !res.body) throw await this.toError(res);
     const reader = res.body.getReader();
@@ -53,7 +58,7 @@ export class OpenAIProvider extends BaseProvider {
         if (!t.startsWith('data:')) continue;
         const d = t.slice(5).trim();
         if (d === '[DONE]') { yield { delta: '', done: true }; return; }
-        try { const j = JSON.parse(d); const delta = j.choices?.[0]?.delta?.content ?? ''; if (delta) yield { delta, done: false }; } catch {}
+        try { const j = JSON.parse(d) as ChatCompletionPayload; const delta = j.choices?.[0]?.delta?.content ?? ''; if (delta) yield { delta, done: false }; } catch { /* ignore an incomplete SSE frame */ }
       }
     }
     yield { delta: '', done: true };
@@ -63,10 +68,13 @@ export class OpenAIProvider extends BaseProvider {
     const res = await fetch(`${this.baseUrl}/embeddings`, {
       method: 'POST', headers: this.headers(),
       body: JSON.stringify({ model, input: text, encoding_format: 'float' }),
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
     if (!res.ok) throw await this.toError(res);
-    const j = await res.json() as any;
-    return { vector: j.data[0].embedding, tokens: j.usage?.total_tokens ?? Math.ceil(text.length / 4) };
+    const j = await res.json() as EmbeddingPayload;
+    const vector = j.data?.[0]?.embedding;
+    if (!Array.isArray(vector)) throw new AiGatewayError('AI_PROVIDER_ERROR', 'OpenAI returned an invalid embedding payload');
+    return { vector, tokens: j.usage?.total_tokens ?? Math.ceil(text.length / 4) };
   }
 
   private toPayload(req: ChatRequest, stream: boolean) {
@@ -74,7 +82,7 @@ export class OpenAIProvider extends BaseProvider {
   }
   private async toError(res: Response): Promise<AiGatewayError> {
     let msg = `OpenAI ${res.status}`;
-    try { const j = await res.json(); msg = j.error?.message ?? JSON.stringify(j); } catch {}
+    try { const payload: unknown = await res.json(); msg = providerErrorMessage(payload) ?? JSON.stringify(payload); } catch { /* response body is not JSON */ }
     return new AiGatewayError('AI_PROVIDER_ERROR', msg, res.status);
   }
 }

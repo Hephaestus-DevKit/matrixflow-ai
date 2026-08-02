@@ -27,12 +27,10 @@ done
 
 echo "Symlinks verified"
 
-# Run database pre-initialization (enable pgvector)
-node scripts/db-init.js || true
-
-# Push schema if needed
-echo "Pushing database schema..."
-npx -p prisma@6.19.3 prisma db push --schema packages/db/prisma/schema.prisma --accept-data-loss --skip-generate || echo "Prisma db push failed! Please check connection to database."
+# Apply versioned, non-destructive production migrations. A failed migration
+# must stop startup rather than launching against an unknown schema.
+echo "Applying database migrations..."
+pnpm --filter @matrixflow/db exec prisma migrate deploy --schema prisma/schema.prisma
 
 echo "Starting Python Sidecar..."
 export SIDECAR_PYTHON_URL=${SIDECAR_PYTHON_URL:-http://localhost:8001}
@@ -49,4 +47,7 @@ for i in $(seq 1 10); do
 done
 
 echo "Starting MatrixFlow API..."
+export INTERNAL_API_URL=${INTERNAL_API_URL:-http://localhost:${PORT:-7860}/api/v1}
+echo "Starting MatrixFlow Worker..."
+node apps/worker/dist/main.js &
 exec node apps/api/dist/main.js

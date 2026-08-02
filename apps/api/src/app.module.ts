@@ -20,9 +20,11 @@ import { MarketModule } from './market/market.module';
 import { BillingModule } from './billing/billing.module';
 import { AdminModule } from './admin/admin.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import { OrgInterceptor } from './common/interceptors/org.interceptor';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { MetricsInterceptor } from './common/interceptors/metrics.interceptor';
+import { RateLimitGuard } from './common/guards/rate-limit.guard';
+import { QueueModule } from './queue/queue.module';
+import { JobsModule } from './jobs/jobs.module';
 
 @Module({
   imports: [
@@ -37,13 +39,14 @@ import { MetricsInterceptor } from './common/interceptors/metrics.interceptor';
         },
       }),
     }),
-    CommonModule, PrismaModule, RedisModule, FileModule, HealthModule,
+    CommonModule, PrismaModule, RedisModule, QueueModule, FileModule, HealthModule,
     AuthModule, OrgModule, AiModule, AgentModule, ContentModule, KbModule, WorkflowModule, CrmModule, MarketModule, BillingModule, AdminModule,
+    JobsModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
-    { provide: APP_INTERCEPTOR, useClass: OrgInterceptor },
     { provide: APP_INTERCEPTOR, useClass: MetricsInterceptor },
+    { provide: APP_GUARD, useClass: RateLimitGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })

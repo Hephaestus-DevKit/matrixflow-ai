@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, Query, Req } from '@nestjs/common';
 import { Request } from 'express';
 import { MarketService } from './market.service';
-import { RequireAction, ReqUser } from '../common/interceptors/org.interceptor';
+import { RequireAction, ReqUser } from '../common/auth-context';
 import { Public } from '../common/guards/jwt-auth.guard';
 
 @Controller('market')

@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Send, Sparkles, CheckCircle2, Loader2, Lock } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle2, Loader2 } from 'lucide-react';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');

@@ -1,8 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, Req, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Req, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { KbService } from './kb.service';
-import { RequireAction, ReqUser } from '../common/interceptors/org.interceptor';
+import { RequireAction, ReqUser } from '../common/auth-context';
 import { Action } from '@matrixflow/shared';
 
 @Controller('kb')

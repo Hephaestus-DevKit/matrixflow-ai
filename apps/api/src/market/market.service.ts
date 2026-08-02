@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../common/audit.service';
 
@@ -7,7 +7,9 @@ export class MarketService {
   constructor(private prisma: PrismaService, private audit: AuditService) {}
 
   async list(filters: { type?: string; category?: string; q?: string; page?: number; pageSize?: number }) {
-    const { type, category, q, page = 1, pageSize = 20 } = filters;
+    const { type, category, q } = filters;
+    const page = Math.max(1, Number(filters.page) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(filters.pageSize) || 20));
     const where = { status: 'approved', deletedAt: null, ...(type ? { type } : {}), ...(category ? { category } : {}), ...(q ? { OR: [{ name: { contains: q } }, { description: { contains: q } }] } : {}) };
     const [data, total] = await Promise.all([
       this.prisma.marketplaceItem.findMany({ where, orderBy: { installs: 'desc' }, skip: (page - 1) * pageSize, take: pageSize }),
@@ -27,12 +29,19 @@ export class MarketService {
   async purchase(organizationId: string, userId: string, itemId: string) {
     const item = await this.prisma.marketplaceItem.findUnique({ where: { id: itemId } });
     if (!item || item.status !== 'approved') throw new NotFoundException();
+    if (item.priceUsd > 0) throw new HttpException('Paid marketplace checkout is not configured', HttpStatus.PAYMENT_REQUIRED);
     const platformFee = item.priceUsd * 0.2;
     const devRevenue = item.priceUsd - platformFee;
-    const p = await this.prisma.marketplacePurchase.create({ data: { itemId, buyerOrgId: organizationId, priceUsd: item.priceUsd, platformFeeUsd: platformFee, developerRevenueUsd: devRevenue } });
-    await this.prisma.marketplaceItem.update({ where: { id: itemId }, data: { installs: { increment: 1 } } });
+    const purchase = await this.prisma.$transaction(async (tx: any) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`market-purchase:${organizationId}:${itemId}`}))`;
+      const existing = await tx.marketplacePurchase.findFirst({ where: { itemId, buyerOrgId: organizationId, status: 'paid' } });
+      if (existing) throw new ConflictException('Item already purchased');
+      const created = await tx.marketplacePurchase.create({ data: { itemId, buyerOrgId: organizationId, priceUsd: item.priceUsd, platformFeeUsd: platformFee, developerRevenueUsd: devRevenue } });
+      await tx.marketplaceItem.update({ where: { id: itemId }, data: { installs: { increment: 1 } } });
+      return created;
+    });
     await this.audit.log({ action: 'market.purchase', userId, organizationId, resource: 'item', resourceId: itemId, metadata: { price: item.priceUsd } as any });
-    return { purchaseId: p.id, payload: item.payload };
+    return { purchaseId: purchase.id, payload: item.payload };
   }
 
   async purchased(organizationId: string) {
@@ -40,6 +49,11 @@ export class MarketService {
   }
 
   async review(organizationId: string, userId: string, itemId: string, rating: number, comment?: string) {
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new BadRequestException('Rating must be an integer from 1 to 5');
+    const item = await this.prisma.marketplaceItem.findFirst({ where: { id: itemId, status: 'approved', deletedAt: null } });
+    if (!item) throw new NotFoundException();
+    const purchase = await this.prisma.marketplacePurchase.findFirst({ where: { itemId, buyerOrgId: organizationId, status: 'paid' } });
+    if (!purchase) throw new ForbiddenException('Purchase required before reviewing an item');
     return this.prisma.marketplaceReview.upsert({ where: { itemId_authorId: { itemId, authorId: userId } }, update: { rating, comment }, create: { itemId, authorId: userId, rating, comment } });
   }
 

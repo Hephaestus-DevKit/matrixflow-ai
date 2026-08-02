@@ -1,5 +1,7 @@
 # MatrixFlow AI · REST API 文档（§5）
 
+> 静态接口概览：开发环境 `/api/v1/docs` 生成的 Swagger 文档和 Controller 实现是实时来源。生产默认使用 Appwrite 认证；`/auth/register`、`/auth/login`、`/auth/refresh`、`/auth/logout` 仅在 `AUTH_MODE=local` 或测试环境启用。
+
 > Base URL: `http://localhost:3001/api/v1`
 > 认证: Bearer JWT (Authorization header)
 > 多租户: 所有业务接口自动注入 organizationId（从 JWT 解析）

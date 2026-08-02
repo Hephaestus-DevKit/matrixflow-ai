@@ -9,6 +9,8 @@ describe('Auth (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   const testEmail = `e2e-${Date.now()}@test.com`;
+  let organizationId: string | undefined;
+  let refreshToken: string | undefined;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -20,6 +22,7 @@ describe('Auth (e2e)', () => {
   });
 
   afterAll(async () => {
+    if (organizationId) await prisma.organization.deleteMany({ where: { id: organizationId } });
     await prisma.user.deleteMany({ where: { email: testEmail } });
     await app.close();
   });
@@ -32,6 +35,8 @@ describe('Auth (e2e)', () => {
     expect(res.body.accessToken).toBeDefined();
     expect(res.body.user.email).toBe(testEmail);
     expect(res.body.organizationId).toBeDefined();
+    organizationId = res.body.organizationId;
+    refreshToken = res.body.refreshToken;
   });
 
   it('POST /auth/register duplicate → 409', async () => {
@@ -54,6 +59,20 @@ describe('Auth (e2e)', () => {
       .post('/api/v1/auth/login')
       .send({ email: testEmail, password: 'WrongPass!' })
       .expect(401);
+  });
+
+  it('POST /auth/refresh rotates the refresh token', async () => {
+    const rotated = await request(app.getHttpServer())
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken })
+      .expect(200);
+    expect(rotated.body.refreshToken).toBeDefined();
+    expect(rotated.body.refreshToken).not.toBe(refreshToken);
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken })
+      .expect(401);
+    refreshToken = rotated.body.refreshToken;
   });
 
   it('GET /auth/me → 200 with Bearer', async () => {

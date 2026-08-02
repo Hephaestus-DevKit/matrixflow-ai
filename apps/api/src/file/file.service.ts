@@ -15,4 +15,5 @@ export class FileService implements OnModuleInit {
   async download(key: string): Promise<Buffer> { const stream = await this.client.getObject(this.bucket, key); const chunks: Buffer[] = []; for await (const c of stream) chunks.push(c); return Buffer.concat(chunks); }
   async delete(key: string) { await this.client.removeObject(this.bucket, key); }
   async presignedUrl(key: string, ttlSec = 3600): Promise<string> { return this.client.presignedGetObject(this.bucket, key, ttlSec); }
+  async health(): Promise<boolean> { return this.client.bucketExists(this.bucket); }
 }

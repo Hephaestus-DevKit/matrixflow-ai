@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, Query, Req } from '@nestjs/common';
 import { Request } from 'express';
 import { ContentService } from './content.service';
-import { RequireAction, ReqUser } from '../common/interceptors/org.interceptor';
+import { RequireAction, ReqUser } from '../common/auth-context';
 import { Action } from '@matrixflow/shared';
 
 @Controller('content')

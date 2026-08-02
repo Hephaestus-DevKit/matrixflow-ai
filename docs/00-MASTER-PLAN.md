@@ -1,5 +1,7 @@
 # MatrixFlow AI · 项目主规划文档（主文档）
 
+> 历史设计基线：本文保留初始产品规划，不代表当前全部能力已经交付。当前工程状态以仓库代码、`docs/production-readiness.md` 和 `docs/security.md` 为准。
+
 > 本文档是 MatrixFlow AI 项目的**唯一权威规划文档**。后续所有代码、数据库、API、页面、Prompt、运营内容的生成，均以本文档的章节号作为回引基准（如「实现 §3.4 AI Gateway」「完成 §6.7 内容工厂页面」）。
 >
 > 文档版本：v1.0 · 2026-06-29
@@ -299,7 +301,7 @@ MVP 第一版目标：用户上传一份商品资料，平台自动生成 15 类
 > [补强] 预留 **Python Sidecar**（FastAPI 微服务）用于文档解析（Unstructured）、Embedding、未来可能的微调，通过内部 gRPC/HTTP 调用，不进主后端。
 
 ### 4.2 前端技术栈 [裁决]
-- Next.js 14+ App Router（SSR + SEO + API Routes 兜底）
+- Next.js 15 App Router（SSR + SEO + API Routes 兜底）
 - React 18 + TypeScript
 - Tailwind CSS + shadcn/ui（主题可控、可复制代码）
 - React Flow（工作流编辑器）

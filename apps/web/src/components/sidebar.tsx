@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-store';
 import { cn } from '@/lib/cn';
@@ -73,9 +74,12 @@ export function Sidebar() {
           title="点击查看个人资料设置"
         >
           {user?.avatarUrl ? (
-            <img 
+            <Image
               src={user.avatarUrl} 
               alt={user.name} 
+              width={32}
+              height={32}
+              unoptimized
               className="h-8 w-8 rounded-full object-cover border border-primary/20 group-hover:scale-105 transition-transform"
             />
           ) : (

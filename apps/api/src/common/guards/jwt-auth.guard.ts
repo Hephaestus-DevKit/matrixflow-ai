@@ -1,8 +1,8 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { ErrorCode } from '@matrixflow/shared';
-import { PERMS_KEY } from '../interceptors/org.interceptor';
+import { PERMS_KEY } from '../auth-context';
 import { AuthService } from '../../auth/auth.service';
 import { ConfigService } from '@nestjs/config';
 import { Client, Account } from 'node-appwrite';
@@ -38,7 +38,8 @@ export class JwtAuthGuard implements CanActivate {
 
     if (!userContext) {
       try {
-        if (this.cfg.get('NODE_ENV') === 'test') {
+        const authMode = this.cfg.get<string>('AUTH_MODE', 'appwrite');
+        if (authMode === 'local' || this.cfg.get('NODE_ENV') === 'test') {
           const payload = this.authService.verifyToken(token);
           userContext = {
             id: payload.sub,
@@ -50,9 +51,11 @@ export class JwtAuthGuard implements CanActivate {
           };
         } else {
           // Initialize Appwrite Client with the user's JWT
+          const projectId = this.cfg.get<string>('APPWRITE_PROJECT_ID', '');
+          if (!projectId) throw new Error('APPWRITE_PROJECT_ID is required');
           const client = new Client()
             .setEndpoint(this.cfg.get<string>('APPWRITE_ENDPOINT', 'https://cloud.appwrite.io/v1'))
-            .setProject(this.cfg.get<string>('APPWRITE_PROJECT_ID', ''));
+            .setProject(projectId);
           
           client.setJWT(token);
 
@@ -87,7 +90,7 @@ export class JwtAuthGuard implements CanActivate {
 
     const required = this.reflector.getAllAndOverride<string[]>(PERMS_KEY, [ctx.getHandler(), ctx.getClass()]);
     if (required?.length && !required.some((p) => req.user?.permissions?.includes(p))) {
-      throw new UnauthorizedException(ErrorCode.FORBIDDEN);
+      throw new ForbiddenException(ErrorCode.FORBIDDEN);
     }
     return true;
   }

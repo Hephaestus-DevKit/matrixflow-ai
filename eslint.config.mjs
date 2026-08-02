@@ -1,10 +1,21 @@
 // ESLint 根配置 (扁平配置)
 import js from '@eslint/js';
+import { FlatCompat } from '@eslint/eslintrc';
 import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 
+const compat = new FlatCompat({ baseDirectory: import.meta.dirname });
+const nextConfigs = compat.extends('next/core-web-vitals').map((config) => ({
+  ...config,
+  files: ['apps/web/**/*.{js,jsx,ts,tsx}'],
+}));
+
 export default [
+  {
+    ignores: ['**/dist/**', '**/.next/**', '**/node_modules/**', '**/generated/**'],
+  },
   js.configs.recommended,
+  ...nextConfigs,
   {
     files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {
@@ -26,6 +37,5 @@ export default [
       'no-unused-vars': 'off',
       'no-empty': 'warn',
     },
-    ignores: ['**/dist/**', '**/.next/**', '**/node_modules/**', '**/generated/**'],
   },
 ];

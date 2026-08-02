@@ -33,6 +33,9 @@ export abstract class BaseProvider implements ProviderClient {
         await new Promise((r) => setTimeout(r, backoffMs * 2 ** i));
       }
     }
+    if (lastErr instanceof Error && (lastErr.name === 'AbortError' || lastErr.name === 'TimeoutError')) {
+      throw new AiGatewayError('AI_TIMEOUT', `${this.name} request timed out`, 504);
+    }
     throw lastErr instanceof Error ? lastErr : new AiGatewayError('AI_PROVIDER_ERROR', String(lastErr));
   }
 }

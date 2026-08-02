@@ -5,8 +5,8 @@ import { createProviders } from './providers';
 import { Provider } from '@matrixflow/shared';
 
 export interface GatewayOptions {
-  glm?: { apiKey: string; baseUrl?: string; defaultModel?: string };
-  openai?: { apiKey: string; baseUrl?: string; defaultModel?: string };
+  glm?: { apiKey: string; baseUrl?: string; defaultModel?: string; timeoutMs?: number };
+  openai?: { apiKey: string; baseUrl?: string; defaultModel?: string; timeoutMs?: number };
   fallbackChain?: Provider[]; // 默认 [GLM, OPENAI]
   onUsage?: (res: ChatResponse, req: ChatRequest) => void;
 }
@@ -51,7 +51,7 @@ export class AiGateway {
           this.onUsage?.({ ...({} as ChatResponse), usage: chunk.usage, costUsd: 0, provider: this.chain[0] } as ChatResponse, req);
         }
       }
-    } catch (e) {
+    } catch {
       // 降级非流式
       const res = await this.chat({ ...req, stream: false });
       yield { delta: res.content, done: false, usage: res.usage };

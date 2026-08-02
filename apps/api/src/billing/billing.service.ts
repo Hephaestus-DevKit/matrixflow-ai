@@ -1,6 +1,5 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ErrorCode } from '@matrixflow/shared';
 
 @Injectable()
 export class BillingService {
@@ -15,8 +14,17 @@ export class BillingService {
   async subscribe(organizationId: string, planId: string, interval: 'month' | 'year' = 'month') {
     const plan = await this.prisma.plan.findUnique({ where: { id: planId } });
     if (!plan) throw new BadRequestException('Plan not found');
+    const price = interval === 'year' ? plan.priceYearlyUsd : plan.priceMonthlyUsd;
+    if (price > 0) throw new HttpException('Paid subscription checkout is not configured', HttpStatus.PAYMENT_REQUIRED);
     const start = new Date(); const end = new Date(); end.setMonth(end.getMonth() + (interval === 'year' ? 12 : 1));
-    return this.prisma.subscription.upsert({ where: { organizationId } as any, update: { planId, interval, status: 'active', currentPeriodStart: start, currentPeriodEnd: end }, create: { organizationId, planId, interval, status: 'active', currentPeriodStart: start, currentPeriodEnd: end } });
+    return this.prisma.$transaction(async (tx: any) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`subscription:${organizationId}`}))`;
+      const existing = await tx.subscription.findFirst({ where: { organizationId, status: { in: ['active', 'trialing'] } }, orderBy: { createdAt: 'desc' } });
+      if (existing) {
+        return tx.subscription.update({ where: { id: existing.id }, data: { planId, interval, status: 'active', currentPeriodStart: start, currentPeriodEnd: end, cancelAt: null, canceledAt: null } });
+      }
+      return tx.subscription.create({ data: { organizationId, planId, interval, status: 'active', currentPeriodStart: start, currentPeriodEnd: end } });
+    });
   }
 
   async usage(organizationId: string, metric?: string) {

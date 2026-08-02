@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: matrixflow
-      POSTGRES_PASSWORD: matrixflow
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-matrixflow}
       POSTGRES_DB: matrixflow
       TZ: UTC
     ports:
@@ -47,8 +47,8 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: matrixflow
-      MINIO_ROOT_PASSWORD: matrixflow123
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-matrixflow}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-matrixflow123}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -67,11 +67,13 @@ services:
     depends_on:
       minio:
         condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-matrixflow}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-matrixflow123}
     entrypoint: >
       /bin/sh -c "
-      mc alias set local http://minio:9000 matrixflow matrixflow123;
+      mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
       mc mb -p local/matrixflow || true;
-      mc anonymous set download local/matrixflow || true;
       echo 'MinIO bucket initialized';
       "
     restart: "no"
@@ -87,16 +89,52 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      sidecar:
+        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://matrixflow:matrixflow@postgres:5432/matrixflow
+      DATABASE_URL: ${DATABASE_URL:-postgresql://matrixflow:matrixflow@postgres:5432/matrixflow}
       REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-matrixflow}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-matrixflow123}
+      MINIO_BUCKET: matrixflow
       JWT_SECRET: dev-secret-32chars-minimum!
       PORT: "3001"
       NODE_ENV: development
+      AUTH_MODE: appwrite
+      APPWRITE_ENDPOINT: ${APPWRITE_ENDPOINT:-https://cloud.appwrite.io/v1}
+      APPWRITE_PROJECT_ID: ${APPWRITE_PROJECT_ID:-}
+      INTERNAL_JOB_SECRET: ${INTERNAL_JOB_SECRET:-local-development-internal-secret-change-me}
       SIDECAR_PYTHON_URL: http://sidecar:8001
     ports:
       - "3001:3001"
-    command: ["sh", "-c", "npx -p prisma@6.19.3 prisma db push --schema packages/db/prisma/schema.prisma --accept-data-loss --skip-generate 2>/dev/null; node apps/api/dist/main.js"]
+    command: ["sh", "-c", "pnpm --filter @matrixflow/db exec prisma migrate deploy --schema prisma/schema.prisma && node apps/api/dist/main.js"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/v1/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mfa-worker
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      INTERNAL_API_URL: http://api:3001/api/v1
+      INTERNAL_JOB_SECRET: ${INTERNAL_JOB_SECRET:-local-development-internal-secret-change-me}
+      QUEUE_CONCURRENCY: 4
+      NODE_ENV: development
+    command: ["node", "apps/worker/dist/main.js"]
 
   sidecar:
     build:
@@ -104,8 +142,13 @@ services:
       dockerfile: Dockerfile
     container_name: mfa-sidecar
     restart: unless-stopped
-    ports:
-      - "8001:8001"
+    expose:
+      - "8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   mailhog:
     image: mailhog/mailhog:latest

@@ -1,5 +1,5 @@
 // 数据生成器：CRM 线索 + 客服对话 + 社媒内容 + 工作流日志（复合）
-const { faker } = require('@faker-js/faker').fakerEnUS;
+const { fakerEN_US: faker } = require('@faker-js/faker');
 
 function genLead(i) {
   return {

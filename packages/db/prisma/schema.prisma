@@ -10,7 +10,6 @@
 generator client {
   provider        = "prisma-client-js"
   output          = "../src/generated/client"
-  previewFeatures = ["driverAdapters"]
   binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
 }
 
@@ -75,7 +74,7 @@ model Account {
 model Session {
   id           String   @id @default(uuid()) @db.Uuid
   userId       String   @map("user_id") @db.Uuid
-  refreshToken String   @unique @map("refresh_token")
+  refreshToken String   @unique @map("refresh_token") // SHA-256 digest; raw token is never persisted
   userAgent    String?  @map("user_agent")
   ip           String?
   expiresAt    DateTime @map("expires_at")
