@@ -15,7 +15,8 @@ RUN pip3 install --no-cache-dir --break-system-packages -r apps/sidecar/requirem
 # Install deps AFTER copy (creates correct workspace symlinks)
 RUN pnpm install --frozen-lockfile
 # Generate Prisma client (Linux x86_64 native engine)
-RUN pnpm --filter @matrixflow/db exec prisma generate --schema prisma/schema.prisma
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build \
+    pnpm --filter @matrixflow/db exec prisma generate --schema prisma/schema.prisma
 # Copy generated client into db/dist
 RUN mkdir -p packages/db/dist/generated/client && cp -r packages/db/src/generated/client/* packages/db/dist/generated/client/
 

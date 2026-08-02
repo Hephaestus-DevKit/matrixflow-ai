@@ -18,7 +18,8 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS builder
 COPY . .
-RUN pnpm --filter @matrixflow/db exec prisma generate --schema prisma/schema.prisma
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build \
+    pnpm --filter @matrixflow/db exec prisma generate --schema prisma/schema.prisma
 RUN pnpm --filter @matrixflow/api... build
 
 FROM base AS runner
