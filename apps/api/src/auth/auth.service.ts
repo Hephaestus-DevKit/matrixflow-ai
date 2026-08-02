@@ -136,7 +136,10 @@ export class AuthService {
     if (!refreshState) throw new UnauthorizedException(ErrorCode.TOKEN_INVALID);
     const sid = typeof refreshState === 'string' ? refreshState : refreshState.sessionId;
     const organizationId = typeof refreshState === 'string' ? undefined : refreshState.organizationId;
-    const session = await this.prisma.session.findUnique({ where: { id: sid } });
+    const session = await this.prisma.session.findUnique({
+      where: { id: sid },
+      omit: { refreshToken: false },
+    });
     if (!session || session.refreshToken !== tokenHash || session.revokedAt || session.expiresAt < new Date()) throw new UnauthorizedException(ErrorCode.TOKEN_EXPIRED);
     const user = await this.prisma.user.findUnique({ where: { id: session.userId } });
     if (!user) throw new UnauthorizedException(ErrorCode.TOKEN_INVALID);

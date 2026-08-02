@@ -46,6 +46,10 @@ describe('AuthService refresh rotation', () => {
     const result = await service.refresh(token);
 
     expect(result.organizationId).toBe('org-1');
+    expect(prisma.session.findUnique).toHaveBeenCalledWith({
+      where: { id: 'session-1' },
+      omit: { refreshToken: false },
+    });
     expect(prisma.organizationMember.findFirst).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ organizationId: 'org-1' }),
     }));
