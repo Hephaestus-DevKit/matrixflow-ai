@@ -11,6 +11,7 @@
 **输入变量**：`productName`, `category`, `features`, `platform`, `language`, `brandVoice`
 
 **system prompt**：
+
 ```
 你是跨境电商资深文案专家。根据商品信息生成高转化率的商品标题。
 规则：
@@ -23,6 +24,7 @@
 ```
 
 **user prompt 模板**：
+
 ```
 商品名称：{{productName}}
 类目：{{category}}
@@ -36,8 +38,22 @@
 ```
 
 **输出 JSON Schema**：
+
 ```json
-{"type":"object","properties":{"titles":{"type":"array","items":{"type":"object","properties":{"text":{"type":"string"},"reason":{"type":"string"}}}},"keywords":{"type":"array","items":{"type":"string"}}},"required":["titles","keywords"]}
+{
+  "type": "object",
+  "properties": {
+    "titles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": { "text": { "type": "string" }, "reason": { "type": "string" } }
+      }
+    },
+    "keywords": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["titles", "keywords"]
+}
 ```
 
 ---
@@ -48,6 +64,7 @@
 **输入变量**：`productName`, `category`, `features`, `specifications`, `price`, `platform`, `language`
 
 **system prompt**：
+
 ```
 你是Amazon/Shopify Listing专家。根据商品信息生成完整商品详情页。
 规则：
@@ -59,6 +76,7 @@
 ```
 
 **user prompt 模板**：
+
 ```
 商品：{{productName}} | 类目：{{category}} | 卖点：{{features}} | 规格：{{specifications}} | 价格：{{price}} | 平台：{{platform}} | 语言：{{language}}
 
@@ -74,6 +92,7 @@
 **输入变量**：`productName`, `features`, `targetAudience`, `duration`, `language`
 
 **system prompt**：
+
 ```
 你是TikTok爆款脚本写手。为商品创作短视频脚本。
 规则：
@@ -86,6 +105,7 @@
 ```
 
 **user prompt 模板**：
+
 ```
 商品：{{productName}} | 卖点：{{features}} | 受众：{{targetAudience}} | 时长：{{duration}}秒 | 语言：{{language}}
 
@@ -101,6 +121,7 @@
 **输入变量**：`productName`, `features`, `style`, `language`
 
 **system prompt**：
+
 ```
 你是Instagram内容运营专家。生成高互动帖文。
 规则：
@@ -113,6 +134,7 @@
 ```
 
 **user prompt 模板**：
+
 ```
 商品：{{productName}} | 卖点：{{features}} | 风格：{{style}} | 语言：{{language}}
 
@@ -128,6 +150,7 @@
 **输入变量**：`productName`, `features`, `targetAudience`, `objective`, `language`
 
 **system prompt**：
+
 ```
 你是Facebook广告优化专家。生成高CTR广告文案。
 规则：
@@ -140,6 +163,7 @@
 ```
 
 **user prompt 模板**：
+
 ```
 商品：{{productName}} | 卖点：{{features}} | 受众：{{targetAudience}} | 目标：{{objective}} | 语言：{{language}}
 
@@ -155,6 +179,7 @@
 **输入变量**：`productName`, `features`, `emailType`, `discount`, `language`
 
 **system prompt**：
+
 ```
 你是邮件营销专家。生成高打开率+高点击率邮件。
 规则：
@@ -167,6 +192,7 @@
 ```
 
 **user prompt 模板**：
+
 ```
 商品：{{productName}} | 卖点：{{features}} | 类型：{{emailType}} | 折扣：{{discount}} | 语言：{{language}}
 
@@ -182,6 +208,7 @@
 **输入变量**：`topic`, `keywords`, `productName`, `wordCount`, `language`
 
 **system prompt**：
+
 ```
 你是SEO内容写手。生成搜索引擎友好的博客文章。
 规则：
@@ -196,6 +223,7 @@
 ```
 
 **user prompt 模板**：
+
 ```
 主题：{{topic}} | 关键词：{{keywords}} | 产品：{{productName}} | 字数：{{wordCount}} | 语言：{{language}}
 
@@ -211,6 +239,7 @@
 **输入变量**：`productName`, `features`, `specifications`, `commonIssues`
 
 **system prompt**：
+
 ```
 你是电商客服专家。根据商品信息生成FAQ。
 规则：
@@ -222,6 +251,7 @@
 ```
 
 **user prompt 模板**：
+
 ```
 商品：{{productName}} | 卖点：{{features}} | 规格：{{specifications}} | 常见问题：{{commonIssues}}
 
@@ -237,6 +267,7 @@
 **输入变量**：`conversationHistory`, `customerMessage`, `productInfo`, `tone`
 
 **system prompt**：
+
 ```
 你是专业电商客服。根据对话历史生成回复。
 规则：
@@ -249,6 +280,7 @@
 ```
 
 **user prompt 模板**：
+
 ```
 对话历史：{{conversationHistory}}
 客户消息：{{customerMessage}}
@@ -267,6 +299,7 @@
 **输入变量**：`sourceText`, `sourceLanguage`, `targetLanguage`, `context`, `brandVoice`
 
 **system prompt**：
+
 ```
 你是专业营销翻译。将内容从{{sourceLanguage}}翻译为{{targetLanguage}}。
 规则：
@@ -279,6 +312,7 @@
 ```
 
 **user prompt 模板**：
+
 ```
 原文：{{sourceText}}
 源语言：{{sourceLanguage}} → 目标语言：{{targetLanguage}}
@@ -296,6 +330,7 @@
 **输入变量**：`sampleTexts`, `brandName`
 
 **system prompt**：
+
 ```
 你是品牌语言分析师。从样本文本中提取品牌语气特征。
 提取维度：
@@ -309,6 +344,7 @@
 ```
 
 **user prompt 模板**：
+
 ```
 品牌名：{{brandName}}
 样本文本：
@@ -326,6 +362,7 @@
 **输入变量**：`content`, `contentType`, `targetPlatform`, `originalBrief`
 
 **system prompt**：
+
 ```
 你是内容质量评审专家。对生成内容打分。
 评分维度（每项1-10）：
@@ -338,6 +375,7 @@
 ```
 
 **user prompt 模板**：
+
 ```
 内容：{{content}}
 类型：{{contentType}} | 平台：{{targetPlatform}}
@@ -355,6 +393,7 @@
 **输入变量**：`productName`, `features`, `targetAudience`, `offer`, `language`
 
 **system prompt**：
+
 ```
 你是落地页文案专家。生成高转化落地页。
 结构：Hero区 → 痛点区 → 方案区 → 社证区 → CTA区
@@ -368,6 +407,7 @@
 ```
 
 **user prompt 模板**：
+
 ```
 产品：{{productName}} | 卖点：{{features}} | 受众：{{targetAudience}} | 优惠：{{offer}} | 语言：{{language}}
 
@@ -383,6 +423,7 @@
 **输入变量**：`date`, `metrics`, `highlights`, `alerts`
 
 **system prompt**：
+
 ```
 你是运营数据分析师。根据今日数据生成老板日报。
 格式：3段式
@@ -394,6 +435,7 @@
 ```
 
 **user prompt 模板**：
+
 ```
 日期：{{date}}
 数据：{{metrics}}
@@ -412,6 +454,7 @@
 **输入变量**：`content`, `contentType`, `locale`
 
 **system prompt**：
+
 ```
 你是内容安全审核员。检查内容是否合规。
 检查项：
@@ -424,6 +467,7 @@
 ```
 
 **user prompt 模板**：
+
 ```
 内容：{{content}}
 类型：{{contentType}} | 地区：{{locale}}

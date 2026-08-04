@@ -1,40 +1,34 @@
-# Multi-stage Dockerfile for NestJS API
-FROM node:22-alpine AS base
+# syntax=docker/dockerfile:1.7
+FROM node:22.14.0-alpine AS base
 RUN apk add --no-cache libc6-compat openssl
 RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
+WORKDIR /workspace
 
 FROM base AS deps
-WORKDIR /app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* turbo.json tsconfig.base.json .npmrc ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json tsconfig.base.json .npmrc ./
 COPY apps/api/package.json ./apps/api/
 COPY apps/worker/package.json ./apps/worker/
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/db/package.json ./packages/db/
 COPY packages/ai-gateway/package.json ./packages/ai-gateway/
 COPY packages/workflow-engine/package.json ./packages/workflow-engine/
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 FROM deps AS builder
 COPY . .
-RUN DATABASE_URL=postgresql://build:build@localhost:5432/build \
-    pnpm --filter @matrixflow/db exec prisma generate --schema prisma/schema.prisma
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build pnpm db:generate
 RUN pnpm --filter @matrixflow/api... build
+RUN pnpm --filter @matrixflow/api deploy --prod --legacy /prod/api \
+    && rm -rf /prod/api/src /prod/api/test /prod/api/.turbo
 
-FROM base AS runner
-WORKDIR /app
+FROM node:22.14.0-alpine AS runner
+RUN apk add --no-cache dumb-init libc6-compat openssl
 ENV NODE_ENV=production
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
-COPY --from=builder /app/packages/ai-gateway/dist ./packages/ai-gateway/dist
-COPY --from=builder /app/packages/workflow-engine/dist ./packages/workflow-engine/dist
-COPY --from=builder /app/packages/db/dist ./packages/db/dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
-COPY --from=builder /app/packages/db/node_modules ./packages/db/node_modules
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/apps/api/package.json ./apps/api/
-COPY --from=builder /app/packages/db/package.json ./packages/db/
+WORKDIR /app
+COPY --from=builder --chown=node:node /prod/api/ ./
+USER node
 EXPOSE 3001
-CMD ["node", "apps/api/dist/main.js"]
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "dist/main.js"]

@@ -76,7 +76,9 @@ describe('Auth (e2e)', () => {
   });
 
   it('GET /auth/me → 200 with Bearer', async () => {
-    const login = await request(app.getHttpServer()).post('/api/v1/auth/login').send({ email: testEmail, password: 'Test1234!' });
+    const login = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: testEmail, password: 'Test1234!' });
     const token = login.body.accessToken;
     const res = await request(app.getHttpServer())
       .get('/api/v1/auth/me')

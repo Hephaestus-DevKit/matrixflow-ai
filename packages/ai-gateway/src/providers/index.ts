@@ -6,13 +6,23 @@ import { Provider } from '@matrixflow/shared';
 export { GlmProvider, OpenAIProvider };
 
 export function createProviders(opts: {
-  glm?: { apiKey: string; baseUrl?: string; defaultModel?: string; timeoutMs?: number };
-  openai?: { apiKey: string; baseUrl?: string; defaultModel?: string; timeoutMs?: number };
+  glm?: {
+    apiKey: string;
+    baseUrl?: string;
+    defaultModel?: string;
+    embeddingModel?: string;
+    timeoutMs?: number;
+  };
+  openai?: {
+    apiKey: string;
+    baseUrl?: string;
+    defaultModel?: string;
+    embeddingModel?: string;
+    timeoutMs?: number;
+  };
 }): Record<Provider, ProviderClient | null> {
   return {
     [Provider.GLM]: opts.glm?.apiKey ? new GlmProvider(opts.glm) : null,
     [Provider.OPENAI]: opts.openai?.apiKey ? new OpenAIProvider(opts.openai) : null,
-    [Provider.ANTHROPIC]: null, // P1
-    [Provider.GEMINI]: null,    // P1
   };
 }

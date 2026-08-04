@@ -1,23 +1,80 @@
 import { describe, it, expect } from '@jest/globals';
-import { registerSchema, loginSchema, createAgentSchema, productDataSchema } from '../schemas';
+import {
+  createAgentSchema,
+  createCustomerSchema,
+  createLeadSchema,
+  loginSchema,
+  productDataSchema,
+  publishMarketplaceItemSchema,
+  refreshTokenSchema,
+  registerSchema,
+  updateProfileSchema,
+} from '../src';
 
 describe('Auth schemas', () => {
   it('validates login', () => {
-    expect(() => loginSchema.parse({ email: 'test@example.com', password: '12345678' })).not.toThrow();
+    expect(() =>
+      loginSchema.parse({ email: 'test@example.com', password: '12345678' }),
+    ).not.toThrow();
     expect(() => loginSchema.parse({ email: 'invalid', password: '' })).toThrow();
   });
   it('validates register', () => {
-    expect(() => registerSchema.parse({ email: 'a@b.com', password: '12345678', name: 'Test' })).not.toThrow();
+    expect(() =>
+      registerSchema.parse({ email: 'a@b.com', password: '12345678', name: 'Test' }),
+    ).not.toThrow();
     expect(() => registerSchema.parse({ email: 'a', password: '1', name: '' })).toThrow();
+  });
+
+  it('rejects unknown auth and profile fields', () => {
+    expect(() =>
+      refreshTokenSchema.parse({ refreshToken: 'x'.repeat(48), role: 'owner' }),
+    ).toThrow();
+    expect(() =>
+      updateProfileSchema.parse({ name: 'User', organizationId: 'other-org' }),
+    ).toThrow();
+    expect(updateProfileSchema.parse({ name: ' User ' })).toEqual({ name: 'User' });
+  });
+});
+
+describe('Tenant-facing write schemas', () => {
+  it('rejects mass-assignment fields on customers', () => {
+    expect(() =>
+      createCustomerSchema.parse({ name: 'Customer', organizationId: 'other-org' }),
+    ).toThrow();
+  });
+
+  it('bounds lead scores and requires UUID customer IDs', () => {
+    expect(() => createLeadSchema.parse({ customerId: 'not-a-uuid', score: 101 })).toThrow();
+  });
+
+  it('rejects negative marketplace prices and oversized payloads', () => {
+    expect(() =>
+      publishMarketplaceItemSchema.parse({
+        type: 'prompt',
+        name: 'Prompt',
+        priceUsd: -1,
+        payload: {},
+      }),
+    ).toThrow();
+    expect(() =>
+      publishMarketplaceItemSchema.parse({
+        type: 'prompt',
+        name: 'Prompt',
+        payload: { value: 'x'.repeat(260_000) },
+      }),
+    ).toThrow();
   });
 });
 
 describe('Agent schema', () => {
   it('validates create agent', () => {
-    expect(() => createAgentSchema.parse({
-      name: 'My Agent', role: 'copywriter',
-      systemPrompt: { templateKey: 'product_title' },
-    })).not.toThrow();
+    expect(() =>
+      createAgentSchema.parse({
+        name: 'My Agent',
+        role: 'copywriter',
+        systemPrompt: { templateKey: 'product_title' },
+      }),
+    ).not.toThrow();
   });
 });
 

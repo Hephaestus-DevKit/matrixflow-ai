@@ -20,8 +20,21 @@ export const promptTemplates = [
 品牌名：{{brand}}
 请生成 5 个商品标题，每个 ≤ {{maxLength}} 字符。
 输出格式：{ "titles": ["...", "...", ...] }`,
-    inputSchema: { type: 'object', properties: { productJson: { type: 'object' }, platform: { type: 'string', enum: ['amazon', 'shopify', 'tiktok_shop'] }, language: { type: 'string' }, brand: { type: 'string' }, maxLength: { type: 'number' } }, required: ['productJson', 'platform', 'language'] },
-    outputSchema: { type: 'object', properties: { titles: { type: 'array', items: { type: 'string' } } } },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        productJson: { type: 'object' },
+        platform: { type: 'string', enum: ['amazon', 'shopify', 'tiktok_shop'] },
+        language: { type: 'string' },
+        brand: { type: 'string' },
+        maxLength: { type: 'number' },
+      },
+      required: ['productJson', 'platform', 'language'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: { titles: { type: 'array', items: { type: 'string' } } },
+    },
     tags: ['ecommerce', 'amazon', 'shopify', 'tiktok'],
   },
   {
@@ -36,8 +49,25 @@ export const promptTemplates = [
 平台：{{platform}}
 语言：{{language}}
 输出格式：{ "title": "", "bulletPoints": ["..."], "description": "", "specifications": {}, "useCases": [""] }`,
-    inputSchema: { type: 'object', properties: { productJson: { type: 'object' }, platform: { type: 'string' }, language: { type: 'string' } }, required: ['productJson', 'platform', 'language'] },
-    outputSchema: { type: 'object', properties: { title: { type: 'string' }, bulletPoints: { type: 'array' }, description: { type: 'string' }, specifications: { type: 'object' }, useCases: { type: 'array' } } },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        productJson: { type: 'object' },
+        platform: { type: 'string' },
+        language: { type: 'string' },
+      },
+      required: ['productJson', 'platform', 'language'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        bulletPoints: { type: 'array' },
+        description: { type: 'string' },
+        specifications: { type: 'object' },
+        useCases: { type: 'array' },
+      },
+    },
     tags: ['ecommerce', 'listing'],
   },
   {
@@ -48,8 +78,20 @@ export const promptTemplates = [
     userPromptTemplate: `商品：{{productJson|json}}
 语言：{{language}}
 输出：{ "faqs": [{ "q": "", "a": "" }] }`,
-    inputSchema: { type: 'object', properties: { productJson: { type: 'object' }, language: { type: 'string' } }, required: ['productJson', 'language'] },
-    outputSchema: { type: 'object', properties: { faqs: { type: 'array', items: { type: 'object', properties: { q: { type: 'string' }, a: { type: 'string' } } } } } },
+    inputSchema: {
+      type: 'object',
+      properties: { productJson: { type: 'object' }, language: { type: 'string' } },
+      required: ['productJson', 'language'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        faqs: {
+          type: 'array',
+          items: { type: 'object', properties: { q: { type: 'string' }, a: { type: 'string' } } },
+        },
+      },
+    },
     tags: ['ecommerce', 'faq'],
   },
   {
@@ -65,8 +107,20 @@ export const promptTemplates = [
 时长：{{duration}}秒
 语言：{{language}}
 输出：{ "hook": "", "scenes": [{ "second": 0, "voiceover": "", "action": "", "text": "" }], "cta": "" }`,
-    inputSchema: { type: 'object', properties: { productJson: { type: 'object' }, audience: { type: 'string' }, duration: { type: 'number' }, language: { type: 'string' } }, required: ['productJson', 'audience', 'duration'] },
-    outputSchema: { type: 'object', properties: { hook: { type: 'string' }, scenes: { type: 'array' }, cta: { type: 'string' } } },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        productJson: { type: 'object' },
+        audience: { type: 'string' },
+        duration: { type: 'number' },
+        language: { type: 'string' },
+      },
+      required: ['productJson', 'audience', 'duration'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: { hook: { type: 'string' }, scenes: { type: 'array' }, cta: { type: 'string' } },
+    },
     tags: ['tiktok', 'video', 'script'],
   },
   {
@@ -78,8 +132,19 @@ export const promptTemplates = [
 风格：{{style}}
 语言：{{language}}
 输出：{ "caption": "", "hashtags": [""] }`,
-    inputSchema: { type: 'object', properties: { productJson: { type: 'object' }, style: { type: 'string' }, language: { type: 'string' } }, required: ['productJson'] },
-    outputSchema: { type: 'object', properties: { caption: { type: 'string' }, hashtags: { type: 'array' } } },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        productJson: { type: 'object' },
+        style: { type: 'string' },
+        language: { type: 'string' },
+      },
+      required: ['productJson'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: { caption: { type: 'string' }, hashtags: { type: 'array' } },
+    },
     tags: ['instagram', 'social'],
   },
   {
@@ -92,8 +157,25 @@ export const promptTemplates = [
 目标：{{objective}}
 语言：{{language}}
 输出：{ "headline": "", "body": "", "description": "", "cta": "" }`,
-    inputSchema: { type: 'object', properties: { productJson: { type: 'object' }, audience: { type: 'string' }, objective: { type: 'string' }, language: { type: 'string' } }, required: ['productJson'] },
-    outputSchema: { type: 'object', properties: { headline: { type: 'string' }, body: { type: 'string' }, description: { type: 'string' }, cta: { type: 'string' } } },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        productJson: { type: 'object' },
+        audience: { type: 'string' },
+        objective: { type: 'string' },
+        language: { type: 'string' },
+      },
+      required: ['productJson'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        headline: { type: 'string' },
+        body: { type: 'string' },
+        description: { type: 'string' },
+        cta: { type: 'string' },
+      },
+    },
     tags: ['facebook', 'ad'],
   },
   {
@@ -105,8 +187,19 @@ export const promptTemplates = [
 关键词：{{keywords}}
 语言：{{language}}
 输出：{ "headlines": ["","",""], "descriptions": ["",""] }`,
-    inputSchema: { type: 'object', properties: { productJson: { type: 'object' }, keywords: { type: 'string' }, language: { type: 'string' } }, required: ['productJson', 'keywords'] },
-    outputSchema: { type: 'object', properties: { headlines: { type: 'array' }, descriptions: { type: 'array' } } },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        productJson: { type: 'object' },
+        keywords: { type: 'string' },
+        language: { type: 'string' },
+      },
+      required: ['productJson', 'keywords'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: { headlines: { type: 'array' }, descriptions: { type: 'array' } },
+    },
     tags: ['google', 'ad'],
   },
   {
@@ -119,8 +212,25 @@ export const promptTemplates = [
 受众：{{audience}}
 语言：{{language}}
 输出：{ "subject": "", "preview": "", "body": "", "cta": "" }`,
-    inputSchema: { type: 'object', properties: { productJson: { type: 'object' }, emailType: { type: 'string' }, audience: { type: 'string' }, language: { type: 'string' } }, required: ['productJson', 'emailType'] },
-    outputSchema: { type: 'object', properties: { subject: { type: 'string' }, preview: { type: 'string' }, body: { type: 'string' }, cta: { type: 'string' } } },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        productJson: { type: 'object' },
+        emailType: { type: 'string' },
+        audience: { type: 'string' },
+        language: { type: 'string' },
+      },
+      required: ['productJson', 'emailType'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        subject: { type: 'string' },
+        preview: { type: 'string' },
+        body: { type: 'string' },
+        cta: { type: 'string' },
+      },
+    },
     tags: ['email', 'marketing'],
   },
   {
@@ -133,8 +243,26 @@ export const promptTemplates = [
 目标受众：{{audience}}
 语言：{{language}}
 输出：{ "title": "", "metaDescription": "", "headings": [{ "level": 2, "text": "" }], "content": "", "internalLinks": [""] }`,
-    inputSchema: { type: 'object', properties: { topic: { type: 'string' }, keywords: { type: 'string' }, audience: { type: 'string' }, language: { type: 'string' } }, required: ['topic', 'keywords'] },
-    outputSchema: { type: 'object', properties: { title: { type: 'string' }, metaDescription: { type: 'string' }, headings: { type: 'array' }, content: { type: 'string' }, internalLinks: { type: 'array' } } },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        topic: { type: 'string' },
+        keywords: { type: 'string' },
+        audience: { type: 'string' },
+        language: { type: 'string' },
+      },
+      required: ['topic', 'keywords'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        metaDescription: { type: 'string' },
+        headings: { type: 'array' },
+        content: { type: 'string' },
+        internalLinks: { type: 'array' },
+      },
+    },
     tags: ['seo', 'blog'],
   },
   {
@@ -146,8 +274,23 @@ export const promptTemplates = [
 客户姓名：{{customerName}}
 知识库上下文：{{context}}
 输出：{ "reply": "", "confidence": 0.0, "suggestEscalate": false }`,
-    inputSchema: { type: 'object', properties: { history: { type: 'string' }, customerName: { type: 'string' }, context: { type: 'string' } }, required: ['history'] },
-    outputSchema: { type: 'object', properties: { reply: { type: 'string' }, confidence: { type: 'number' }, suggestEscalate: { type: 'boolean' } } },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        history: { type: 'string' },
+        customerName: { type: 'string' },
+        context: { type: 'string' },
+      },
+      required: ['history'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        reply: { type: 'string' },
+        confidence: { type: 'number' },
+        suggestEscalate: { type: 'boolean' },
+      },
+    },
     tags: ['support', 'customer_service'],
   },
   {
@@ -159,7 +302,15 @@ export const promptTemplates = [
 商品：{{productJson|json}}
 品牌：{{brand}}
 输出：{ "reply": "" }`,
-    inputSchema: { type: 'object', properties: { review: { type: 'string' }, productJson: { type: 'object' }, brand: { type: 'string' } }, required: ['review'] },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        review: { type: 'string' },
+        productJson: { type: 'object' },
+        brand: { type: 'string' },
+      },
+      required: ['review'],
+    },
     outputSchema: { type: 'object', properties: { reply: { type: 'string' } } },
     tags: ['support', 'review'],
   },
@@ -173,7 +324,16 @@ export const promptTemplates = [
 目标语言：{{targetLanguage}}
 领域：{{domain}}
 输出：{ "translation": "" }`,
-    inputSchema: { type: 'object', properties: { sourceText: { type: 'string' }, sourceLanguage: { type: 'string' }, targetLanguage: { type: 'string' }, domain: { type: 'string' } }, required: ['sourceText', 'sourceLanguage', 'targetLanguage'] },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sourceText: { type: 'string' },
+        sourceLanguage: { type: 'string' },
+        targetLanguage: { type: 'string' },
+        domain: { type: 'string' },
+      },
+      required: ['sourceText', 'sourceLanguage', 'targetLanguage'],
+    },
     outputSchema: { type: 'object', properties: { translation: { type: 'string' } } },
     tags: ['translation', 'multilingual'],
   },
@@ -185,7 +345,11 @@ export const promptTemplates = [
     userPromptTemplate: `原文：{{sourceText}}
 品牌语气规则：{{brandVoiceRules|json}}
 输出：{ "rewritten": "" }`,
-    inputSchema: { type: 'object', properties: { sourceText: { type: 'string' }, brandVoiceRules: { type: 'object' } }, required: ['sourceText', 'brandVoiceRules'] },
+    inputSchema: {
+      type: 'object',
+      properties: { sourceText: { type: 'string' }, brandVoiceRules: { type: 'object' } },
+      required: ['sourceText', 'brandVoiceRules'],
+    },
     outputSchema: { type: 'object', properties: { rewritten: { type: 'string' } } },
     tags: ['brand', 'rewrite'],
   },
@@ -197,8 +361,22 @@ export const promptTemplates = [
     userPromptTemplate: `样本文本：{{sampleTexts}}
 品牌名：{{brandName}}
 输出：{ "formality": 3, "humor": 2, "emojiFrequency": "low", "bannedWords": [], "catchphrases": [], "toneDescription": "" }`,
-    inputSchema: { type: 'object', properties: { sampleTexts: { type: 'string' }, brandName: { type: 'string' } }, required: ['sampleTexts'] },
-    outputSchema: { type: 'object', properties: { formality: { type: 'number' }, humor: { type: 'number' }, emojiFrequency: { type: 'string' }, bannedWords: { type: 'array' }, catchphrases: { type: 'array' }, toneDescription: { type: 'string' } } },
+    inputSchema: {
+      type: 'object',
+      properties: { sampleTexts: { type: 'string' }, brandName: { type: 'string' } },
+      required: ['sampleTexts'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        formality: { type: 'number' },
+        humor: { type: 'number' },
+        emojiFrequency: { type: 'string' },
+        bannedWords: { type: 'array' },
+        catchphrases: { type: 'array' },
+        toneDescription: { type: 'string' },
+      },
+    },
     tags: ['brand'],
   },
   {
@@ -210,8 +388,23 @@ export const promptTemplates = [
 维度：{{dimension}}
 品牌规范：{{brandVoiceRules|json}}
 输出：{ "score": 0, "reason": "", "suggestions": [""] }`,
-    inputSchema: { type: 'object', properties: { content: { type: 'string' }, dimension: { type: 'string' }, brandVoiceRules: { type: 'object' } }, required: ['content', 'dimension'] },
-    outputSchema: { type: 'object', properties: { score: { type: 'number' }, reason: { type: 'string' }, suggestions: { type: 'array' } } },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        content: { type: 'string' },
+        dimension: { type: 'string' },
+        brandVoiceRules: { type: 'object' },
+      },
+      required: ['content', 'dimension'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        score: { type: 'number' },
+        reason: { type: 'string' },
+        suggestions: { type: 'array' },
+      },
+    },
     tags: ['evaluation', 'score'],
   },
   {
@@ -222,8 +415,15 @@ export const promptTemplates = [
     userPromptTemplate: `上下文：{{context}}
 问题：{{question}}
 输出：{ "answer": "", "citations": [{ "docId": "", "snippet": "" }] }`,
-    inputSchema: { type: 'object', properties: { context: { type: 'string' }, question: { type: 'string' } }, required: ['context', 'question'] },
-    outputSchema: { type: 'object', properties: { answer: { type: 'string' }, citations: { type: 'array' } } },
+    inputSchema: {
+      type: 'object',
+      properties: { context: { type: 'string' }, question: { type: 'string' } },
+      required: ['context', 'question'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: { answer: { type: 'string' }, citations: { type: 'array' } },
+    },
     tags: ['rag', 'qa'],
   },
   {
@@ -233,8 +433,19 @@ export const promptTemplates = [
     systemPrompt: `总结客服对话：客户问题、解决方案、是否解决、后续建议。输出 JSON。`,
     userPromptTemplate: `对话历史：{{history}}
 输出：{ "summary": "", "resolved": true, "followUp": "" }`,
-    inputSchema: { type: 'object', properties: { history: { type: 'string' } }, required: ['history'] },
-    outputSchema: { type: 'object', properties: { summary: { type: 'string' }, resolved: { type: 'boolean' }, followUp: { type: 'string' } } },
+    inputSchema: {
+      type: 'object',
+      properties: { history: { type: 'string' } },
+      required: ['history'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        summary: { type: 'string' },
+        resolved: { type: 'boolean' },
+        followUp: { type: 'string' },
+      },
+    },
     tags: ['crm', 'summary'],
   },
   {
@@ -245,8 +456,21 @@ export const promptTemplates = [
     userPromptTemplate: `客户数据：{{customerData|json}}
 交互历史：{{interactions}}
 输出：{ "spendingLevel": "", "preferences": [], "activityLevel": "", "lifecycleStage": "", "insights": "" }`,
-    inputSchema: { type: 'object', properties: { customerData: { type: 'object' }, interactions: { type: 'string' } }, required: ['customerData'] },
-    outputSchema: { type: 'object', properties: { spendingLevel: { type: 'string' }, preferences: { type: 'array' }, activityLevel: { type: 'string' }, lifecycleStage: { type: 'string' }, insights: { type: 'string' } } },
+    inputSchema: {
+      type: 'object',
+      properties: { customerData: { type: 'object' }, interactions: { type: 'string' } },
+      required: ['customerData'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        spendingLevel: { type: 'string' },
+        preferences: { type: 'array' },
+        activityLevel: { type: 'string' },
+        lifecycleStage: { type: 'string' },
+        insights: { type: 'string' },
+      },
+    },
     tags: ['crm', 'profile'],
   },
   {
@@ -257,8 +481,20 @@ export const promptTemplates = [
     userPromptTemplate: `线索：{{leadData|json}}
 历史：{{history}}
 输出：{ "action": "", "timing": "", "script": "", "priority": "high" }`,
-    inputSchema: { type: 'object', properties: { leadData: { type: 'object' }, history: { type: 'string' } }, required: ['leadData'] },
-    outputSchema: { type: 'object', properties: { action: { type: 'string' }, timing: { type: 'string' }, script: { type: 'string' }, priority: { type: 'string' } } },
+    inputSchema: {
+      type: 'object',
+      properties: { leadData: { type: 'object' }, history: { type: 'string' } },
+      required: ['leadData'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string' },
+        timing: { type: 'string' },
+        script: { type: 'string' },
+        priority: { type: 'string' },
+      },
+    },
     tags: ['crm', 'sales'],
   },
   {
@@ -270,8 +506,26 @@ export const promptTemplates = [
 目标受众：{{audience}}
 语言：{{language}}
 输出：{ "hero": { "title": "", "subtitle": "", "cta": "" }, "painPoints": [""], "solution": "", "socialProof": [""], "features": [{ "title": "", "desc": "" }], "finalCta": "" }`,
-    inputSchema: { type: 'object', properties: { productJson: { type: 'object' }, audience: { type: 'string' }, language: { type: 'string' } }, required: ['productJson'] },
-    outputSchema: { type: 'object', properties: { hero: { type: 'object' }, painPoints: { type: 'array' }, solution: { type: 'string' }, socialProof: { type: 'array' }, features: { type: 'array' }, finalCta: { type: 'string' } } },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        productJson: { type: 'object' },
+        audience: { type: 'string' },
+        language: { type: 'string' },
+      },
+      required: ['productJson'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        hero: { type: 'object' },
+        painPoints: { type: 'array' },
+        solution: { type: 'string' },
+        socialProof: { type: 'array' },
+        features: { type: 'array' },
+        finalCta: { type: 'string' },
+      },
+    },
     tags: ['landing_page', 'copy'],
   },
   {
@@ -282,8 +536,20 @@ export const promptTemplates = [
     userPromptTemplate: `数据：{{data|json}}
 分析维度：{{dimensions}}
 输出：{ "insights": [""], "trends": [""], "anomalies": [""], "recommendations": [""] }`,
-    inputSchema: { type: 'object', properties: { data: { type: 'object' }, dimensions: { type: 'string' } }, required: ['data'] },
-    outputSchema: { type: 'object', properties: { insights: { type: 'array' }, trends: { type: 'array' }, anomalies: { type: 'array' }, recommendations: { type: 'array' } } },
+    inputSchema: {
+      type: 'object',
+      properties: { data: { type: 'object' }, dimensions: { type: 'string' } },
+      required: ['data'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        insights: { type: 'array' },
+        trends: { type: 'array' },
+        anomalies: { type: 'array' },
+        recommendations: { type: 'array' },
+      },
+    },
     tags: ['analytics', 'data'],
   },
   {
@@ -294,8 +560,20 @@ export const promptTemplates = [
     userPromptTemplate: `指标数据：{{metrics|json}}
 日期：{{date}}
 输出：{ "headline": "", "metrics": [{ "name": "", "value": "", "change": "" }], "alerts": [""], "focus": [""] }`,
-    inputSchema: { type: 'object', properties: { metrics: { type: 'object' }, date: { type: 'string' } }, required: ['metrics'] },
-    outputSchema: { type: 'object', properties: { headline: { type: 'string' }, metrics: { type: 'array' }, alerts: { type: 'array' }, focus: { type: 'array' } } },
+    inputSchema: {
+      type: 'object',
+      properties: { metrics: { type: 'object' }, date: { type: 'string' } },
+      required: ['metrics'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        headline: { type: 'string' },
+        metrics: { type: 'array' },
+        alerts: { type: 'array' },
+        focus: { type: 'array' },
+      },
+    },
     tags: ['analytics', 'daily'],
   },
   {
@@ -306,8 +584,15 @@ export const promptTemplates = [
     userPromptTemplate: `描述：{{description}}
 业务场景：{{scenario}}
 输出：{ "nodes": [{ "id": "", "type": "", "config": {} }], "edges": [{ "source": "", "target": "" }] }`,
-    inputSchema: { type: 'object', properties: { description: { type: 'string' }, scenario: { type: 'string' } }, required: ['description'] },
-    outputSchema: { type: 'object', properties: { nodes: { type: 'array' }, edges: { type: 'array' } } },
+    inputSchema: {
+      type: 'object',
+      properties: { description: { type: 'string' }, scenario: { type: 'string' } },
+      required: ['description'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: { nodes: { type: 'array' }, edges: { type: 'array' } },
+    },
     tags: ['workflow', 'generate'],
   },
   {
@@ -317,8 +602,20 @@ export const promptTemplates = [
     systemPrompt: `你是内容安全审核员。检测：暴力/色情/政治敏感/虚假宣传/歧视/隐私泄露。输出风险等级和理由。输出 JSON。`,
     userPromptTemplate: `内容：{{content}}
 输出：{ "safe": true, "riskLevel": "low", "flags": [{ "type": "", "reason": "" }], "suggestion": "" }`,
-    inputSchema: { type: 'object', properties: { content: { type: 'string' } }, required: ['content'] },
-    outputSchema: { type: 'object', properties: { safe: { type: 'boolean' }, riskLevel: { type: 'string' }, flags: { type: 'array' }, suggestion: { type: 'string' } } },
+    inputSchema: {
+      type: 'object',
+      properties: { content: { type: 'string' } },
+      required: ['content'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        safe: { type: 'boolean' },
+        riskLevel: { type: 'string' },
+        flags: { type: 'array' },
+        suggestion: { type: 'string' },
+      },
+    },
     tags: ['safety', 'audit'],
   },
   {
@@ -331,8 +628,24 @@ export const promptTemplates = [
 行业：{{industry}}
 语气：{{tone}}
 输出：{ "systemPrompt": "", "suggestedSkills": [""], "suggestedTools": [""] }`,
-    inputSchema: { type: 'object', properties: { role: { type: 'string' }, skills: { type: 'string' }, industry: { type: 'string' }, tone: { type: 'string' } }, required: ['role'] },
-    outputSchema: { type: 'object', properties: { systemPrompt: { type: 'string' }, suggestedSkills: { type: 'array' }, suggestedTools: { type: 'array' } } },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        role: { type: 'string' },
+        skills: { type: 'string' },
+        industry: { type: 'string' },
+        tone: { type: 'string' },
+      },
+      required: ['role'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        systemPrompt: { type: 'string' },
+        suggestedSkills: { type: 'array' },
+        suggestedTools: { type: 'array' },
+      },
+    },
     tags: ['agent', 'prompt'],
   },
 ];

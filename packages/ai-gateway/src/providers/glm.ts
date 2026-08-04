@@ -1,10 +1,14 @@
 // GLM Provider (智谱 GLM-4 / embedding-3)
 // OpenAI-compatible API at https://open.bigmodel.cn/api/paas/v4
 import { BaseProvider } from './base';
-import type { ChatRequest, ChatResponse, StreamChunk } from '../types';
+import { requestSignal, type ChatRequest, type ChatResponse, type StreamChunk } from '../types';
 import { AiGatewayError } from '../types';
 import { Provider } from '@matrixflow/shared';
-import { ChatCompletionPayload, EmbeddingPayload, providerErrorMessage } from './openai-compatible.types';
+import {
+  ChatCompletionPayload,
+  EmbeddingPayload,
+  providerErrorMessage,
+} from './openai-compatible.types';
 
 export class GlmProvider extends BaseProvider {
   name = Provider.GLM;
@@ -13,7 +17,12 @@ export class GlmProvider extends BaseProvider {
   private defaultModel: string;
   private timeoutMs: number;
 
-  constructor(opts: { apiKey: string; baseUrl?: string; defaultModel?: string; timeoutMs?: number }) {
+  constructor(opts: {
+    apiKey: string;
+    baseUrl?: string;
+    defaultModel?: string;
+    timeoutMs?: number;
+  }) {
     super();
     this.apiKey = opts.apiKey;
     this.baseUrl = (opts.baseUrl ?? 'https://open.bigmodel.cn/api/paas/v4').replace(/\/$/, '');
@@ -27,10 +36,10 @@ export class GlmProvider extends BaseProvider {
         method: 'POST',
         headers: this.headers(),
         body: JSON.stringify(this.toPayload(req, false)),
-        signal: AbortSignal.timeout(this.timeoutMs),
+        signal: requestSignal(this.timeoutMs, req.signal),
       });
       if (!res.ok) throw await this.toError(res);
-      const json = await res.json() as ChatCompletionPayload;
+      const json = (await res.json()) as ChatCompletionPayload;
       return this.parseResponse(json, req);
     });
   }
@@ -40,7 +49,7 @@ export class GlmProvider extends BaseProvider {
       method: 'POST',
       headers: this.headers(),
       body: JSON.stringify(this.toPayload(req, true)),
-      signal: AbortSignal.timeout(this.timeoutMs),
+      signal: requestSignal(this.timeoutMs, req.signal),
     });
     if (!res.ok || !res.body) throw await this.toError(res);
     const reader = res.body.getReader();
@@ -56,28 +65,47 @@ export class GlmProvider extends BaseProvider {
         const t = line.trim();
         if (!t.startsWith('data:')) continue;
         const data = t.slice(5).trim();
-        if (data === '[DONE]') { yield { delta: '', done: true }; return; }
+        if (data === '[DONE]') {
+          yield { delta: '', done: true };
+          return;
+        }
         try {
           const j = JSON.parse(data) as ChatCompletionPayload;
           const delta = j.choices?.[0]?.delta?.content ?? '';
           if (delta) yield { delta, done: false };
-          if (j.usage) yield { delta: '', done: false, usage: { inputTokens: j.usage.prompt_tokens ?? 0, outputTokens: j.usage.completion_tokens ?? 0, totalTokens: j.usage.total_tokens ?? 0 } };
-        } catch { /* ignore partial */ }
+          if (j.usage)
+            yield {
+              delta: '',
+              done: false,
+              usage: {
+                inputTokens: j.usage.prompt_tokens ?? 0,
+                outputTokens: j.usage.completion_tokens ?? 0,
+                totalTokens: j.usage.total_tokens ?? 0,
+              },
+            };
+        } catch {
+          /* ignore partial */
+        }
       }
     }
     yield { delta: '', done: true };
   }
 
-  async embedding(text: string, model = 'embedding-3'): Promise<{ vector: number[]; tokens: number }> {
+  async embedding(
+    text: string,
+    model = 'embedding-3',
+  ): Promise<{ vector: number[]; tokens: number }> {
     const res = await fetch(`${this.baseUrl}/embeddings`, {
-      method: 'POST', headers: this.headers(),
+      method: 'POST',
+      headers: this.headers(),
       body: JSON.stringify({ model, input: text, encoding_format: 'float' }),
       signal: AbortSignal.timeout(this.timeoutMs),
     });
     if (!res.ok) throw await this.toError(res);
-    const j = await res.json() as EmbeddingPayload;
+    const j = (await res.json()) as EmbeddingPayload;
     const vector = j.data?.[0]?.embedding;
-    if (!Array.isArray(vector)) throw new AiGatewayError('AI_PROVIDER_ERROR', 'GLM returned an invalid embedding payload');
+    if (!Array.isArray(vector))
+      throw new AiGatewayError('AI_PROVIDER_ERROR', 'GLM returned an invalid embedding payload');
     return { vector, tokens: j.usage?.total_tokens ?? Math.ceil(text.length / 4) };
   }
 
@@ -98,7 +126,11 @@ export class GlmProvider extends BaseProvider {
       id: json.id ?? crypto.randomUUID(),
       model: req.model,
       content: json.choices?.[0]?.message?.content ?? '',
-      usage: { inputTokens: usage.prompt_tokens ?? 0, outputTokens: usage.completion_tokens ?? 0, totalTokens: usage.total_tokens ?? 0 },
+      usage: {
+        inputTokens: usage.prompt_tokens ?? 0,
+        outputTokens: usage.completion_tokens ?? 0,
+        totalTokens: usage.total_tokens ?? 0,
+      },
       costUsd: 0, // 由 gateway 按价目表计算后回填
       provider: this.name,
     };
@@ -106,7 +138,12 @@ export class GlmProvider extends BaseProvider {
 
   private async toError(res: Response): Promise<AiGatewayError> {
     let msg = `GLM ${res.status}`;
-    try { const payload: unknown = await res.json(); msg = providerErrorMessage(payload) ?? JSON.stringify(payload); } catch { /* response body is not JSON */ }
+    try {
+      const payload: unknown = await res.json();
+      msg = providerErrorMessage(payload) ?? JSON.stringify(payload);
+    } catch {
+      /* response body is not JSON */
+    }
     return new AiGatewayError('AI_PROVIDER_ERROR', msg, res.status);
   }
 }

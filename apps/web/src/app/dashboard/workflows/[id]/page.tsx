@@ -3,7 +3,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
-import ReactFlow, { Background, Controls, MiniMap, useNodesState, useEdgesState, addEdge, MarkerType } from 'reactflow';
+import ReactFlow, {
+  Background,
+  Controls,
+  MiniMap,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  MarkerType,
+} from 'reactflow';
 import 'reactflow/dist/style.css';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
@@ -14,10 +22,18 @@ import { Plus, Save, Play, Trash2, ArrowLeft, Settings2, HelpCircle } from 'luci
 const NODE_TYPES = [
   { type: 'trigger', label: '手动触发器 (Trigger)', desc: '作为流的起点接收初始参数输入。' },
   { type: 'ai', label: 'AI 大模型节点 (AI)', desc: '调用 Zhipu GLM 生成文案或执行分类推理。' },
-  { type: 'email', label: '邮件通知节点 (Email)', desc: '触发 SMTP 发送提示邮件到指定收件人。' },
+  { type: 'email', label: '邮件通知节点 (Email)', desc: '预留节点；当前执行会明确返回未实现。' },
   { type: 'webhook', label: '网络钩子节点 (Webhook)', desc: '向外部系统发送 HTTP POST 数据请求。' },
-  { type: 'transform', label: '数据转换节点 (Transform)', desc: '对上游节点的输出结果进行数据格式化。' },
-  { type: 'condition', label: '条件分支节点 (Condition)', desc: '根据条件表达式路由到不同输出路径。' },
+  {
+    type: 'transform',
+    label: '数据转换节点 (Transform)',
+    desc: '对上游节点的输出结果进行数据格式化。',
+  },
+  {
+    type: 'condition',
+    label: '条件分支节点 (Condition)',
+    desc: '根据条件表达式路由到不同输出路径。',
+  },
 ];
 
 const PROMPT_OPTIONS = [
@@ -53,37 +69,42 @@ export default function WorkflowEditorPage() {
     setMounted(true);
   }, []);
 
-  const { data: wf } = useQuery({ 
-    queryKey: ['wf', id], 
-    queryFn: () => apiClient.get<any>(`/workflows/${id}`), 
-    enabled: !!id 
+  const { data: wf } = useQuery({
+    queryKey: ['wf', id],
+    queryFn: () => apiClient.get<any>(`/workflows/${id}`),
+    enabled: !!id,
   });
 
   // Populate ReactFlow graph from Database DSL
   useEffect(() => {
     if (wf?.versions?.[0]?.dsl) {
       const dsl = wf.versions[0].dsl;
-      const initialNodes = dsl.nodes?.map((n: any) => ({
-        id: n.id,
-        type: 'default',
-        position: { x: n.position?.x ?? Math.random() * 300 + 100, y: n.position?.y ?? Math.random() * 300 + 100 },
-        data: { 
-          label: `${n.type.toUpperCase()}: ${n.config?.promptKey || n.config?.to || n.config?.url || ''}`, 
-          rawNode: n 
-        }
-      })) ?? [];
-      
-      const initialEdges = dsl.edges?.map((e: any, i: number) => ({
-        id: `e${i}`,
-        source: e.source,
-        target: e.target,
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: '#3b82f6',
-        },
-        style: { stroke: '#3b82f6', strokeWidth: 2 }
-      })) ?? [];
-      
+      const initialNodes =
+        dsl.nodes?.map((n: any) => ({
+          id: n.id,
+          type: 'default',
+          position: {
+            x: n.position?.x ?? Math.random() * 300 + 100,
+            y: n.position?.y ?? Math.random() * 300 + 100,
+          },
+          data: {
+            label: `${n.type.toUpperCase()}: ${n.config?.promptKey || n.config?.to || n.config?.url || ''}`,
+            rawNode: n,
+          },
+        })) ?? [];
+
+      const initialEdges =
+        dsl.edges?.map((e: any, i: number) => ({
+          id: `e${i}`,
+          source: e.source,
+          target: e.target,
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: '#3b82f6',
+          },
+          style: { stroke: '#3b82f6', strokeWidth: 2 },
+        })) ?? [];
+
       setNodes(initialNodes);
       setEdges(initialEdges);
     }
@@ -99,21 +120,22 @@ export default function WorkflowEditorPage() {
             markerEnd: { type: MarkerType.ArrowClosed, color: '#3b82f6' },
             style: { stroke: '#3b82f6', strokeWidth: 2 },
           },
-          eds
-        )
+          eds,
+        ),
       ),
-    [setEdges]
+    [setEdges],
   );
 
   // Trigger executing the workflow run
-  const runMutation = useMutation({ 
-    mutationFn: () => apiClient.post<any>(`/workflows/${id}/run`, {}), 
-    onSuccess: (r: any) => alert(`工作流运行成功！运行结果: ${JSON.stringify(r?.output).slice(0, 300)}...`) 
+  const runMutation = useMutation({
+    mutationFn: () => apiClient.post<any>(`/workflows/${id}/run`, {}),
+    onSuccess: (r: any) =>
+      alert(`工作流运行成功！运行结果: ${JSON.stringify(r?.output).slice(0, 300)}...`),
   });
 
   // Save new workflow DSL version back to database
   const saveMutation = useMutation({
-    mutationFn: (body: { dsl: any; changeNote: string }) => 
+    mutationFn: (body: { dsl: any; changeNote: string }) =>
       apiClient.post<any>(`/workflows/${id}/versions`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wf', id] });
@@ -121,7 +143,7 @@ export default function WorkflowEditorPage() {
     },
     onError: (e: any) => {
       alert(`保存失败: ${e.message}`);
-    }
+    },
   });
 
   // When node is clicked, show editor pane
@@ -148,9 +170,9 @@ export default function WorkflowEditorPage() {
           id: newId,
           type,
           config: {},
-          position: { x: 250, y: 150 }
-        }
-      }
+          position: { x: 250, y: 150 },
+        },
+      },
     };
     setNodes((nds) => [...nds, newNode]);
     setSelectedNode(newNode);
@@ -161,28 +183,32 @@ export default function WorkflowEditorPage() {
   const deleteNode = () => {
     if (!selectedNode) return;
     setNodes((nds) => nds.filter((n) => n.id !== selectedNode.id));
-    setEdges((eds) => eds.filter((e) => e.source !== selectedNode.id && e.target !== selectedNode.id));
+    setEdges((eds) =>
+      eds.filter((e) => e.source !== selectedNode.id && e.target !== selectedNode.id),
+    );
     setSelectedNode(null);
   };
 
   // Update selected node config
   const handleSaveNodeConfig = () => {
     if (!selectedNode) return;
-    setNodes((nds) => nds.map((n) => {
-      if (n.id === selectedNode.id) {
-        const updatedRaw = { ...n.data.rawNode, config: editConfig };
-        const labelText = editConfig.promptKey || editConfig.to || editConfig.url || '已配置';
-        return {
-          ...n,
-          data: {
-            ...n.data,
-            rawNode: updatedRaw,
-            label: `${updatedRaw.type.toUpperCase()}: ${labelText}`
-          }
-        };
-      }
-      return n;
-    }));
+    setNodes((nds) =>
+      nds.map((n) => {
+        if (n.id === selectedNode.id) {
+          const updatedRaw = { ...n.data.rawNode, config: editConfig };
+          const labelText = editConfig.promptKey || editConfig.to || editConfig.url || '已配置';
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              rawNode: updatedRaw,
+              label: `${updatedRaw.type.toUpperCase()}: ${labelText}`,
+            },
+          };
+        }
+        return n;
+      }),
+    );
     alert('节点属性配置已缓存至画布，别忘了点击右上角的“保存配置”提交哦！');
   };
 
@@ -194,18 +220,18 @@ export default function WorkflowEditorPage() {
         id: n.id,
         type: raw.type || 'ai',
         config: raw.config || {},
-        position: { x: Math.round(n.position.x), y: Math.round(n.position.y) }
+        position: { x: Math.round(n.position.x), y: Math.round(n.position.y) },
       };
     });
-    
+
     const dslEdges = edges.map((e) => ({
       source: e.source,
-      target: e.target
+      target: e.target,
     }));
 
     saveMutation.mutate({
       dsl: { nodes: dslNodes, edges: dslEdges },
-      changeNote: `可视化配置修改于 ${new Date().toLocaleTimeString()}`
+      changeNote: `可视化配置修改于 ${new Date().toLocaleTimeString()}`,
     });
   };
 
@@ -227,24 +253,46 @@ export default function WorkflowEditorPage() {
       {/* Editor Top Bar */}
       <div className="flex items-center justify-between border-b border-border/40 pb-4 shrink-0">
         <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/dashboard/workflows')} className="text-muted-foreground hover:text-foreground transition-colors">
+          <button
+            onClick={() => router.push('/dashboard/workflows')}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
             <ArrowLeft className="h-4 w-4" />
           </button>
           <div>
             <h1 className="text-xl font-bold tracking-tight">{wf?.name ?? '工作流编辑器'}</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">当前版本: v{wf?.currentVersion ?? 1} · 拖动节点或接头进行可视化连接</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              当前版本: v{wf?.currentVersion ?? 1} · 拖动节点或接头进行可视化连接
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="text-xs" onClick={() => router.push(`/dashboard/workflows/${id}/runs`)}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={() => router.push(`/dashboard/workflows/${id}/runs`)}
+          >
             运行历史
           </Button>
-          <Button variant="outline" size="sm" className="text-xs border-primary/20 text-primary hover:bg-primary/5 gap-1.5" onClick={handleSaveWorkflow} disabled={saveMutation.isPending}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs border-primary/20 text-primary hover:bg-primary/5 gap-1.5"
+            onClick={handleSaveWorkflow}
+            disabled={saveMutation.isPending}
+          >
             <Save className="h-3.5 w-3.5" /> 保存配置
           </Button>
-          <Button size="sm" className="text-xs gap-1.5 shadow-glow-sm hover:shadow-glow" onClick={() => runMutation.mutate()} disabled={runMutation.isPending}>
-            <Play className="h-3.5 w-3.5 fill-current" /> {runMutation.isPending ? '正在运行...' : '运行'}
+          <Button
+            size="sm"
+            className="text-xs gap-1.5 shadow-glow-sm hover:shadow-glow"
+            onClick={() => runMutation.mutate()}
+            disabled={runMutation.isPending}
+          >
+            <Play className="h-3.5 w-3.5 fill-current" />{' '}
+            {runMutation.isPending ? '正在运行...' : '运行'}
           </Button>
         </div>
       </div>
@@ -253,11 +301,11 @@ export default function WorkflowEditorPage() {
       <div className="flex gap-4 grow min-h-0">
         {/* Canvas Area */}
         <div className="flex-1 rounded-xl border border-border bg-card relative overflow-hidden">
-          <ReactFlow 
-            nodes={nodes} 
-            edges={edges} 
-            onNodesChange={onNodesChange} 
-            onEdgesChange={onEdgesChange} 
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
             onPaneClick={onPaneClick}
@@ -265,7 +313,7 @@ export default function WorkflowEditorPage() {
           >
             <Background color="#555" gap={16} />
             <Controls className="bg-card text-foreground border-border fill-current" />
-            <MiniMap 
+            <MiniMap
               nodeColor="#1e293b"
               maskColor="rgba(0, 0, 0, 0.5)"
               className="bg-card border border-border rounded-lg"
@@ -282,7 +330,9 @@ export default function WorkflowEditorPage() {
                 <h3 className="text-sm font-bold flex items-center gap-1.5 text-primary">
                   <Settings2 className="h-4 w-4" /> 属性编辑
                 </h3>
-                <span className="rounded bg-muted px-2 py-0.5 text-3xs font-semibold text-muted-foreground uppercase">{selectedNode.data?.rawNode?.type}</span>
+                <span className="rounded bg-muted px-2 py-0.5 text-3xs font-semibold text-muted-foreground uppercase">
+                  {selectedNode.data?.rawNode?.type}
+                </span>
               </div>
 
               <div className="space-y-1.5">
@@ -294,14 +344,18 @@ export default function WorkflowEditorPage() {
               {selectedNode.data?.rawNode?.type === 'ai' && (
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold">选择 AI 提示词模板 (Prompt Key)</Label>
-                  <select 
-                    value={editConfig.promptKey || ''} 
+                  <select
+                    value={editConfig.promptKey || ''}
                     onChange={(e) => setEditConfig({ ...editConfig, promptKey: e.target.value })}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border-border/80 text-foreground"
                   >
-                    <option value="" disabled>-- 请选择提示词模板 --</option>
+                    <option value="" disabled>
+                      -- 请选择提示词模板 --
+                    </option>
                     {PROMPT_OPTIONS.map((o) => (
-                      <option key={o.key} value={o.key}>{o.label}</option>
+                      <option key={o.key} value={o.key}>
+                        {o.label}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -310,11 +364,11 @@ export default function WorkflowEditorPage() {
               {selectedNode.data?.rawNode?.type === 'email' && (
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold">通知收件人邮箱 (Email Address)</Label>
-                  <Input 
-                    type="email" 
-                    value={editConfig.to || ''} 
+                  <Input
+                    type="email"
+                    value={editConfig.to || ''}
                     onChange={(e) => setEditConfig({ ...editConfig, to: e.target.value })}
-                    placeholder="e.g. boss@company.com" 
+                    placeholder="e.g. boss@company.com"
                     className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
                   />
                 </div>
@@ -323,11 +377,11 @@ export default function WorkflowEditorPage() {
               {selectedNode.data?.rawNode?.type === 'webhook' && (
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold">网络钩子地址 (Webhook URL)</Label>
-                  <Input 
-                    type="url" 
-                    value={editConfig.url || ''} 
+                  <Input
+                    type="url"
+                    value={editConfig.url || ''}
                     onChange={(e) => setEditConfig({ ...editConfig, url: e.target.value })}
-                    placeholder="e.g. https://api.mycrm.com/v1/leads" 
+                    placeholder="e.g. https://api.mycrm.com/v1/leads"
                     className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
                   />
                 </div>
@@ -336,8 +390,8 @@ export default function WorkflowEditorPage() {
               {selectedNode.data?.rawNode?.type === 'transform' && (
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold">转换模板内容 (JSON/Txt Template)</Label>
-                  <textarea 
-                    value={editConfig.template || ''} 
+                  <textarea
+                    value={editConfig.template || ''}
                     onChange={(e) => setEditConfig({ ...editConfig, template: e.target.value })}
                     placeholder="e.g. {{ai.content}} converted to text..."
                     rows={4}
@@ -349,10 +403,10 @@ export default function WorkflowEditorPage() {
               {selectedNode.data?.rawNode?.type === 'condition' && (
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold">条件表达式 (JS Expression)</Label>
-                  <Input 
-                    value={editConfig.expression || ''} 
+                  <Input
+                    value={editConfig.expression || ''}
                     onChange={(e) => setEditConfig({ ...editConfig, expression: e.target.value })}
-                    placeholder="e.g. state.confidence > 0.8" 
+                    placeholder="e.g. state.confidence > 0.8"
                     className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
                   />
                 </div>
@@ -365,7 +419,12 @@ export default function WorkflowEditorPage() {
               )}
 
               <div className="flex gap-2 pt-3 border-t border-border/60">
-                <Button variant="destructive" size="sm" className="grow text-xs gap-1" onClick={deleteNode}>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="grow text-xs gap-1"
+                  onClick={deleteNode}
+                >
                   <Trash2 className="h-3.5 w-3.5" /> 删除节点
                 </Button>
                 <Button size="sm" className="grow text-xs" onClick={handleSaveNodeConfig}>
@@ -390,7 +449,9 @@ export default function WorkflowEditorPage() {
                     className="w-full text-left rounded-xl border border-border/60 bg-muted/10 p-3 hover:border-primary/20 hover:bg-primary/5 transition-all group"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">{nt.label}</span>
+                      <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
+                        {nt.label}
+                      </span>
                       <Plus className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
                     <p className="text-3xs text-muted-foreground mt-1 leading-normal">{nt.desc}</p>
@@ -402,7 +463,8 @@ export default function WorkflowEditorPage() {
                 <HelpCircle className="h-4 w-4 shrink-0 text-primary/70" />
                 <div>
                   <span className="font-bold text-foreground block mb-0.5">如何配置及连接？</span>
-                  1. 选择左侧节点可在本面板配置其专有属性参数。<br />
+                  1. 选择左侧节点可在本面板配置其专有属性参数。
+                  <br />
                   2. 拖动节点右侧/左侧的连接点连接下一个节点以建立 DAG 工作流逻辑。
                 </div>
               </div>
@@ -410,7 +472,9 @@ export default function WorkflowEditorPage() {
           )}
 
           <div className="pt-4 border-t border-border mt-6 shrink-0">
-            <p className="text-[10px] text-muted-foreground text-center">MatrixFlow AI · 可靠的跨境电商自动化核心引擎</p>
+            <p className="text-[10px] text-muted-foreground text-center">
+              MatrixFlow AI · 可靠的跨境电商自动化核心引擎
+            </p>
           </div>
         </div>
       </div>

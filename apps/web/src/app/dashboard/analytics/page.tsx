@@ -5,13 +5,18 @@ import { apiClient } from '@/lib/api-client';
 import { ShieldAlert, Cpu } from 'lucide-react';
 
 export default function AnalyticsPage() {
-  const { data: usage, isLoading } = useQuery({ queryKey: ['usage'], queryFn: () => apiClient.get<Record<string, any>>('/billing/usage') });
-  
+  const { data: usage, isLoading } = useQuery({
+    queryKey: ['usage'],
+    queryFn: () => apiClient.get<Record<string, any>>('/billing/usage'),
+  });
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="border-b border-border/40 pb-5">
         <h1 className="text-xl font-bold tracking-tight">数据看板</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">监控系统资源开销、API 调用频次与流量配额利用率</p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          监控系统资源开销、API 调用频次与流量配额利用率
+        </p>
       </div>
 
       {isLoading && (

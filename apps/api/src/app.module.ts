@@ -28,7 +28,10 @@ import { JobsModule } from './jobs/jobs.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env.local', '.env', '../../.env.local', '../../.env'] }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env.local', '.env', '../../.env.local', '../../.env'],
+    }),
     LoggerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => ({
@@ -36,18 +39,37 @@ import { JobsModule } from './jobs/jobs.module';
           level: cfg.get('LOG_LEVEL', 'info'),
           transport: cfg.get('NODE_ENV') === 'development' ? { target: 'pino-pretty' } : undefined,
           genReqId: (req) => (req.headers['x-request-id'] as string) ?? crypto.randomUUID(),
+          redact: {
+            paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
+            censor: '[REDACTED]',
+          },
         },
       }),
     }),
-    CommonModule, PrismaModule, RedisModule, QueueModule, FileModule, HealthModule,
-    AuthModule, OrgModule, AiModule, AgentModule, ContentModule, KbModule, WorkflowModule, CrmModule, MarketModule, BillingModule, AdminModule,
+    CommonModule,
+    PrismaModule,
+    RedisModule,
+    QueueModule,
+    FileModule,
+    HealthModule,
+    AuthModule,
+    OrgModule,
+    AiModule,
+    AgentModule,
+    ContentModule,
+    KbModule,
+    WorkflowModule,
+    CrmModule,
+    MarketModule,
+    BillingModule,
+    AdminModule,
     JobsModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: MetricsInterceptor },
-    { provide: APP_GUARD, useClass: RateLimitGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RateLimitGuard },
   ],
 })
 export class AppModule implements NestModule {

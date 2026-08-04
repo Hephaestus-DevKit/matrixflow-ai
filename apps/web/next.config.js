@@ -2,12 +2,12 @@
 const nextConfig = {
   // output: 'export',
   reactStrictMode: true,
-  images: { 
+  images: {
     unoptimized: true,
-    remotePatterns: [{ protocol: 'https', hostname: '**' }] 
+    remotePatterns: [{ protocol: 'https', hostname: '**' }],
   },
   typedRoutes: true,
-  transpilePackages: ['@matrixflow/shared', '@matrixflow/ui'],
+  transpilePackages: ['@matrixflow/shared'],
 };
 
 module.exports = nextConfig;

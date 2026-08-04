@@ -7,11 +7,12 @@ overrides:
   'multer@<2.2.0': '2.2.0'
   'file-type@<21.3.2': '21.3.2'
   'lodash@<4.18.0': '4.18.0'
-  'postcss@<8.5.18': '8.5.18'
+  'postcss@<8.5.25': '8.5.25'
   'qs@>=6.11.1 <=6.15.1': '>=6.15.2'
   'body-parser@<1.20.6': '>=1.20.6'
   'sharp@<0.35.0': '>=0.35.0'
   'fast-xml-parser@>=5.9.3 <5.10.1': '>=5.10.1'
+  'undici@<6.28.0': '6.28.0'
 allowBuilds:
   '@nestjs/core': true
   '@prisma/client': true

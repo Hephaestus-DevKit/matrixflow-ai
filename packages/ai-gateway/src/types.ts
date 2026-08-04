@@ -10,12 +10,14 @@ export interface ChatMessage {
 
 export interface ChatRequest {
   model: string;
+  providerModels?: Partial<Record<Provider, string>>;
   messages: ChatMessage[];
   temperature?: number;
   maxTokens?: number;
   stream?: boolean;
   responseFormat?: 'text' | 'json_object';
   tools?: unknown[];
+  signal?: AbortSignal;
   // 元数据用于计量
   metadata?: {
     organizationId: string;
@@ -44,6 +46,8 @@ export interface StreamChunk {
   delta: string;
   done: boolean;
   usage?: ChatResponse['usage'];
+  provider?: Provider;
+  model?: string;
 }
 
 export interface ProviderClient {
@@ -53,8 +57,17 @@ export interface ProviderClient {
   embedding(text: string, model?: string): Promise<{ vector: number[]; tokens: number }>;
 }
 
+export function requestSignal(timeoutMs: number, signal?: AbortSignal): AbortSignal {
+  const timeout = AbortSignal.timeout(timeoutMs);
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
+
 export class AiGatewayError extends Error {
-  constructor(public code: string, message: string, public status?: number) {
+  constructor(
+    public code: string,
+    message: string,
+    public status?: number,
+  ) {
     super(message);
     this.name = 'AiGatewayError';
   }

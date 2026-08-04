@@ -6,15 +6,21 @@ const R = path.resolve(__dirname, '..');
 const src = path.join(R, 'packages', 'db', 'src', 'generated', 'client');
 const dst = path.join(R, 'packages', 'db', 'dist', 'generated', 'client');
 
-if (!fs.existsSync(src)) { console.error('copy-generated: src not found ' + src); process.exit(1); }
+if (!fs.existsSync(src)) {
+  console.error('copy-generated: src not found ' + src);
+  process.exit(1);
+}
 fs.mkdirSync(dst, { recursive: true });
 
 function copyDir(s, d) {
   for (const e of fs.readdirSync(s)) {
-    const sp = path.join(s, e), dp = path.join(d, e);
+    const sp = path.join(s, e),
+      dp = path.join(d, e);
     const st = fs.lstatSync(sp);
-    if (st.isDirectory()) { fs.mkdirSync(dp, { recursive: true }); copyDir(sp, dp); }
-    else fs.copyFileSync(sp, dp);
+    if (st.isDirectory()) {
+      fs.mkdirSync(dp, { recursive: true });
+      copyDir(sp, dp);
+    } else fs.copyFileSync(sp, dp);
   }
 }
 copyDir(src, dst);

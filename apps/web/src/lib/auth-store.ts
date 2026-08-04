@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { apiClient, clearAppwriteCache } from '@/lib/api-client';
+import { apiClient, clearAppwriteCache, clearOrganizationContext } from '@/lib/api-client';
 import { account } from './appwrite';
 import { ID } from 'appwrite';
 
@@ -9,7 +9,13 @@ interface User {
   email: string;
   name: string;
   avatarUrl?: string | null;
-  memberships: { organizationId: string; organizationName: string; slug: string; role: string; permissions: string[] }[];
+  memberships: {
+    organizationId: string;
+    organizationName: string;
+    slug: string;
+    role: string;
+    permissions: string[];
+  }[];
 }
 
 interface AuthState {
@@ -39,43 +45,59 @@ export const useAuth = create<AuthState>()(
         set({ loading: true });
         try {
           clearAppwriteCache();
+          clearOrganizationContext();
+          set({ user: null, organizationId: null });
           await account.deleteSession('current').catch(() => {});
           await account.createEmailPasswordSession(email, password);
           await get().fetchMe();
-        } finally { set({ loading: false }); }
+        } finally {
+          set({ loading: false });
+        }
       },
 
       register: async (email, password, name) => {
         set({ loading: true });
         try {
           clearAppwriteCache();
+          clearOrganizationContext();
+          set({ user: null, organizationId: null });
           await account.deleteSession('current').catch(() => {});
           await account.create(ID.unique(), email, password, name);
           await account.createEmailPasswordSession(email, password);
           await get().fetchMe();
-        } finally { set({ loading: false }); }
+        } finally {
+          set({ loading: false });
+        }
       },
 
       registerWithOtp: async (email, password, name) => {
         set({ loading: true });
         try {
           clearAppwriteCache();
+          clearOrganizationContext();
+          set({ user: null, organizationId: null });
           await account.deleteSession('current').catch(() => {});
           const userId = ID.unique();
           await account.create(userId, email, password, name);
           const token = await account.createEmailToken(userId, email);
           return token.userId;
-        } finally { set({ loading: false }); }
+        } finally {
+          set({ loading: false });
+        }
       },
 
       sendOtp: async (email) => {
         set({ loading: true });
         try {
           clearAppwriteCache();
+          clearOrganizationContext();
+          set({ user: null, organizationId: null });
           await account.deleteSession('current').catch(() => {});
           const token = await account.createEmailToken(ID.unique(), email);
           return token.userId;
-        } finally { set({ loading: false }); }
+        } finally {
+          set({ loading: false });
+        }
       },
 
       verifyOtp: async (userId, code, name) => {
@@ -87,7 +109,9 @@ export const useAuth = create<AuthState>()(
             await account.updateName(name).catch(() => {});
           }
           await get().fetchMe();
-        } finally { set({ loading: false }); }
+        } finally {
+          set({ loading: false });
+        }
       },
 
       updateProfile: async (name, avatarUrl) => {
@@ -96,11 +120,14 @@ export const useAuth = create<AuthState>()(
           const updatedUser = await apiClient.put<User>('/auth/me', { name, avatarUrl });
           await account.updateName(name).catch(() => {});
           set({ user: updatedUser });
-        } finally { set({ loading: false }); }
+        } finally {
+          set({ loading: false });
+        }
       },
 
       logout: async () => {
         clearAppwriteCache();
+        clearOrganizationContext();
         await account.deleteSession('current').catch(() => {});
         set({ user: null, organizationId: null });
       },
@@ -110,12 +137,13 @@ export const useAuth = create<AuthState>()(
           const me = await apiClient.get<User>('/auth/me');
           const orgId = me.memberships[0]?.organizationId ?? null;
           set({ user: me, organizationId: orgId });
-        } catch { set({ user: null }); }
+        } catch {
+          set({ user: null, organizationId: null });
+        }
       },
 
       setOrg: (orgId) => {
         set({ organizationId: orgId });
-        if (typeof window !== 'undefined') localStorage.setItem('mfa_oid', orgId);
       },
 
       hasPerm: (action) => {

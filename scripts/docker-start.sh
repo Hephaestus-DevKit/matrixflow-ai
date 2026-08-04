@@ -34,20 +34,45 @@ pnpm --filter @matrixflow/db exec prisma migrate deploy --schema prisma/schema.p
 
 echo "Starting Python Sidecar..."
 export SIDECAR_PYTHON_URL=${SIDECAR_PYTHON_URL:-http://localhost:8001}
-python3 apps/sidecar/main.py > /dev/null 2>&1 &
+python3 apps/sidecar/main.py &
+sidecar_pid=$!
+
+cleanup() {
+  trap - TERM INT EXIT
+  for pid in "${api_pid:-}" "${worker_pid:-}" "${sidecar_pid:-}"; do
+    [ -n "$pid" ] && kill -TERM "$pid" 2>/dev/null || true
+  done
+  wait 2>/dev/null || true
+}
+trap cleanup TERM INT EXIT
 
 # Wait for sidecar to become ready
 echo "Waiting for Python Sidecar..."
-for i in $(seq 1 10); do
+sidecar_ready=false
+for i in $(seq 1 30); do
   if wget -qO- http://localhost:8001/health > /dev/null 2>&1; then
     echo "Python Sidecar is ready"
+    sidecar_ready=true
     break
   fi
   sleep 1
 done
+if [ "$sidecar_ready" != "true" ]; then
+  echo "Python Sidecar failed to become ready" >&2
+  exit 1
+fi
 
 echo "Starting MatrixFlow API..."
 export INTERNAL_API_URL=${INTERNAL_API_URL:-http://localhost:${PORT:-7860}/api/v1}
 echo "Starting MatrixFlow Worker..."
 node apps/worker/dist/main.js &
-exec node apps/api/dist/main.js
+worker_pid=$!
+node apps/api/dist/main.js &
+api_pid=$!
+
+while kill -0 "$sidecar_pid" 2>/dev/null && kill -0 "$worker_pid" 2>/dev/null && kill -0 "$api_pid" 2>/dev/null; do
+  sleep 2
+done
+
+echo "A managed process exited; shutting down the combined container" >&2
+exit 1

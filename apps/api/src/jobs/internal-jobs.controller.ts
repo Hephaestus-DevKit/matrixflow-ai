@@ -8,7 +8,10 @@ import { InternalJobGuard } from './internal-job.guard';
 @UseGuards(InternalJobGuard)
 @Controller('internal/jobs')
 export class InternalJobsController {
-  constructor(private readonly kb: KbService, private readonly workflows: WorkflowService) {}
+  constructor(
+    private readonly kb: KbService,
+    private readonly workflows: WorkflowService,
+  ) {}
 
   @Post('documents/:docId/process')
   async processDocument(@Param('docId') docId: string) {

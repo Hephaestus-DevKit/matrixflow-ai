@@ -8,10 +8,27 @@ import { AiGateway } from '@matrixflow/ai-gateway';
   imports: [ConfigModule],
   controllers: [AiController],
   providers: [
-    { provide: AiGateway, inject: [ConfigService], useFactory: (cfg: ConfigService) => new AiGateway({
-      glm: { apiKey: cfg.get('GLM_API_KEY', ''), baseUrl: cfg.get('GLM_BASE_URL'), defaultModel: cfg.get('GLM_DEFAULT_MODEL'), timeoutMs: cfg.get<number>('GLM_TIMEOUT_MS', 60_000) },
-      openai: { apiKey: cfg.get('OPENAI_API_KEY', ''), baseUrl: cfg.get('OPENAI_BASE_URL'), defaultModel: cfg.get('OPENAI_DEFAULT_MODEL'), timeoutMs: cfg.get<number>('OPENAI_TIMEOUT_MS', 60_000) },
-    }) },
+    {
+      provide: AiGateway,
+      inject: [ConfigService],
+      useFactory: (cfg: ConfigService) =>
+        new AiGateway({
+          glm: {
+            apiKey: cfg.get('GLM_API_KEY', ''),
+            baseUrl: cfg.get('GLM_BASE_URL'),
+            defaultModel: cfg.get('GLM_DEFAULT_MODEL', 'glm-4-plus'),
+            embeddingModel: cfg.get('GLM_EMBEDDING_MODEL', 'embedding-3'),
+            timeoutMs: cfg.get<number>('GLM_TIMEOUT_MS', 60_000),
+          },
+          openai: {
+            apiKey: cfg.get('OPENAI_API_KEY', ''),
+            baseUrl: cfg.get('OPENAI_BASE_URL'),
+            defaultModel: cfg.get('OPENAI_DEFAULT_MODEL', 'gpt-4o-mini'),
+            embeddingModel: cfg.get('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
+            timeoutMs: cfg.get<number>('OPENAI_TIMEOUT_MS', 60_000),
+          },
+        }),
+    },
     AiService,
   ],
   exports: [AiService, AiGateway],

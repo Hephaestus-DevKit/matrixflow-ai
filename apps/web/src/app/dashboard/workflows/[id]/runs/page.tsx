@@ -30,7 +30,15 @@ export default function WorkflowRunsPage() {
           <div key={r.id} className="rounded-lg border border-border bg-card px-4 py-3 text-sm">
             <div className="flex items-center justify-between">
               <span className="font-mono text-xs text-muted-foreground">{r.id.slice(0, 8)}</span>
-              <span className={r.status === 'SUCCESS' ? 'text-success' : r.status === 'FAILED' ? 'text-destructive' : 'text-muted-foreground'}>
+              <span
+                className={
+                  r.status === 'SUCCESS'
+                    ? 'text-success'
+                    : r.status === 'FAILED'
+                      ? 'text-destructive'
+                      : 'text-muted-foreground'
+                }
+              >
                 {r.status}
               </span>
             </div>

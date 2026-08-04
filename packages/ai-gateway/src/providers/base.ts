@@ -22,8 +22,9 @@ export abstract class BaseProvider implements ProviderClient {
   protected async withRetry<T>(fn: () => Promise<T>, maxRetry = 3, backoffMs = 500): Promise<T> {
     let lastErr: unknown;
     for (let i = 0; i < maxRetry; i++) {
-      try { return await fn(); }
-      catch (e) {
+      try {
+        return await fn();
+      } catch (e) {
         lastErr = e;
         if (e instanceof AiGatewayError && e.status === 429) {
           await new Promise((r) => setTimeout(r, backoffMs * 2 ** i));
@@ -33,9 +34,14 @@ export abstract class BaseProvider implements ProviderClient {
         await new Promise((r) => setTimeout(r, backoffMs * 2 ** i));
       }
     }
-    if (lastErr instanceof Error && (lastErr.name === 'AbortError' || lastErr.name === 'TimeoutError')) {
+    if (
+      lastErr instanceof Error &&
+      (lastErr.name === 'AbortError' || lastErr.name === 'TimeoutError')
+    ) {
       throw new AiGatewayError('AI_TIMEOUT', `${this.name} request timed out`, 504);
     }
-    throw lastErr instanceof Error ? lastErr : new AiGatewayError('AI_PROVIDER_ERROR', String(lastErr));
+    throw lastErr instanceof Error
+      ? lastErr
+      : new AiGatewayError('AI_PROVIDER_ERROR', String(lastErr));
   }
 }

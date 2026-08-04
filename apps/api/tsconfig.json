@@ -14,18 +14,10 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "@matrixflow/shared": [
-        "../../packages/shared/src"
-      ],
-      "@matrixflow/db": [
-        "../../packages/db/src"
-      ],
-      "@matrixflow/ai-gateway": [
-        "../../packages/ai-gateway/src"
-      ],
-      "@matrixflow/workflow-engine": [
-        "../../packages/workflow-engine/src"
-      ]
+      "@matrixflow/shared": ["../../packages/shared/src"],
+      "@matrixflow/db": ["../../packages/db/src"],
+      "@matrixflow/ai-gateway": ["../../packages/ai-gateway/src"],
+      "@matrixflow/workflow-engine": ["../../packages/workflow-engine/src"]
     }
   },
   "references": [
@@ -42,12 +34,6 @@
       "path": "../../packages/db"
     }
   ],
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "test"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test"]
 }

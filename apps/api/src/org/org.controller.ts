@@ -1,8 +1,18 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+} from '@nestjs/common';
 import { Request } from 'express';
 import { OrgService } from './org.service';
 import { RequireAction, ReqUser } from '../common/auth-context';
-import { Action } from '@matrixflow/shared';
+import { Action, changeRoleSchema } from '@matrixflow/shared';
 
 @Controller('orgs')
 export class OrgController {
@@ -17,11 +27,15 @@ export class OrgController {
   }
 
   @Get()
-  list(@Req() req: Request) { return this.org.list((req.user as ReqUser).id); }
+  list(@Req() req: Request) {
+    return this.org.list((req.user as ReqUser).id);
+  }
 
   @Post()
   @RequireAction(Action.ORG_MANAGE)
-  create(@Req() req: Request, @Body() body: unknown) { return this.org.create((req.user as ReqUser).id, body); }
+  create(@Req() req: Request, @Body() body: unknown) {
+    return this.org.create((req.user as ReqUser).id, body);
+  }
 
   @Get(':orgId/members')
   @RequireAction(Action.ORG_MANAGE)
@@ -39,9 +53,14 @@ export class OrgController {
 
   @Patch(':orgId/members/:userId')
   @RequireAction(Action.ORG_MANAGE)
-  changeRole(@Req() req: Request, @Param('orgId') orgId: string, @Param('userId') userId: string, @Body() body: { roleName: string }) {
+  changeRole(
+    @Req() req: Request,
+    @Param('orgId') orgId: string,
+    @Param('userId') userId: string,
+    @Body() body: unknown,
+  ) {
     const user = this.currentUserForOrg(req, orgId);
-    return this.org.changeRole(user.id, orgId, userId, body.roleName);
+    return this.org.changeRole(user.id, orgId, userId, changeRoleSchema.parse(body).roleName);
   }
 
   @Delete(':orgId/members/:userId')

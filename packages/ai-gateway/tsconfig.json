@@ -11,9 +11,7 @@
     "sourceMap": true,
     "composite": true,
     "paths": {
-      "@matrixflow/shared": [
-        "../../packages/shared/src"
-      ]
+      "@matrixflow/shared": ["../../packages/shared/src"]
     }
   },
   "references": [
@@ -21,11 +19,6 @@
       "path": "../shared"
     }
   ],
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

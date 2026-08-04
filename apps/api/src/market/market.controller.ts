@@ -3,6 +3,7 @@ import { Request } from 'express';
 import { MarketService } from './market.service';
 import { RequireAction, ReqUser } from '../common/auth-context';
 import { Public } from '../common/guards/jwt-auth.guard';
+import { Action } from '@matrixflow/shared';
 
 @Controller('market')
 export class MarketController {
@@ -10,24 +11,36 @@ export class MarketController {
 
   @Public()
   @Get('items')
-  list(@Query() q: any) { return this.m.list(q); }
+  list(@Query() q: unknown) {
+    return this.m.list(q);
+  }
   @Public()
   @Get('items/:id')
-  get(@Param('id') id: string) { return this.m.get(id); }
+  get(@Param('id') id: string) {
+    return this.m.get(id);
+  }
 
   @Post('items')
-  @RequireAction('content:write')
-  publish(@Req() req: Request, @Body() body: any) { return this.m.publish((req.user as ReqUser).organizationId!, (req.user as ReqUser).id, body); }
+  @RequireAction(Action.MARKET_WRITE)
+  publish(@Req() req: Request, @Body() body: unknown) {
+    return this.m.publish((req.user as ReqUser).organizationId!, (req.user as ReqUser).id, body);
+  }
 
   @Post('items/:id/purchase')
-  @RequireAction('content:read')
-  purchase(@Req() req: Request, @Param('id') id: string) { return this.m.purchase((req.user as ReqUser).organizationId!, (req.user as ReqUser).id, id); }
+  @RequireAction(Action.MARKET_PURCHASE)
+  purchase(@Req() req: Request, @Param('id') id: string) {
+    return this.m.purchase((req.user as ReqUser).organizationId!, (req.user as ReqUser).id, id);
+  }
 
   @Get('purchased')
-  @RequireAction('content:read')
-  purchased(@Req() req: Request) { return this.m.purchased((req.user as ReqUser).organizationId!); }
+  @RequireAction(Action.MARKET_READ)
+  purchased(@Req() req: Request) {
+    return this.m.purchased((req.user as ReqUser).organizationId!);
+  }
 
   @Post('items/:id/reviews')
-  @RequireAction('content:read')
-  review(@Req() req: Request, @Param('id') id: string, @Body() body: { rating: number; comment?: string }) { return this.m.review((req.user as ReqUser).organizationId!, (req.user as ReqUser).id, id, body.rating, body.comment); }
+  @RequireAction(Action.MARKET_PURCHASE)
+  review(@Req() req: Request, @Param('id') id: string, @Body() body: unknown) {
+    return this.m.review((req.user as ReqUser).organizationId!, (req.user as ReqUser).id, id, body);
+  }
 }

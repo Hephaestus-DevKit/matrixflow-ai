@@ -8,9 +8,22 @@ describe('AgentController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AgentController],
-      providers: [{ provide: AgentService, useValue: { list: jest.fn(), get: jest.fn(), create: jest.fn(), run: jest.fn(), logs: jest.fn() } }],
+      providers: [
+        {
+          provide: AgentService,
+          useValue: {
+            list: jest.fn(),
+            get: jest.fn(),
+            create: jest.fn(),
+            run: jest.fn(),
+            logs: jest.fn(),
+          },
+        },
+      ],
     }).compile();
     controller = module.get<AgentController>(AgentController);
   });
-  it('should be defined', () => { expect(controller).toBeDefined(); });
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
+  });
 });

@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      node-production:
+        dependency-type: production
+      node-development:
+        dependency-type: development
+  - package-ecosystem: pip
+    directory: /apps/sidecar
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directory: /
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directory: /infra/docker
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directory: /apps/sidecar
+    schedule: { interval: weekly }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }

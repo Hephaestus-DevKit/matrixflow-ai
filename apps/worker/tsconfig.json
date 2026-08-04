@@ -8,21 +8,8 @@
     "target": "ES2022",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "baseUrl": ".",
-    "paths": {
-      "@matrixflow/shared": ["../../packages/shared/src"],
-      "@matrixflow/ai-gateway": ["../../packages/ai-gateway/src"],
-      "@matrixflow/workflow-engine": ["../../packages/workflow-engine/src"],
-      "@matrixflow/db": ["../../packages/db/src"]
-    }
+    "resolveJsonModule": true
   },
-  "references": [
-    { "path": "../../packages/shared" },
-    { "path": "../../packages/ai-gateway" },
-    { "path": "../../packages/workflow-engine" },
-    { "path": "../../packages/db" }
-  ],
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

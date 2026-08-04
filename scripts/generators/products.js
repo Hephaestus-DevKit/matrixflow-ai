@@ -3,7 +3,18 @@
 const faker = require('@faker-js/faker').fakerEN;
 
 const PLATFORMS = ['amazon', 'shopify', 'tiktok_shop', 'independent'];
-const CATEGORIES = ['Electronics', 'Home & Kitchen', 'Beauty', 'Fitness', 'Pet', 'Baby', 'Outdoor', 'Office', 'Toys', 'Auto'];
+const CATEGORIES = [
+  'Electronics',
+  'Home & Kitchen',
+  'Beauty',
+  'Fitness',
+  'Pet',
+  'Baby',
+  'Outdoor',
+  'Office',
+  'Toys',
+  'Auto',
+];
 
 function genProduct(i) {
   const cat = faker.helpers.arrayElement(CATEGORIES);
@@ -15,7 +26,9 @@ function genProduct(i) {
     name,
     slug: faker.helpers.slugify(name).toLowerCase(),
     description: faker.commerce.productDescription(),
-    features: faker.helpers.multiple(() => faker.commerce.productDescription().slice(0, 60), { count: { min: 3, max: 6 } }),
+    features: faker.helpers.multiple(() => faker.commerce.productDescription().slice(0, 60), {
+      count: { min: 3, max: 6 },
+    }),
     price: parseFloat(faker.commerce.price({ min: 9.99, max: 499.99 })),
     currency: 'USD',
     category: cat,

@@ -32,7 +32,7 @@ export const ErrorCode = {
   PAYMENT_REQUIRED: 'PAYMENT_REQUIRED',
 } as const;
 
-export type ErrorCode = typeof ErrorCode[keyof typeof ErrorCode];
+export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
 // 角色
 export const RoleName = {
@@ -40,23 +40,68 @@ export const RoleName = {
   ADMIN: 'admin',
   MEMBER: 'member',
 } as const;
-export type RoleName = typeof RoleName[keyof typeof RoleName];
+export type RoleName = (typeof RoleName)[keyof typeof RoleName];
 
 // Agent 状态
 export const AgentStatus = { DRAFT: 'DRAFT', ACTIVE: 'ACTIVE', ARCHIVED: 'ARCHIVED' } as const;
-export const RunStatus = { PENDING: 'PENDING', RUNNING: 'RUNNING', SUCCESS: 'SUCCESS', FAILED: 'FAILED', CANCELED: 'CANCELED' } as const;
+export const RunStatus = {
+  PENDING: 'PENDING',
+  RUNNING: 'RUNNING',
+  SUCCESS: 'SUCCESS',
+  FAILED: 'FAILED',
+  CANCELED: 'CANCELED',
+} as const;
 
 // AI Provider
-export const Provider = { GLM: 'glm', OPENAI: 'openai', ANTHROPIC: 'anthropic', GEMINI: 'gemini' } as const;
-export type Provider = typeof Provider[keyof typeof Provider];
+export const Provider = { GLM: 'glm', OPENAI: 'openai' } as const;
+export type Provider = (typeof Provider)[keyof typeof Provider];
 
 // 权限 action
 export const Action = {
-  AGENT_READ: 'agent:read', AGENT_WRITE: 'agent:write', AGENT_RUN: 'agent:run',
-  CONTENT_READ: 'content:read', CONTENT_WRITE: 'content:write',
-  KB_READ: 'kb:read', KB_WRITE: 'kb:write',
-  WORKFLOW_READ: 'workflow:read', WORKFLOW_WRITE: 'workflow:write', WORKFLOW_RUN: 'workflow:run',
-  CRM_READ: 'crm:read', CRM_WRITE: 'crm:write',
-  ORG_MANAGE: 'org:manage', BILLING_MANAGE: 'billing:manage',
+  AGENT_READ: 'agent:read',
+  AGENT_WRITE: 'agent:write',
+  AGENT_RUN: 'agent:run',
+  CONTENT_READ: 'content:read',
+  CONTENT_WRITE: 'content:write',
+  KB_READ: 'kb:read',
+  KB_WRITE: 'kb:write',
+  WORKFLOW_READ: 'workflow:read',
+  WORKFLOW_WRITE: 'workflow:write',
+  WORKFLOW_RUN: 'workflow:run',
+  CRM_READ: 'crm:read',
+  CRM_WRITE: 'crm:write',
+  MARKET_READ: 'market:read',
+  MARKET_WRITE: 'market:write',
+  MARKET_PURCHASE: 'market:purchase',
+  ORG_MANAGE: 'org:manage',
+  BILLING_MANAGE: 'billing:manage',
 } as const;
-export type Action = typeof Action[keyof typeof Action];
+export type Action = (typeof Action)[keyof typeof Action];
+
+export const ADMIN_ACTIONS: Action[] = [
+  Action.AGENT_READ,
+  Action.AGENT_WRITE,
+  Action.AGENT_RUN,
+  Action.CONTENT_READ,
+  Action.CONTENT_WRITE,
+  Action.KB_READ,
+  Action.KB_WRITE,
+  Action.WORKFLOW_READ,
+  Action.WORKFLOW_WRITE,
+  Action.WORKFLOW_RUN,
+  Action.CRM_READ,
+  Action.CRM_WRITE,
+  Action.MARKET_READ,
+  Action.MARKET_WRITE,
+  Action.MARKET_PURCHASE,
+];
+
+export const MEMBER_ACTIONS: Action[] = [
+  Action.AGENT_READ,
+  Action.CONTENT_READ,
+  Action.KB_READ,
+  Action.WORKFLOW_READ,
+  Action.CRM_READ,
+  Action.MARKET_READ,
+  Action.MARKET_PURCHASE,
+];

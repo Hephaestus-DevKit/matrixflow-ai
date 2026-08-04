@@ -1,9 +1,19 @@
 // @matrixflow/workflow-engine · 工作流 DSL + DAG 执行器
 export interface WorkflowNode {
   id: string;
-  type: 'trigger' | 'ai' | 'condition' | 'transform' | 'webhook' | 'email' | 'content' | 'human' | 'schedule' | 'loop';
-  config: Record<string, unknown>;
-  position: { x: number; y: number };
+  type:
+    | 'trigger'
+    | 'ai'
+    | 'condition'
+    | 'transform'
+    | 'webhook'
+    | 'email'
+    | 'content'
+    | 'human'
+    | 'schedule'
+    | 'loop';
+  config?: Record<string, unknown>;
+  position?: { x: number; y: number };
 }
 
 export interface WorkflowEdge {
@@ -30,10 +40,16 @@ export interface NodeResult {
   durationMs: number;
 }
 
-export type WorkflowNodeHandler = (node: WorkflowNode, input: unknown, context: ExecutionContext) => Promise<unknown>;
+export type WorkflowNodeHandler = (
+  node: WorkflowNode,
+  input: unknown,
+  context: ExecutionContext,
+) => Promise<unknown>;
 
 export class WorkflowEngine {
-  constructor(private readonly handlers: Partial<Record<WorkflowNode['type'], WorkflowNodeHandler>> = {}) {}
+  constructor(
+    private readonly handlers: Partial<Record<WorkflowNode['type'], WorkflowNodeHandler>> = {},
+  ) {}
 
   async execute(dsl: WorkflowDSL, input: unknown, ctx: ExecutionContext): Promise<unknown> {
     const validation = this.validate(dsl);
@@ -41,15 +57,26 @@ export class WorkflowEngine {
     const sorted = this.topoSort(dsl.nodes, dsl.edges);
     const state: Record<string, unknown> = { __input: input };
     for (const node of sorted) {
-      const sources = dsl.edges.filter((edge) => edge.target === node.id).map((edge) => edge.source);
-      const nodeInput = sources.length === 0 ? input : sources.length === 1 ? state[sources[0]] : Object.fromEntries(sources.map((source) => [source, state[source]]));
+      const sources = dsl.edges
+        .filter((edge) => edge.target === node.id)
+        .map((edge) => edge.source);
+      const nodeInput =
+        sources.length === 0
+          ? input
+          : sources.length === 1
+            ? state[sources[0]]
+            : Object.fromEntries(sources.map((source) => [source, state[source]]));
       state[node.id] = await this.runNode(node, nodeInput, ctx);
     }
     const last = sorted.filter((n) => n.type !== 'trigger').pop();
-    return last ? state[last.id] : state;
+    return last ? state[last.id] : input;
   }
 
-  private async runNode(node: WorkflowNode, input: unknown, ctx: ExecutionContext): Promise<unknown> {
+  private async runNode(
+    node: WorkflowNode,
+    input: unknown,
+    ctx: ExecutionContext,
+  ): Promise<unknown> {
     if (node.type === 'trigger') return input;
     const handler = this.handlers[node.type];
     if (!handler) throw new Error(`No handler registered for workflow node type: ${node.type}`);
@@ -78,10 +105,25 @@ export class WorkflowEngine {
 
   validate(dsl: WorkflowDSL): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
-    if (!Array.isArray(dsl?.nodes) || !dsl.nodes.length) return { valid: false, errors: ['No nodes'] };
+    if (!Array.isArray(dsl?.nodes) || !dsl.nodes.length)
+      return { valid: false, errors: ['No nodes'] };
     if (!Array.isArray(dsl.edges)) return { valid: false, errors: ['No edges array'] };
     const ids = new Set(dsl.nodes.map((n) => n.id));
     if (ids.size !== dsl.nodes.length) errors.push('Duplicate node IDs');
+    const allowedTypes = new Set<WorkflowNode['type']>([
+      'trigger',
+      'ai',
+      'condition',
+      'transform',
+      'webhook',
+      'email',
+      'content',
+      'human',
+      'schedule',
+      'loop',
+    ]);
+    for (const node of dsl.nodes)
+      if (!allowedTypes.has(node.type)) errors.push(`Unsupported node type ${node.type}`);
     for (const e of dsl.edges) {
       if (!ids.has(e.source)) errors.push(`Edge source ${e.source} not found`);
       if (!ids.has(e.target)) errors.push(`Edge target ${e.target} not found`);
@@ -95,11 +137,17 @@ export class WorkflowEngine {
     const hasCycle = (id: string): boolean => {
       if (stack.has(id)) return true;
       if (visited.has(id)) return false;
-      visited.add(id); stack.add(id);
+      visited.add(id);
+      stack.add(id);
       for (const next of adj.get(id) ?? []) if (hasCycle(next)) return true;
-      stack.delete(id); return false;
+      stack.delete(id);
+      return false;
     };
-    for (const n of dsl.nodes) if (hasCycle(n.id)) { errors.push('Cycle detected'); break; }
+    for (const n of dsl.nodes)
+      if (hasCycle(n.id)) {
+        errors.push('Cycle detected');
+        break;
+      }
     return { valid: errors.length === 0, errors };
   }
 }

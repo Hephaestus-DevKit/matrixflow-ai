@@ -37,7 +37,7 @@ export default function SettingsPage() {
       setName(user.name);
       setAvatarUrl(user.avatarUrl ?? '');
       // If the avatarUrl is not one of our presets, populate customAvatar
-      const isPreset = PRESET_AVATARS.some(p => makeSvgAvatar(p.color) === user.avatarUrl);
+      const isPreset = PRESET_AVATARS.some((p) => makeSvgAvatar(p.color) === user.avatarUrl);
       if (!isPreset && user.avatarUrl) {
         setCustomAvatar(user.avatarUrl);
       } else {
@@ -80,7 +80,9 @@ export default function SettingsPage() {
         <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
           设置中心
         </h1>
-        <p className="text-xs text-muted-foreground mt-0.5">管理您的个人身份属性、企业配置以及系统级集成</p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          管理您的个人身份属性、企业配置以及系统级集成
+        </p>
       </div>
 
       {/* Tabs */}
@@ -135,14 +137,18 @@ export default function SettingsPage() {
 
               <div>
                 <h3 className="text-sm font-bold text-foreground">头像与工作身份预览</h3>
-                <p className="text-2xs text-muted-foreground mt-0.5">即时同步在左下角及工作台的系统级状态中</p>
+                <p className="text-2xs text-muted-foreground mt-0.5">
+                  即时同步在左下角及工作台的系统级状态中
+                </p>
               </div>
             </div>
 
             {/* Form Fields */}
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="profileName" className="text-xs font-semibold text-foreground">工作姓名</Label>
+                <Label htmlFor="profileName" className="text-xs font-semibold text-foreground">
+                  工作姓名
+                </Label>
                 <Input
                   id="profileName"
                   value={name}
@@ -192,7 +198,9 @@ export default function SettingsPage() {
 
               {/* Custom Input */}
               <div className="space-y-1.5">
-                <Label htmlFor="customAvatar" className="text-xs font-semibold text-foreground">或者使用自定义头像链接 (URL)</Label>
+                <Label htmlFor="customAvatar" className="text-xs font-semibold text-foreground">
+                  或者使用自定义头像链接 (URL)
+                </Label>
                 <Input
                   id="customAvatar"
                   value={customAvatar}
@@ -205,7 +213,11 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={saving} className="gap-1.5 text-xs font-bold px-5 shadow-glow-sm hover:shadow-glow">
+            <Button
+              type="submit"
+              disabled={saving}
+              className="gap-1.5 text-xs font-bold px-5 shadow-glow-sm hover:shadow-glow"
+            >
               <Save className="h-3.5 w-3.5" />
               {saving ? '正在保存...' : '保存更改'}
             </Button>
@@ -221,17 +233,23 @@ export default function SettingsPage() {
               </div>
               <div>
                 <h3 className="text-xs font-bold text-foreground">组织角色权限</h3>
-                <p className="text-2xs text-muted-foreground mt-0.5">当前登录企业级节点及资源范围说明</p>
+                <p className="text-2xs text-muted-foreground mt-0.5">
+                  当前登录企业级节点及资源范围说明
+                </p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div className="bg-muted/10 p-3 rounded-lg border border-border/40">
-                <p className="text-[10px] text-muted-foreground font-semibold uppercase">所属企业组织</p>
+                <p className="text-[10px] text-muted-foreground font-semibold uppercase">
+                  所属企业组织
+                </p>
                 <p className="font-bold text-foreground mt-1">MatrixFlow AI</p>
               </div>
               <div className="bg-muted/10 p-3 rounded-lg border border-border/40">
-                <p className="text-[10px] text-muted-foreground font-semibold uppercase">组织角色定位</p>
+                <p className="text-[10px] text-muted-foreground font-semibold uppercase">
+                  组织角色定位
+                </p>
                 <p className="font-bold text-primary mt-1 flex items-center gap-1">
                   创始人 (OWNER)
                 </p>
@@ -247,7 +265,9 @@ export default function SettingsPage() {
               </div>
               <div>
                 <p className="text-xs font-bold text-foreground">API 接入密钥</p>
-                <p className="text-2xs text-muted-foreground mt-0.5">支持对接店小秘、马帮等外部 ERP 平台进行商品同步</p>
+                <p className="text-2xs text-muted-foreground mt-0.5">
+                  支持对接店小秘、马帮等外部 ERP 平台进行商品同步
+                </p>
               </div>
             </div>
             <span className="rounded-full bg-primary/5 px-2.5 py-0.5 text-primary text-[10px] font-bold border border-primary/10">

@@ -33,7 +33,10 @@ describe('WorkflowEngine', () => {
         { id: 'n1', type: 'trigger', config: {}, position: { x: 0, y: 0 } },
         { id: 'n2', type: 'ai', config: {}, position: { x: 200, y: 0 } },
       ],
-      edges: [{ source: 'n1', target: 'n2' }, { source: 'n2', target: 'n1' }],
+      edges: [
+        { source: 'n1', target: 'n2' },
+        { source: 'n2', target: 'n1' },
+      ],
     };
     const result = engine.validate(dsl);
     expect(result.valid).toBe(false);
@@ -58,7 +61,9 @@ describe('WorkflowEngine', () => {
   });
 
   it('executes registered handlers with upstream input', async () => {
-    const handled = new WorkflowEngine({ transform: async (_node, input) => ({ input, transformed: true }) });
+    const handled = new WorkflowEngine({
+      transform: async (_node, input) => ({ input, transformed: true }),
+    });
     const dsl: WorkflowDSL = {
       nodes: [
         { id: 'start', type: 'trigger', config: {}, position: { x: 0, y: 0 } },
@@ -66,7 +71,12 @@ describe('WorkflowEngine', () => {
       ],
       edges: [{ source: 'start', target: 'transform' }],
     };
-    await expect(handled.execute(dsl, { value: 1 }, { organizationId: 'o', userId: 'u', workflowId: 'w', runId: 'r' }))
-      .resolves.toEqual({ input: { value: 1 }, transformed: true });
+    await expect(
+      handled.execute(
+        dsl,
+        { value: 1 },
+        { organizationId: 'o', userId: 'u', workflowId: 'w', runId: 'r' },
+      ),
+    ).resolves.toEqual({ input: { value: 1 }, transformed: true });
   });
 });

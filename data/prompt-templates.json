@@ -5,7 +5,16 @@
     "category": "ecommerce",
     "systemPrompt": "你是跨境电商资深文案专家，精通 Amazon A9、Shopify SEO、TikTok Shop 规则。产出符合平台字数与禁用词的高转化标题。",
     "userPromptTemplate": "商品资料：{{productJson}}\n目标平台：{{platform}}\n目标语言：{{language}}\n最大长度：{{maxLength}} 字\n请生成 5 个标题，输出 JSON 数组 [\"\",\"\",...]",
-    "inputSchema": { "type": "object", "properties": { "productJson": { "type": "object" }, "platform": { "type": "string" }, "language": { "type": "string" }, "maxLength": { "type": "number" } }, "required": ["productJson", "platform", "language"] },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "productJson": { "type": "object" },
+        "platform": { "type": "string" },
+        "language": { "type": "string" },
+        "maxLength": { "type": "number" }
+      },
+      "required": ["productJson", "platform", "language"]
+    },
     "outputSchema": { "type": "array", "items": { "type": "string" } },
     "tags": ["ecommerce", "amazon", "shopify"]
   },
@@ -15,8 +24,19 @@
     "category": "ecommerce",
     "systemPrompt": "你是 Amazon Listing 专家，输出符合 A9 算法的 5 点描述 + 详细描述 + backend keywords。",
     "userPromptTemplate": "商品：{{productJson}}\n语言：{{language}}\n输出 JSON：{bulletPoints:[],description,backendKeywords:[]}",
-    "inputSchema": { "type": "object", "properties": { "productJson": { "type": "object" }, "language": { "type": "string" } }, "required": ["productJson"] },
-    "outputSchema": { "type": "object", "properties": { "bulletPoints": { "type": "array" }, "description": { "type": "string" }, "backendKeywords": { "type": "array" } } },
+    "inputSchema": {
+      "type": "object",
+      "properties": { "productJson": { "type": "object" }, "language": { "type": "string" } },
+      "required": ["productJson"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "bulletPoints": { "type": "array" },
+        "description": { "type": "string" },
+        "backendKeywords": { "type": "array" }
+      }
+    },
     "tags": ["amazon", "listing"]
   },
   {

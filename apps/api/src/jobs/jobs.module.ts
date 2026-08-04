@@ -4,5 +4,9 @@ import { WorkflowModule } from '../workflow/workflow.module';
 import { InternalJobGuard } from './internal-job.guard';
 import { InternalJobsController } from './internal-jobs.controller';
 
-@Module({ imports: [KbModule, WorkflowModule], controllers: [InternalJobsController], providers: [InternalJobGuard] })
+@Module({
+  imports: [KbModule, WorkflowModule],
+  controllers: [InternalJobsController],
+  providers: [InternalJobGuard],
+})
 export class JobsModule {}

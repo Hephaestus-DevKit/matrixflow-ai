@@ -8,9 +8,21 @@ describe('ContentController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ContentController],
-      providers: [{ provide: ContentService, useValue: { createProject: jest.fn(), listProjects: jest.fn(), generate: jest.fn(), generateAll: jest.fn() } }],
+      providers: [
+        {
+          provide: ContentService,
+          useValue: {
+            createProject: jest.fn(),
+            listProjects: jest.fn(),
+            generate: jest.fn(),
+            generateAll: jest.fn(),
+          },
+        },
+      ],
     }).compile();
     controller = module.get<ContentController>(ContentController);
   });
-  it('should be defined', () => { expect(controller).toBeDefined(); });
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
+  });
 });

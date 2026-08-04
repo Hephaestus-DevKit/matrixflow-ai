@@ -15,7 +15,13 @@ describe('AuthService refresh rotation', () => {
   function makeService(claimCount: number) {
     const prisma = {
       session: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'session-1', userId: user.id, refreshToken: tokenHash, revokedAt: null, expiresAt: new Date(Date.now() + 60_000) }),
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'session-1',
+          userId: user.id,
+          refreshToken: tokenHash,
+          revokedAt: null,
+          expiresAt: new Date(Date.now() + 60_000),
+        }),
         updateMany: jest.fn().mockResolvedValue({ count: claimCount }),
         create: jest.fn().mockResolvedValue({ id: 'session-2' }),
       },
@@ -28,7 +34,13 @@ describe('AuthService refresh rotation', () => {
       set: jest.fn().mockResolvedValue(undefined),
     };
     const jwt = { signAsync: jest.fn().mockResolvedValue('access-token') };
-    const service = new AuthService(prisma as any, jwt as any, { get: jest.fn() } as any, redis as any, { log: jest.fn() } as any);
+    const service = new AuthService(
+      prisma as any,
+      jwt as any,
+      { get: jest.fn() } as any,
+      redis as any,
+      { log: jest.fn() } as any,
+    );
     return { service, prisma, redis };
   }
 
@@ -50,10 +62,16 @@ describe('AuthService refresh rotation', () => {
       where: { id: 'session-1' },
       omit: { refreshToken: false },
     });
-    expect(prisma.organizationMember.findFirst).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ organizationId: 'org-1' }),
-    }));
+    expect(prisma.organizationMember.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ organizationId: 'org-1' }),
+      }),
+    );
     expect(redis.del).toHaveBeenCalledTimes(1);
-    expect(redis.set).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ organizationId: 'org-1' }), expect.any(Number));
+    expect(redis.set).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ organizationId: 'org-1' }),
+      expect.any(Number),
+    );
   });
 });

@@ -1,9 +1,8 @@
-import { Body, Controller, Post, Req, Sse, MessageEvent } from '@nestjs/common';
-import { Request } from 'express';
+import { Body, Controller, Post, Req, Res } from '@nestjs/common';
+import { Request, Response } from 'express';
 import { AiService } from './ai.service';
 import { RequireAction, ReqUser } from '../common/auth-context';
-import { Action } from '@matrixflow/shared';
-import { Observable } from 'rxjs';
+import { Action, aiPromptRequestSchema } from '@matrixflow/shared';
 
 @Controller('ai')
 export class AiController {
@@ -11,24 +10,44 @@ export class AiController {
 
   @Post('run')
   @RequireAction(Action.AGENT_RUN)
-  run(@Req() req: Request, @Body() body: { promptKey: string; variables: Record<string, unknown>; agentId?: string; responseFormat?: 'text' | 'json_object' }) {
+  run(@Req() req: Request, @Body() body: unknown) {
     const u = req.user as ReqUser;
-    return this.ai.runPrompt({ ...body, organizationId: u.organizationId!, userId: u.id });
+    return this.ai.runPrompt({
+      ...aiPromptRequestSchema.parse(body),
+      organizationId: u.organizationId!,
+      userId: u.id,
+    });
   }
 
-  @Sse('stream')
+  @Post('stream')
   @RequireAction(Action.AGENT_RUN)
-  stream(@Req() req: Request, @Body() body: { promptKey: string; variables: Record<string, unknown>; agentId?: string }): Observable<MessageEvent> {
+  async stream(@Req() req: Request, @Res() res: Response, @Body() body: unknown): Promise<void> {
     const u = req.user as ReqUser;
-    return new Observable<MessageEvent>((sub) => {
-      (async () => {
-        try {
-          for await (const chunk of this.ai.stream({ ...body, organizationId: u.organizationId!, userId: u.id })) {
-            sub.next({ type: 'delta', data: JSON.stringify(chunk) } as MessageEvent);
-          }
-          sub.complete();
-        } catch (e) { sub.error(e); }
-      })();
-    });
+    const input = aiPromptRequestSchema.parse(body);
+    const abortController = new AbortController();
+    const abort = () => abortController.abort();
+    res.on('close', abort);
+    res.status(200);
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+    try {
+      for await (const chunk of this.ai.stream(
+        { ...input, organizationId: u.organizationId!, userId: u.id },
+        abortController.signal,
+      )) {
+        if (res.destroyed) break;
+        res.write(`event: ${chunk.done ? 'done' : 'delta'}\ndata: ${JSON.stringify(chunk)}\n\n`);
+      }
+    } catch (error) {
+      if (!res.destroyed)
+        res.write(
+          `event: error\ndata: ${JSON.stringify({ message: (error as Error).message })}\n\n`,
+        );
+    } finally {
+      res.off('close', abort);
+      if (!res.destroyed) res.end();
+    }
   }
 }

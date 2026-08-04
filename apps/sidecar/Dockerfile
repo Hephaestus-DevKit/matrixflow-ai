@@ -1,17 +1,15 @@
-FROM python:3.11-slim
+# syntax=docker/dockerfile:1.7
+FROM python:3.12.11-slim AS runner
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 WORKDIR /app
 
-# 安装编译所需的依赖包
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt ./
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --require-hashes -r requirements.txt
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
+COPY --chown=65532:65532 main.py config.py parsers.py text_processing.py ./
+USER 65532:65532
 EXPOSE 8001
-
-CMD ["python", "main.py"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--no-access-log"]

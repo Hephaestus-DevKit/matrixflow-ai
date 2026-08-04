@@ -14,7 +14,7 @@ import {
   MessageSquare,
   Store,
   LineChart,
-  Settings
+  Settings,
 } from 'lucide-react';
 
 const NAV = [
@@ -27,7 +27,7 @@ const NAV = [
   { href: '/dashboard/marketplace', icon: Store, label: '模板市场' },
   { href: '/dashboard/analytics', icon: LineChart, label: '数据看板' },
   { href: '/dashboard/settings', icon: Settings, label: '设置' },
-];
+] as const;
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -40,7 +40,9 @@ export function Sidebar() {
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-primary via-indigo-500 to-primary text-primary-foreground text-xs font-black shadow-glow-sm hover:rotate-6 transition-transform duration-300">
           M
         </div>
-        <span className="font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground/90 to-primary bg-clip-text text-transparent text-sm">MatrixFlow AI</span>
+        <span className="font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground/90 to-primary bg-clip-text text-transparent text-sm">
+          MatrixFlow AI
+        </span>
       </div>
 
       {/* Nav */}
@@ -51,7 +53,7 @@ export function Sidebar() {
           return (
             <Link
               key={item.href}
-              href={item.href as any}
+              href={item.href}
               className={cn(
                 'flex items-center gap-3 rounded-xl px-3.5 py-2 text-xs transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]',
                 isActive
@@ -59,7 +61,12 @@ export function Sidebar() {
                   : 'text-muted-foreground hover:bg-muted/65 hover:text-foreground',
               )}
             >
-              <Icon className={cn('h-4 w-4 transition-transform duration-200 group-hover:scale-105', isActive ? 'text-primary' : 'text-muted-foreground')} />
+              <Icon
+                className={cn(
+                  'h-4 w-4 transition-transform duration-200 group-hover:scale-105',
+                  isActive ? 'text-primary' : 'text-muted-foreground',
+                )}
+              />
               <span>{item.label}</span>
             </Link>
           );
@@ -68,15 +75,15 @@ export function Sidebar() {
 
       {/* User */}
       <div className="border-t border-border p-3 bg-muted/20">
-        <Link 
-          href="/dashboard/settings" 
+        <Link
+          href="/dashboard/settings"
           className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-muted/60 transition-all duration-200 cursor-pointer group"
           title="点击查看个人资料设置"
         >
           {user?.avatarUrl ? (
             <Image
-              src={user.avatarUrl} 
-              alt={user.name} 
+              src={user.avatarUrl}
+              alt={user.name}
               width={32}
               height={32}
               unoptimized

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiService } from '../ai/ai.service';
 import { FileService } from '../file/file.service';
@@ -13,27 +13,59 @@ const SUPPORTED_EXTENSIONS = new Set(['pdf', 'docx', 'txt', 'md', 'csv']);
 
 @Injectable()
 export class KbService {
-  constructor(private prisma: PrismaService, private ai: AiService, private file: FileService, private audit: AuditService, private queue: QueueService) {}
+  private readonly logger = new Logger(KbService.name);
+  constructor(
+    private prisma: PrismaService,
+    private ai: AiService,
+    private file: FileService,
+    private audit: AuditService,
+    private queue: QueueService,
+  ) {}
 
   async list(organizationId: string) {
-    return this.prisma.knowledgeBase.findMany({ where: { organizationId, deletedAt: null }, include: { _count: { select: { documents: true } } }, orderBy: { createdAt: 'desc' } });
+    return this.prisma.knowledgeBase.findMany({
+      where: { organizationId, deletedAt: null },
+      include: { _count: { select: { documents: { where: { deletedAt: null } } } } },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
-  async create(organizationId: string, userId: string, input: { name: string; description?: string }) {
+  async create(
+    organizationId: string,
+    userId: string,
+    input: { name: string; description?: string },
+  ) {
     const name = input.name?.trim();
-    if (!name || name.length > 100 || (input.description?.length ?? 0) > 2_000) throw new BadRequestException('Invalid knowledge base name or description');
-    const kb = await this.prisma.knowledgeBase.create({ data: { organizationId, name, description: input.description?.trim() } });
-    await this.audit.log({ action: 'kb.create', userId, organizationId, resource: 'kb', resourceId: kb.id });
+    if (!name || name.length > 100 || (input.description?.length ?? 0) > 2_000)
+      throw new BadRequestException('Invalid knowledge base name or description');
+    const kb = await this.prisma.knowledgeBase.create({
+      data: { organizationId, name, description: input.description?.trim() },
+    });
+    await this.audit.log({
+      action: 'kb.create',
+      userId,
+      organizationId,
+      resource: 'kb',
+      resourceId: kb.id,
+    });
     return kb;
   }
 
   async get(organizationId: string, id: string) {
-    const kb = await this.prisma.knowledgeBase.findFirst({ where: { id, organizationId, deletedAt: null }, include: { documents: { where: { deletedAt: null }, orderBy: { createdAt: 'desc' } } } });
+    const kb = await this.prisma.knowledgeBase.findFirst({
+      where: { id, organizationId, deletedAt: null },
+      include: { documents: { where: { deletedAt: null }, orderBy: { createdAt: 'desc' } } },
+    });
     if (!kb) throw new NotFoundException();
     return kb;
   }
 
-  async uploadDocument(organizationId: string, userId: string, kbId: string, file: Express.Multer.File) {
+  async uploadDocument(
+    organizationId: string,
+    userId: string,
+    kbId: string,
+    file: Express.Multer.File,
+  ) {
     if (!file) throw new BadRequestException('File is required');
 
     const extension = extname(file.originalname).slice(1).toLowerCase();
@@ -52,31 +84,56 @@ export class KbService {
     if (!kb) throw new NotFoundException('Knowledge base not found');
 
     // 上传到 MinIO
-    const safeName = basename(file.originalname).replace(/[^a-zA-Z0-9._-]/g, '_') || `document.${extension}`;
+    const safeName =
+      basename(file.originalname).replace(/[^a-zA-Z0-9._-]/g, '_') || `document.${extension}`;
     const objectKey = `kb/${kbId}/${randomUUID()}-${safeName}`;
     await this.file.upload(objectKey, file.buffer, file.mimetype);
 
     // 创建文档记录
-    const doc = await this.prisma.knowledgeDocument.create({ data: { knowledgeBaseId: kbId, organizationId, title: safeName, sourceType: extension, objectKey, mimeType: file.mimetype, sizeBytes: file.size, status: 'pending' } }).catch(async (error) => {
-      await this.file.delete(objectKey).catch(() => undefined);
-      throw error;
-    });
+    const doc = await this.prisma.knowledgeDocument
+      .create({
+        data: {
+          knowledgeBaseId: kbId,
+          organizationId,
+          title: safeName,
+          sourceType: extension,
+          objectKey,
+          mimeType: file.mimetype,
+          sizeBytes: file.size,
+          status: 'pending',
+        },
+      })
+      .catch(async (error) => {
+        await this.file.delete(objectKey).catch(() => undefined);
+        throw error;
+      });
 
     try {
       await this.queue.enqueueDocument(doc.id);
     } catch (error) {
-      await this.prisma.knowledgeDocument.update({ where: { id: doc.id }, data: { status: 'failed', error: 'Unable to enqueue document processing' } });
+      await this.prisma.knowledgeDocument.update({
+        where: { id: doc.id },
+        data: { status: 'failed', error: 'Unable to enqueue document processing' },
+      });
       throw error;
     }
 
-    await this.audit.log({ action: 'kb.upload', userId, organizationId, resource: 'document', resourceId: doc.id });
+    await this.audit.log({
+      action: 'kb.upload',
+      userId,
+      organizationId,
+      resource: 'document',
+      resourceId: doc.id,
+    });
     return doc;
   }
 
   async processDocument(docId: string) {
     const doc = await this.prisma.knowledgeDocument.findUnique({ where: { id: docId } });
     if (!doc || doc.deletedAt || doc.status === 'ready') return;
-    const leaseCutoff = new Date(Date.now() - Number(process.env.DOCUMENT_PROCESSING_LEASE_MS ?? 10 * 60_000));
+    const leaseCutoff = new Date(
+      Date.now() - Number(process.env.DOCUMENT_PROCESSING_LEASE_MS ?? 10 * 60_000),
+    );
     const claimed = await this.prisma.knowledgeDocument.updateMany({
       where: {
         id: docId,
@@ -99,7 +156,9 @@ export class KbService {
       // Copy the Buffer into a standalone ArrayBuffer. Node's Buffer is typed
       // with ArrayBufferLike, which is not assignable to BlobPart on newer
       // TypeScript/Node versions (and avoids sharing a pooled backing buffer).
-      const blob = new Blob([new Uint8Array(buf).slice().buffer], { type: doc.mimeType || 'application/octet-stream' });
+      const blob = new Blob([new Uint8Array(buf).slice().buffer], {
+        type: doc.mimeType || 'application/octet-stream',
+      });
       formData.append('file', blob, doc.title || 'document');
 
       const response = await fetch(
@@ -108,7 +167,7 @@ export class KbService {
           method: 'POST',
           body: formData,
           signal: AbortSignal.timeout(Number(process.env.SIDECAR_TIMEOUT_MS ?? 60_000)),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -117,47 +176,88 @@ export class KbService {
       }
 
       const parsedData = (await response.json()) as { text?: unknown; chunks?: unknown };
-      if (typeof parsedData.text !== 'string' || !Array.isArray(parsedData.chunks) || parsedData.chunks.some((chunk) => typeof chunk !== 'string')) {
+      if (
+        typeof parsedData.text !== 'string' ||
+        !Array.isArray(parsedData.chunks) ||
+        parsedData.chunks.some((chunk) => typeof chunk !== 'string')
+      ) {
         throw new Error('Sidecar returned an invalid payload');
       }
       const maxChunks = Number(process.env.SIDECAR_MAX_CHUNKS ?? 10_000);
-      if (parsedData.chunks.length > maxChunks) throw new Error(`Document exceeds ${maxChunks} chunks`);
+      if (parsedData.chunks.length > maxChunks)
+        throw new Error(`Document exceeds ${maxChunks} chunks`);
       const text = parsedData.text;
       const chunks = parsedData.chunks as string[];
 
-      await this.prisma.knowledgeDocument.update({ where: { id: docId }, data: { content: text, status: 'chunking' } });
+      await this.prisma.knowledgeDocument.update({
+        where: { id: docId },
+        data: { content: text, status: 'chunking' },
+      });
 
       // A retry may follow a partial failure. Clear partial derived data so the
       // unique (documentId, chunkIndex) key cannot make every retry fail.
-      await this.prisma.$executeRaw`DELETE FROM embeddings WHERE chunk_id IN (SELECT id FROM document_chunks WHERE document_id = ${docId}::uuid)`;
+      await this.prisma
+        .$executeRaw`DELETE FROM embeddings WHERE chunk_id IN (SELECT id FROM document_chunks WHERE document_id = ${docId}::uuid)`;
       await this.prisma.documentChunk.deleteMany({ where: { documentId: docId } });
-      await this.prisma.knowledgeDocument.update({ where: { id: docId }, data: { status: 'embedding' } });
+      await this.prisma.knowledgeDocument.update({
+        where: { id: docId },
+        data: { status: 'embedding' },
+      });
 
-      for (let i = 0; i < chunks.length; i++) {
-        const c = await this.prisma.documentChunk.create({ data: { documentId: docId, organizationId: doc.organizationId, chunkIndex: i, content: chunks[i], tokenCount: Math.ceil(chunks[i].length / 4) } });
-        // 向量化
-        const emb = await this.ai.embedding(chunks[i], doc.organizationId);
-        const vector = this.toVectorLiteral(emb.vector);
-        // 写入 embeddings 表 (raw SQL, pgvector)
-        await this.prisma.$executeRaw`INSERT INTO embeddings (id, chunk_id, model, vector) VALUES (${randomUUID()}::uuid, ${c.id}::uuid, ${process.env.EMBEDDING_MODEL ?? 'embedding-3'}, ${vector}::vector)`;
+      const chunkRows = chunks.map((content, chunkIndex) => ({
+        id: randomUUID(),
+        documentId: docId,
+        organizationId: doc.organizationId,
+        chunkIndex,
+        content,
+        tokenCount: Math.ceil(content.length / 4),
+      }));
+      await this.prisma.documentChunk.createMany({ data: chunkRows });
+      const concurrency = Math.min(16, Math.max(1, Number(process.env.EMBEDDING_CONCURRENCY ?? 4)));
+      for (let offset = 0; offset < chunkRows.length; offset += concurrency) {
+        await Promise.all(
+          chunkRows.slice(offset, offset + concurrency).map(async (chunk) => {
+            const emb = await this.ai.embedding(chunk.content, doc.organizationId);
+            const vector = this.toVectorLiteral(emb.vector);
+            await this.prisma
+              .$executeRaw`INSERT INTO embeddings (id, chunk_id, model, vector) VALUES (${randomUUID()}::uuid, ${chunk.id}::uuid, ${emb.model}, ${vector}::vector)`;
+          }),
+        );
       }
-      await this.prisma.knowledgeDocument.update({ where: { id: docId }, data: { status: 'ready' } });
+      await this.prisma.knowledgeDocument.update({
+        where: { id: docId },
+        data: { status: 'ready' },
+      });
     } catch (e) {
-      await this.prisma.knowledgeDocument.update({ where: { id: docId }, data: { status: 'failed', error: (e as Error).message } });
+      this.logger.error(
+        `Document ${docId} processing failed`,
+        e instanceof Error ? e.stack : String(e),
+      );
+      await this.prisma.knowledgeDocument.update({
+        where: { id: docId },
+        data: { status: 'failed', error: this.publicProcessingError(e) },
+      });
       throw e;
     }
   }
 
   async ragQuery(organizationId: string, kbId: string, question: string, userId?: string) {
     question = question?.trim();
-    if (!question || question.length > 4_000) throw new BadRequestException('Question must contain 1-4000 characters');
+    if (!question || question.length > 4_000)
+      throw new BadRequestException('Question must contain 1-4000 characters');
     const kb = await this.prisma.knowledgeBase.findFirst({ where: { id: kbId, organizationId } });
     if (!kb) throw new NotFoundException('Knowledge base not found');
 
     // 向量检索 top-5
     const qEmb = await this.ai.embedding(question, organizationId);
     const queryVector = this.toVectorLiteral(qEmb.vector);
-    const results: { chunk_id: string; document_id: string; content: string; score: number; doc_title: string }[] = await this.prisma.$queryRaw`
+    const results: {
+      chunk_id: string;
+      document_id: string;
+      content: string;
+      score: number;
+      doc_title: string;
+    }[] = await this.prisma.$queryRaw`
       SELECT dc.id AS chunk_id, kd.id AS document_id, dc.content, 1 - (e.vector <=> ${queryVector}::vector) AS score, kd.title AS doc_title
       FROM embeddings e
       JOIN document_chunks dc ON dc.id = e.chunk_id
@@ -171,16 +271,67 @@ export class KbService {
     if (results.length === 0) return { answer: '未在知识库中找到相关内容', citations: [] };
 
     const context = results.map((r, i) => `[doc${i + 1}] ${r.content}`).join('\n\n');
-    const answer = await this.ai.runPrompt({ promptKey: 'rag_qa', variables: { context, question }, organizationId, userId: userId ?? '', responseFormat: 'json_object' });
-    let parsed: any; try { parsed = JSON.parse(answer.content); } catch { parsed = { answer: answer.content, citations: [] }; }
-    return { answer: parsed.answer ?? answer.content, citations: results.map((r) => ({ docId: r.document_id, chunkId: r.chunk_id, snippet: r.content.slice(0, 200), title: r.doc_title, score: r.score })) };
+    const answer = await this.ai.runPrompt({
+      promptKey: 'rag_qa',
+      variables: { context, question },
+      organizationId,
+      userId: userId ?? '',
+      responseFormat: 'json_object',
+    });
+    let parsed: any;
+    try {
+      parsed = JSON.parse(answer.content);
+    } catch {
+      parsed = { answer: answer.content, citations: [] };
+    }
+    return {
+      answer: parsed.answer ?? answer.content,
+      citations: results.map((r) => ({
+        docId: r.document_id,
+        chunkId: r.chunk_id,
+        snippet: r.content.slice(0, 200),
+        title: r.doc_title,
+        score: r.score,
+      })),
+    };
   }
 
-  async deleteDocument(organizationId: string, docId: string) {
-    const doc = await this.prisma.knowledgeDocument.findFirst({ where: { id: docId, organizationId } });
+  async deleteDocument(organizationId: string, userId: string, docId: string) {
+    const doc = await this.prisma.knowledgeDocument.findFirst({
+      where: { id: docId, organizationId },
+    });
     if (!doc) throw new NotFoundException();
-    await this.prisma.knowledgeDocument.update({ where: { id: docId }, data: { deletedAt: new Date() } });
+    if (doc.objectKey) await this.file.delete(doc.objectKey);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`DELETE FROM embeddings WHERE chunk_id IN (SELECT id FROM document_chunks WHERE document_id = ${docId}::uuid)`;
+      await tx.documentChunk.deleteMany({ where: { documentId: docId } });
+      await tx.knowledgeDocument.update({
+        where: { id: docId },
+        data: {
+          deletedAt: new Date(),
+          content: null,
+          objectKey: null,
+          sizeBytes: null,
+          error: null,
+        },
+      });
+    });
+    await this.audit.log({
+      action: 'kb.document.delete',
+      userId,
+      organizationId,
+      resource: 'document',
+      resourceId: docId,
+    });
     return { ok: true };
+  }
+
+  private publicProcessingError(error: unknown): string {
+    if (error instanceof Error && error.message.startsWith('Document exceeds'))
+      return error.message;
+    if (error instanceof Error && error.message === 'Sidecar returned an invalid payload')
+      return error.message;
+    return 'Document processing failed';
   }
 
   private assertFileSignature(extension: string, buffer: Buffer) {

@@ -11,7 +11,17 @@ import { AuthService } from './auth.service';
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => ({
         secret: cfg.get<string>('JWT_SECRET', 'dev-only-change-me'),
-        signOptions: { expiresIn: cfg.get('JWT_ACCESS_TTL', '15m'), issuer: cfg.get('JWT_ISSUER', 'matrixflow.ai') },
+        signOptions: {
+          expiresIn: cfg.get('JWT_ACCESS_TTL', '15m'),
+          issuer: cfg.get('JWT_ISSUER', 'matrixflow.ai'),
+          audience: cfg.get('JWT_AUDIENCE', 'matrixflow-api'),
+          algorithm: 'HS256',
+        },
+        verifyOptions: {
+          issuer: cfg.get('JWT_ISSUER', 'matrixflow.ai'),
+          audience: cfg.get('JWT_AUDIENCE', 'matrixflow-api'),
+          algorithms: ['HS256'],
+        },
       }),
     }),
   ],

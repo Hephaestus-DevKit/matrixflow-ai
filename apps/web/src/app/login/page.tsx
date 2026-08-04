@@ -18,7 +18,7 @@ export default function LoginPage() {
   const [userId, setUserId] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [error, setError] = useState('');
-  
+
   const { login, sendOtp, verifyOtp, loading } = useAuth();
   const router = useRouter();
 
@@ -74,7 +74,10 @@ export default function LoginPage() {
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/10 via-background to-background" />
       <div className="absolute top-0 left-0 w-full h-full opacity-5 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:32px_32px]" />
 
-      <Link href="/" className="absolute top-6 left-6 flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
+      <Link
+        href="/"
+        className="absolute top-6 left-6 flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+      >
         <ArrowLeft className="h-3 w-3" /> 返回首页
       </Link>
 
@@ -93,7 +96,9 @@ export default function LoginPage() {
             /* OTP Step 1: Input Email */
             <form onSubmit={handleSendOtp} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-xs font-semibold">邮箱</Label>
+                <Label htmlFor="email" className="text-xs font-semibold">
+                  邮箱
+                </Label>
                 <Input
                   id="email"
                   type="email"
@@ -112,7 +117,11 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <Button type="submit" className="w-full shadow-glow-sm hover:shadow-glow gap-1.5" disabled={loading}>
+              <Button
+                type="submit"
+                className="w-full shadow-glow-sm hover:shadow-glow gap-1.5"
+                disabled={loading}
+              >
                 {loading ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
@@ -129,13 +138,16 @@ export default function LoginPage() {
                   <CheckCircle2 className="h-3.5 w-3.5" /> 验证码已发送
                 </div>
                 <p className="text-2xs text-muted-foreground leading-normal">
-                  已向 <span className="text-foreground font-semibold">{email}</span> 发送了登录验证码。
+                  已向 <span className="text-foreground font-semibold">{email}</span>{' '}
+                  发送了登录验证码。
                 </p>
               </div>
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="otpCode" className="text-xs font-semibold">6位邮箱验证码</Label>
+                  <Label htmlFor="otpCode" className="text-xs font-semibold">
+                    6位邮箱验证码
+                  </Label>
                   <button
                     type="button"
                     onClick={() => setStep('info')}
@@ -162,15 +174,17 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <Button type="submit" className="w-full shadow-glow-sm hover:shadow-glow" disabled={loading}>
+              <Button
+                type="submit"
+                className="w-full shadow-glow-sm hover:shadow-glow"
+                disabled={loading}
+              >
                 {loading ? '正在验证登录...' : '验证并登录'}
               </Button>
 
               <div className="text-center">
                 {countdown > 0 ? (
-                  <p className="text-2xs text-muted-foreground">
-                    重新获取验证码 ({countdown}s)
-                  </p>
+                  <p className="text-2xs text-muted-foreground">重新获取验证码 ({countdown}s)</p>
                 ) : (
                   <button
                     type="button"
@@ -187,7 +201,9 @@ export default function LoginPage() {
           /* Password Login Form */
           <form onSubmit={handlePasswordLogin} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-xs font-semibold">邮箱</Label>
+              <Label htmlFor="email" className="text-xs font-semibold">
+                邮箱
+              </Label>
               <Input
                 id="email"
                 type="email"
@@ -200,8 +216,12 @@ export default function LoginPage() {
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-xs font-semibold">密码</Label>
-                <Link href="#" className="text-2xs text-primary hover:underline">忘记密码？</Link>
+                <Label htmlFor="password" className="text-xs font-semibold">
+                  密码
+                </Label>
+                <Link href="#" className="text-2xs text-primary hover:underline">
+                  忘记密码？
+                </Link>
               </div>
               <Input
                 id="password"
@@ -221,7 +241,11 @@ export default function LoginPage() {
               </div>
             )}
 
-            <Button type="submit" className="w-full shadow-glow-sm hover:shadow-glow" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full shadow-glow-sm hover:shadow-glow"
+              disabled={loading}
+            >
               {loading ? '正在验证凭证...' : '立即登录'}
             </Button>
           </form>

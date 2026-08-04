@@ -1,32 +1,265 @@
 [
-  { "name": "新品一键内容工厂", "scene": "上传商品 → 生成 15 类内容入库", "trigger": "manual", "nodes": ["trigger", "ai:product_title", "ai:listing", "ai:faq", "ai:tiktok", "ai:instagram", "ai:facebook_ad", "ai:email", "ai:seo_blog", "transform:aggregate"], "value": "节省 8 小时/新品", "priceUsd": 29 },
-  { "name": "Amazon Listing 全套", "scene": "生成 Amazon 5点+描述+backend keywords", "trigger": "manual", "nodes": ["trigger", "ai:product_listing", "ai:faq", "ai:backend_keywords"], "value": "Listing 上架提速 5x", "priceUsd": 19 },
-  { "name": "TikTok 短视频日更", "scene": "每日自动生成 3 条 TikTok 脚本", "trigger": "schedule", "nodes": ["trigger:schedule", "ai:product_pick", "ai:tiktok_script", "email:notify"], "value": "日更不愁", "priceUsd": 25 },
-  { "name": "Instagram 周更矩阵", "scene": "每周生成 7 帖 + hashtag", "trigger": "schedule", "nodes": ["trigger:schedule", "ai:product_pick", "ai:instagram_caption", "transform:save"], "value": "账号矩阵自动化", "priceUsd": 25 },
-  { "name": "Facebook A/B 广告", "scene": "生成 3 个广告变体入库", "trigger": "manual", "nodes": ["trigger", "ai:facebook_ad", "transform:ab_split"], "value": "A/B 测试提速", "priceUsd": 19 },
-  { "name": "Google Ads 全套", "scene": "关键词+标题+描述", "trigger": "manual", "nodes": ["trigger", "ai:google_ads", "transform:save"], "value": "广告组快速搭建", "priceUsd": 19 },
-  { "name": "SEO 博客周更", "scene": "每周一篇 1500+字 SEO 文", "trigger": "schedule", "nodes": ["trigger:schedule", "ai:topic_pick", "ai:seo_blog", "ai:content_score", "human:review"], "value": "SEO 内容自动化", "priceUsd": 29 },
-  { "name": "邮件营销自动化", "scene": "新品 EDM 全套", "trigger": "manual", "nodes": ["trigger", "ai:email_marketing", "email:send"], "value": "EDM 产出提速", "priceUsd": 25 },
-  { "name": "多语言铺货", "scene": "原文 → 10 语言翻译", "trigger": "manual", "nodes": ["trigger", "ai:translation:loop", "transform:save"], "value": "多语言铺货", "priceUsd": 39 },
-  { "name": "客服自动回复", "scene": "新消息 → AI 回复 → 转人工", "trigger": "webhook", "nodes": ["trigger:webhook", "ai:customer_reply", "condition:confidence", "human:escalate"], "value": "客服 24/7", "priceUsd": 49 },
-  { "name": "差评公关", "scene": "差评 → AI 回复 + 升级", "trigger": "webhook", "nodes": ["trigger:webhook", "ai:diff_review_reply", "condition:severity", "human:escalate"], "value": "差评挽回", "priceUsd": 39 },
-  { "name": "RAG 客服", "scene": "知识库问答", "trigger": "webhook", "nodes": ["trigger:webhook", "ai:rag_qa", "transform:format"], "value": "FAQ 自动化", "priceUsd": 39 },
-  { "name": "对话总结日报", "scene": "每日总结所有对话", "trigger": "schedule", "nodes": ["trigger:schedule", "ai:conv_summary:loop", "email:daily"], "value": "客服复盘", "priceUsd": 25 },
-  { "name": "客户画像更新", "scene": "新对话 → 画像更新", "trigger": "webhook", "nodes": ["trigger:webhook", "ai:customer_profile", "transform:save"], "value": "CRM 自动化", "priceUsd": 29 },
-  { "name": "销售线索跟进", "scene": "新线索 → AI 跟进", "trigger": "webhook", "nodes": ["trigger:webhook", "ai:sales_followup", "email:send", "condition:reply", "human:takeover"], "value": "线索转化提升", "priceUsd": 49 },
-  { "name": "商机预测", "scene": "线索评分 + 商机预测", "trigger": "schedule", "nodes": ["trigger:schedule", "ai:lead_score", "transform:save"], "value": "销售聚焦", "priceUsd": 39 },
-  { "name": "老板日报", "scene": "每日 9 点发老板日报", "trigger": "schedule", "nodes": ["trigger:schedule", "ai:boss_daily", "email:send"], "value": "老板省心", "priceUsd": 29 },
-  { "name": "商品销量分析", "scene": "周报销量趋势", "trigger": "schedule", "nodes": ["trigger:schedule", "ai:data_analysis", "email:send"], "value": "数据驱动", "priceUsd": 25 },
-  { "name": "广告 ROI 分析", "scene": "广告数据 → ROI 报告", "trigger": "schedule", "nodes": ["trigger:schedule", "ai:ad_roi", "email:send"], "value": "广告优化", "priceUsd": 29 },
-  { "name": "异常告警", "scene": "销量/库存异常 → 告警", "trigger": "schedule", "nodes": ["trigger:schedule", "ai:anomaly_detect", "condition:alert", "email:alert"], "value": "风险预警", "priceUsd": 39 },
-  { "name": "品牌语气提取", "scene": "样本 → 语气规则", "trigger": "manual", "nodes": ["trigger", "ai:brand_voice_extract", "transform:save"], "value": "品牌统一", "priceUsd": 19 },
-  { "name": "内容评分筛选", "scene": "生成 → 评分 → 仅留高分", "trigger": "manual", "nodes": ["trigger", "ai:content_gen", "ai:content_score", "condition:pass", "transform:save"], "value": "质量把控", "priceUsd": 25 },
-  { "name": "落地页生成", "scene": "商品 → 落地页文案 + 代码", "trigger": "manual", "nodes": ["trigger", "ai:landing_page_copy", "ai:react_component", "transform:export"], "value": "落地页快速上线", "priceUsd": 49 },
-  { "name": "竞品监控", "scene": "抓竞品 → 分析差异", "trigger": "schedule", "nodes": ["trigger:schedule", "webhook:scrape", "ai:competitor_analysis", "email:send"], "value": "竞品洞察", "priceUsd": 39 },
-  { "name": "评论挖掘", "scene": "抓评论 → 提炼改进点", "trigger": "schedule", "nodes": ["trigger:schedule", "webhook:scrape", "ai:review_mining", "transform:save"], "value": "产品迭代", "priceUsd": 29 },
-  { "name": "新品调研", "scene": "关键词 → 趋势 → 建议", "trigger": "manual", "nodes": ["trigger", "ai:keyword_research", "ai:trend_analysis", "ai:product_suggestion"], "value": "选品辅助", "priceUsd": 39 },
-  { "name": "库存补货提醒", "scene": "库存低 → 通知", "trigger": "schedule", "nodes": ["trigger:schedule", "condition:low_stock", "email:alert"], "value": "防断货", "priceUsd": 19 },
-  { "name": "退款处理", "scene": "退款申请 → AI 初审 → 人工", "trigger": "webhook", "nodes": ["trigger:webhook", "ai:refund_review", "condition:approve", "human:approve"], "value": "退款自动化", "priceUsd": 39 },
-  { "name": "社群运营", "scene": "社群内容日更", "trigger": "schedule", "nodes": ["trigger:schedule", "ai:community_content", "transform:dispatch"], "value": "社群活跃", "priceUsd": 25 },
-  { "name": "全渠道发布", "scene": "一内容 → 多平台适配", "trigger": "manual", "nodes": ["trigger", "ai:multi_channel", "transform:dispatch"], "value": "一稿多发", "priceUsd": 29 }
+  {
+    "name": "新品一键内容工厂",
+    "scene": "上传商品 → 生成 15 类内容入库",
+    "trigger": "manual",
+    "nodes": [
+      "trigger",
+      "ai:product_title",
+      "ai:listing",
+      "ai:faq",
+      "ai:tiktok",
+      "ai:instagram",
+      "ai:facebook_ad",
+      "ai:email",
+      "ai:seo_blog",
+      "transform:aggregate"
+    ],
+    "value": "节省 8 小时/新品",
+    "priceUsd": 29
+  },
+  {
+    "name": "Amazon Listing 全套",
+    "scene": "生成 Amazon 5点+描述+backend keywords",
+    "trigger": "manual",
+    "nodes": ["trigger", "ai:product_listing", "ai:faq", "ai:backend_keywords"],
+    "value": "Listing 上架提速 5x",
+    "priceUsd": 19
+  },
+  {
+    "name": "TikTok 短视频日更",
+    "scene": "每日自动生成 3 条 TikTok 脚本",
+    "trigger": "schedule",
+    "nodes": ["trigger:schedule", "ai:product_pick", "ai:tiktok_script", "email:notify"],
+    "value": "日更不愁",
+    "priceUsd": 25
+  },
+  {
+    "name": "Instagram 周更矩阵",
+    "scene": "每周生成 7 帖 + hashtag",
+    "trigger": "schedule",
+    "nodes": ["trigger:schedule", "ai:product_pick", "ai:instagram_caption", "transform:save"],
+    "value": "账号矩阵自动化",
+    "priceUsd": 25
+  },
+  {
+    "name": "Facebook A/B 广告",
+    "scene": "生成 3 个广告变体入库",
+    "trigger": "manual",
+    "nodes": ["trigger", "ai:facebook_ad", "transform:ab_split"],
+    "value": "A/B 测试提速",
+    "priceUsd": 19
+  },
+  {
+    "name": "Google Ads 全套",
+    "scene": "关键词+标题+描述",
+    "trigger": "manual",
+    "nodes": ["trigger", "ai:google_ads", "transform:save"],
+    "value": "广告组快速搭建",
+    "priceUsd": 19
+  },
+  {
+    "name": "SEO 博客周更",
+    "scene": "每周一篇 1500+字 SEO 文",
+    "trigger": "schedule",
+    "nodes": [
+      "trigger:schedule",
+      "ai:topic_pick",
+      "ai:seo_blog",
+      "ai:content_score",
+      "human:review"
+    ],
+    "value": "SEO 内容自动化",
+    "priceUsd": 29
+  },
+  {
+    "name": "邮件营销自动化",
+    "scene": "新品 EDM 全套",
+    "trigger": "manual",
+    "nodes": ["trigger", "ai:email_marketing", "email:send"],
+    "value": "EDM 产出提速",
+    "priceUsd": 25
+  },
+  {
+    "name": "多语言铺货",
+    "scene": "原文 → 10 语言翻译",
+    "trigger": "manual",
+    "nodes": ["trigger", "ai:translation:loop", "transform:save"],
+    "value": "多语言铺货",
+    "priceUsd": 39
+  },
+  {
+    "name": "客服自动回复",
+    "scene": "新消息 → AI 回复 → 转人工",
+    "trigger": "webhook",
+    "nodes": ["trigger:webhook", "ai:customer_reply", "condition:confidence", "human:escalate"],
+    "value": "客服 24/7",
+    "priceUsd": 49
+  },
+  {
+    "name": "差评公关",
+    "scene": "差评 → AI 回复 + 升级",
+    "trigger": "webhook",
+    "nodes": ["trigger:webhook", "ai:diff_review_reply", "condition:severity", "human:escalate"],
+    "value": "差评挽回",
+    "priceUsd": 39
+  },
+  {
+    "name": "RAG 客服",
+    "scene": "知识库问答",
+    "trigger": "webhook",
+    "nodes": ["trigger:webhook", "ai:rag_qa", "transform:format"],
+    "value": "FAQ 自动化",
+    "priceUsd": 39
+  },
+  {
+    "name": "对话总结日报",
+    "scene": "每日总结所有对话",
+    "trigger": "schedule",
+    "nodes": ["trigger:schedule", "ai:conv_summary:loop", "email:daily"],
+    "value": "客服复盘",
+    "priceUsd": 25
+  },
+  {
+    "name": "客户画像更新",
+    "scene": "新对话 → 画像更新",
+    "trigger": "webhook",
+    "nodes": ["trigger:webhook", "ai:customer_profile", "transform:save"],
+    "value": "CRM 自动化",
+    "priceUsd": 29
+  },
+  {
+    "name": "销售线索跟进",
+    "scene": "新线索 → AI 跟进",
+    "trigger": "webhook",
+    "nodes": [
+      "trigger:webhook",
+      "ai:sales_followup",
+      "email:send",
+      "condition:reply",
+      "human:takeover"
+    ],
+    "value": "线索转化提升",
+    "priceUsd": 49
+  },
+  {
+    "name": "商机预测",
+    "scene": "线索评分 + 商机预测",
+    "trigger": "schedule",
+    "nodes": ["trigger:schedule", "ai:lead_score", "transform:save"],
+    "value": "销售聚焦",
+    "priceUsd": 39
+  },
+  {
+    "name": "老板日报",
+    "scene": "每日 9 点发老板日报",
+    "trigger": "schedule",
+    "nodes": ["trigger:schedule", "ai:boss_daily", "email:send"],
+    "value": "老板省心",
+    "priceUsd": 29
+  },
+  {
+    "name": "商品销量分析",
+    "scene": "周报销量趋势",
+    "trigger": "schedule",
+    "nodes": ["trigger:schedule", "ai:data_analysis", "email:send"],
+    "value": "数据驱动",
+    "priceUsd": 25
+  },
+  {
+    "name": "广告 ROI 分析",
+    "scene": "广告数据 → ROI 报告",
+    "trigger": "schedule",
+    "nodes": ["trigger:schedule", "ai:ad_roi", "email:send"],
+    "value": "广告优化",
+    "priceUsd": 29
+  },
+  {
+    "name": "异常告警",
+    "scene": "销量/库存异常 → 告警",
+    "trigger": "schedule",
+    "nodes": ["trigger:schedule", "ai:anomaly_detect", "condition:alert", "email:alert"],
+    "value": "风险预警",
+    "priceUsd": 39
+  },
+  {
+    "name": "品牌语气提取",
+    "scene": "样本 → 语气规则",
+    "trigger": "manual",
+    "nodes": ["trigger", "ai:brand_voice_extract", "transform:save"],
+    "value": "品牌统一",
+    "priceUsd": 19
+  },
+  {
+    "name": "内容评分筛选",
+    "scene": "生成 → 评分 → 仅留高分",
+    "trigger": "manual",
+    "nodes": ["trigger", "ai:content_gen", "ai:content_score", "condition:pass", "transform:save"],
+    "value": "质量把控",
+    "priceUsd": 25
+  },
+  {
+    "name": "落地页生成",
+    "scene": "商品 → 落地页文案 + 代码",
+    "trigger": "manual",
+    "nodes": ["trigger", "ai:landing_page_copy", "ai:react_component", "transform:export"],
+    "value": "落地页快速上线",
+    "priceUsd": 49
+  },
+  {
+    "name": "竞品监控",
+    "scene": "抓竞品 → 分析差异",
+    "trigger": "schedule",
+    "nodes": ["trigger:schedule", "webhook:scrape", "ai:competitor_analysis", "email:send"],
+    "value": "竞品洞察",
+    "priceUsd": 39
+  },
+  {
+    "name": "评论挖掘",
+    "scene": "抓评论 → 提炼改进点",
+    "trigger": "schedule",
+    "nodes": ["trigger:schedule", "webhook:scrape", "ai:review_mining", "transform:save"],
+    "value": "产品迭代",
+    "priceUsd": 29
+  },
+  {
+    "name": "新品调研",
+    "scene": "关键词 → 趋势 → 建议",
+    "trigger": "manual",
+    "nodes": ["trigger", "ai:keyword_research", "ai:trend_analysis", "ai:product_suggestion"],
+    "value": "选品辅助",
+    "priceUsd": 39
+  },
+  {
+    "name": "库存补货提醒",
+    "scene": "库存低 → 通知",
+    "trigger": "schedule",
+    "nodes": ["trigger:schedule", "condition:low_stock", "email:alert"],
+    "value": "防断货",
+    "priceUsd": 19
+  },
+  {
+    "name": "退款处理",
+    "scene": "退款申请 → AI 初审 → 人工",
+    "trigger": "webhook",
+    "nodes": ["trigger:webhook", "ai:refund_review", "condition:approve", "human:approve"],
+    "value": "退款自动化",
+    "priceUsd": 39
+  },
+  {
+    "name": "社群运营",
+    "scene": "社群内容日更",
+    "trigger": "schedule",
+    "nodes": ["trigger:schedule", "ai:community_content", "transform:dispatch"],
+    "value": "社群活跃",
+    "priceUsd": 25
+  },
+  {
+    "name": "全渠道发布",
+    "scene": "一内容 → 多平台适配",
+    "trigger": "manual",
+    "nodes": ["trigger", "ai:multi_channel", "transform:dispatch"],
+    "value": "一稿多发",
+    "priceUsd": 29
+  }
 ]

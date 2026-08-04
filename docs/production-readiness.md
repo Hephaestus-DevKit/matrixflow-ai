@@ -1,45 +1,76 @@
-# Production readiness
+# 生产部署与运行手册
 
-运行时基线为 Node.js ≥ 22.13、pnpm 11.9、PostgreSQL 16 + pgvector、Redis 7 和私有 S3/MinIO。
+运行基线：Node.js 22、pnpm 11、Python 3.12、PostgreSQL 16 + pgvector、Redis 7、私有 S3/MinIO。
 
 ## 必需配置
 
-生产启动会校验以下变量，缺失时直接退出：
+生产 API 会在启动时校验：
 
 - `DATABASE_URL`、`REDIS_URL`
 - `MINIO_ENDPOINT`、`MINIO_ACCESS_KEY`、`MINIO_SECRET_KEY`
-- `CORS_ALLOWED_ORIGINS`（不允许 `*`）
-- `INTERNAL_JOB_SECRET`（至少 32 字符）
-- `APPWRITE_PROJECT_ID` 与 HTTPS `APPWRITE_ENDPOINT`
+- 非通配符 `CORS_ALLOWED_ORIGINS`
+- 至少 32 字符的 `INTERNAL_JOB_SECRET` 与 `METRICS_TOKEN`
+- Appwrite 模式下的 `APPWRITE_PROJECT_ID` 与 HTTPS `APPWRITE_ENDPOINT`
+- 本地认证模式下至少 32 字符的 `JWT_SECRET`
 - `GLM_API_KEY` 或 `OPENAI_API_KEY` 至少一个
 
-同时为 Web 设置 `NEXT_PUBLIC_APPWRITE_PROJECT_ID` 和 `NEXT_PUBLIC_APPWRITE_ENDPOINT`。反向代理部署必须把 `TRUST_PROXY_HOPS` 设置为真实且精确的代理跳数。
+Web 还需要 `NEXT_PUBLIC_APPWRITE_PROJECT_ID`、`NEXT_PUBLIC_APPWRITE_ENDPOINT` 和 `NEXT_PUBLIC_API_BASE_URL`。反向代理部署必须将 `TRUST_PROXY_HOPS` 设为真实且精确的代理跳数。所有密钥应由 Secret Manager 注入，不写入镜像或仓库。
 
-## 部署顺序
+## 镜像与职责
 
-1. 创建 PostgreSQL 16 + pgvector、Redis 与私有 MinIO bucket。
-2. 执行 `pnpm db:migrate`；失败必须中止发布。
-3. 启动 Python Sidecar、API 和 Worker。
-4. 等待 `/api/v1/health/ready` 返回 200，再切换流量。
-5. 执行登录、租户切换、文档解析、RAG 和工作流 smoke tests。
+- `infra/docker/api.Dockerfile`：API 运行镜像；`builder` target 供一次性 migration 使用。
+- `infra/docker/worker.Dockerfile`：Worker 独立运行镜像。
+- `apps/sidecar/Dockerfile`：Python 解析服务，依赖由 hash 锁定。
+- 根 `Dockerfile`：Hugging Face/单容器环境，组合 API、Worker 和 Sidecar。
 
-禁止在生产使用 `prisma db push`、`--accept-data-loss`、默认 Docker 密码或示例密钥。
+常规生产环境优先使用独立镜像，以便分别扩缩容、限权和发布。组合镜像只用于平台限制为单容器的环境。
+
+## 发布顺序
+
+1. 备份数据库和对象存储，并记录当前应用/镜像版本。
+2. 创建 PostgreSQL + pgvector、Redis 和私有对象存储；使用独立最小权限凭据。
+3. 运行一次性 migration job：`pnpm db:migrate`。失败立即中止，不启动新版本。
+4. 部署 Sidecar、API 和 Worker；先不接入外部流量。
+5. 等待 `/api/v1/health/live` 和 `/api/v1/health/ready` 返回 200。
+6. 运行登录、组织隔离、内容生成、文件解析、RAG、CRM 和工作流 smoke test。
+7. 小流量切换，观察错误率、延迟、队列积压和数据库连接，再完成发布。
+
+禁止在生产使用 `prisma db push`、`--accept-data-loss`、示例密钥、默认对象存储密码或开放的 Sidecar 端口。
 
 ## 发布门禁
 
-- `pnpm install --frozen-lockfile`
-- `pnpm db:generate`
-- `pnpm typecheck`
-- `pnpm lint`
-- `pnpm test`
-- API E2E（PostgreSQL + Redis）
-- `pnpm build`
-- `pnpm audit --prod --audit-level=high`
-- Docker 镜像构建
+```bash
+pnpm install --frozen-lockfile
+pnpm db:generate
+pnpm format:check
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm --filter @matrixflow/api test:e2e
+pnpm build
+pnpm audit --prod --audit-level=high
+```
+
+Sidecar 必须在使用 `apps/sidecar/requirements.txt` 创建的 Python 3.12 环境中运行 `python -m unittest -v`。CI 还构建 API、Worker、Sidecar 与组合镜像，并执行 CodeQL。
+
+## 回滚与恢复
+
+- 应用失败但 migration 向后兼容：把 API/Worker 回滚到上一镜像并继续观察。
+- migration 不兼容：不要自动执行破坏性 down migration；停止写流量，按该 migration 的人工恢复方案恢复备份或前向修复。
+- Sidecar 失败：暂停文档队列，保留任务记录，修复后重试；不要标记虚假成功。
+- Redis 故障：恢复后检查延迟任务和租约；数据库记录仍是任务状态事实来源。
+- 对象存储故障：停止新上传/删除，避免数据库与对象状态继续分叉。
+
+每次正式发布至少验证一次数据库恢复点；定期演练 PostgreSQL 和对象存储的联合恢复。
+
+## 可观测性
+
+- Prometheus 抓取 `/api/v1/metrics` 时发送 `x-metrics-token`。
+- 告警至少覆盖 API 5xx、p95 延迟、readiness、Worker 失败/积压、Sidecar 失败、数据库连接和磁盘/对象存储容量。
+- 日志聚合系统应保留 request ID，但继续过滤 Authorization、Cookie 和 Set-Cookie。
 
 ## 当前产品边界
 
-- 免费计划和免费市场项目可直接开通；收费项目返回 HTTP 402，直到 Stripe 状态机上线。
-- AI、条件、转换和 Webhook 工作流节点可执行。
-- 邮件、人工审批、Schedule 节点和 Loop 节点会明确返回未实现错误，不会伪造成功。
+- 免费计划和免费市场项目可直接开通；收费项目在 Stripe 状态机完成前返回 HTTP 402。
+- AI、条件、转换和 Webhook 节点可执行；邮件、人工审批、Schedule 和 Loop 会明确返回未实现错误。
 - 文件解析支持 PDF、DOCX、TXT、Markdown 和 CSV。

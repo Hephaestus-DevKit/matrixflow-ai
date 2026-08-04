@@ -4,5 +4,10 @@ import { WorkflowService } from './workflow.service';
 import { WorkflowExecutor } from './workflow.executor';
 import { AiModule } from '../ai/ai.module';
 
-@Module({ imports: [AiModule], controllers: [WorkflowController], providers: [WorkflowService, WorkflowExecutor], exports: [WorkflowService] })
+@Module({
+  imports: [AiModule],
+  controllers: [WorkflowController],
+  providers: [WorkflowService, WorkflowExecutor],
+  exports: [WorkflowService],
+})
 export class WorkflowModule {}

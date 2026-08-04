@@ -6,9 +6,10 @@ describe('InternalJobGuard', () => {
   const config = { get: jest.fn(() => secret) };
   const guard = new InternalJobGuard(config as any);
 
-  const context = (supplied: string): ExecutionContext => ({
-    switchToHttp: () => ({ getRequest: () => ({ header: () => supplied }) }),
-  } as any);
+  const context = (supplied: string): ExecutionContext =>
+    ({
+      switchToHttp: () => ({ getRequest: () => ({ header: () => supplied }) }),
+    }) as any;
 
   it('accepts the configured secret', () => {
     expect(guard.canActivate(context(secret))).toBe(true);

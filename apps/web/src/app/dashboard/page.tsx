@@ -8,8 +8,16 @@ import Link from 'next/link';
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { data: agents } = useQuery({ queryKey: ['agents'], queryFn: () => apiClient.get('/agents'), enabled: !!user });
-  const { data: projects } = useQuery({ queryKey: ['content-projects'], queryFn: () => apiClient.get('/content/projects'), enabled: !!user });
+  const { data: agents } = useQuery({
+    queryKey: ['agents'],
+    queryFn: () => apiClient.get('/agents'),
+    enabled: !!user,
+  });
+  const { data: projects } = useQuery({
+    queryKey: ['content-projects'],
+    queryFn: () => apiClient.get('/content/projects'),
+    enabled: !!user,
+  });
 
   const agentCount = Array.isArray(agents) ? agents.length : 0;
   const projectCount = Array.isArray(projects) ? projects.length : 0;
@@ -29,16 +37,45 @@ export default function DashboardPage() {
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: '活跃 AI 员工', value: agentCount, icon: Bot, color: 'text-primary', bg: 'bg-primary/5' },
-          { label: '内容工厂项目', value: projectCount, icon: Factory, color: 'text-success', bg: 'bg-success/5' },
-          { label: '本月 AI 调用', value: '—', icon: Zap, color: 'text-warning', bg: 'bg-warning/5' },
-          { label: '关联知识库', value: '—', icon: FolderOpen, color: 'text-primary', bg: 'bg-primary/5' },
+          {
+            label: '活跃 AI 员工',
+            value: agentCount,
+            icon: Bot,
+            color: 'text-primary',
+            bg: 'bg-primary/5',
+          },
+          {
+            label: '内容工厂项目',
+            value: projectCount,
+            icon: Factory,
+            color: 'text-success',
+            bg: 'bg-success/5',
+          },
+          {
+            label: '本月 AI 调用',
+            value: '—',
+            icon: Zap,
+            color: 'text-warning',
+            bg: 'bg-warning/5',
+          },
+          {
+            label: '关联知识库',
+            value: '—',
+            icon: FolderOpen,
+            color: 'text-primary',
+            bg: 'bg-primary/5',
+          },
         ].map((s, idx) => {
           const Icon = s.icon;
           return (
-            <div key={idx} className="rounded-xl border border-border/60 bg-card p-5 shadow-sm transition-all hover:border-border hover:shadow">
+            <div
+              key={idx}
+              className="rounded-xl border border-border/60 bg-card p-5 shadow-sm transition-all hover:border-border hover:shadow"
+            >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{s.label}</span>
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  {s.label}
+                </span>
                 <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${s.bg}`}>
                   <Icon className={`h-4.5 w-4.5 ${s.color}`} />
                 </div>
@@ -61,7 +98,8 @@ export default function DashboardPage() {
               <Factory className="h-5 w-5" />
             </div>
             <h3 className="mt-4 font-bold text-foreground group-hover:text-primary transition-colors text-sm flex items-center gap-1.5">
-              新建内容项目 <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
+              新建内容项目{' '}
+              <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
             </h3>
             <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
               导入商品细节，一键批量产出标题、Listing 描述、TikTok 脚本等 15 种文案。
@@ -76,7 +114,8 @@ export default function DashboardPage() {
               <Bot className="h-5 w-5" />
             </div>
             <h3 className="mt-4 font-bold text-foreground group-hover:text-primary transition-colors text-sm flex items-center gap-1.5">
-              配置 AI 员工 <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
+              配置 AI 员工{' '}
+              <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
             </h3>
             <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
               从行业标杆模板库快速创建客服、文案策划、竞品分析或SEO优化员工。
@@ -91,7 +130,8 @@ export default function DashboardPage() {
               <FolderOpen className="h-5 w-5" />
             </div>
             <h3 className="mt-4 font-bold text-foreground group-hover:text-primary transition-colors text-sm flex items-center gap-1.5">
-              新建知识库 <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
+              新建知识库{' '}
+              <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
             </h3>
             <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
               上传私域商品资料、历史邮件或客服Q&A，赋能 AI 员工以实现精确回答。

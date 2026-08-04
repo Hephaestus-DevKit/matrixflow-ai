@@ -11,9 +11,12 @@ export class AdminGuard implements CanActivate {
   canActivate(ctx: ExecutionContext): boolean {
     const req = ctx.switchToHttp().getRequest<Request>();
     const u = req.user as ReqUser;
-    const ids = this.config.get<string>('PLATFORM_ADMIN_IDS', '').split(',').map((v) => v.trim()).filter(Boolean);
-    const emails = this.config.get<string>('PLATFORM_ADMIN_EMAILS', '').split(',').map((v) => v.trim().toLowerCase()).filter(Boolean);
-    if (!u || !ids.includes(u.id) && !emails.includes(u.email.toLowerCase())) {
+    const ids = this.config
+      .get<string>('PLATFORM_ADMIN_IDS', '')
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
+    if (!u || !ids.includes(u.id)) {
       throw new ForbiddenException(ErrorCode.FORBIDDEN);
     }
     return true;

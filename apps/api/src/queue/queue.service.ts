@@ -22,11 +22,19 @@ export class QueueService implements OnModuleDestroy {
   }
 
   enqueueDocument(docId: string): Promise<Job> {
-    return this.documents.add('process', { docId }, { ...this.jobOptions, jobId: `document-${docId}` });
+    return this.documents.add(
+      'process',
+      { docId },
+      { ...this.jobOptions, jobId: `document-${docId}` },
+    );
   }
 
   enqueueWorkflow(runId: string, userId: string): Promise<Job> {
-    return this.workflows.add('execute', { runId, userId }, { ...this.jobOptions, jobId: `workflow-${runId}` });
+    return this.workflows.add(
+      'execute',
+      { runId, userId },
+      { ...this.jobOptions, jobId: `workflow-${runId}` },
+    );
   }
 
   async onModuleDestroy() {

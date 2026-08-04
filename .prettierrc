@@ -6,7 +6,5 @@
   "tabWidth": 2,
   "arrowParens": "always",
   "endOfLine": "lf",
-  "bracketSpacing": true,
-  "importOrder": ["<THIRD_PARTY_MODULES>", "^@matrixflow/(.*)$", "^[./]"],
-  "importOrderSortSpecifiers": true
+  "bracketSpacing": true
 }
