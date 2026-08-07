@@ -4,15 +4,16 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import Link from 'next/link';
 import { Users, TrendingUp, UserCheck, ArrowRight } from 'lucide-react';
+import type { CustomerSummary, LeadSummary } from '@matrixflow/shared';
 
 export default function CrmPage() {
   const { data: customers, isLoading: isCustLoading } = useQuery({
     queryKey: ['customers'],
-    queryFn: () => apiClient.get<any[]>('/crm/customers'),
+    queryFn: () => apiClient.get<CustomerSummary[]>('/crm/customers'),
   });
   const { data: leads, isLoading: isLeadsLoading } = useQuery({
     queryKey: ['leads'],
-    queryFn: () => apiClient.get<any[]>('/crm/leads'),
+    queryFn: () => apiClient.get<LeadSummary[]>('/crm/leads'),
   });
 
   return (
@@ -37,7 +38,7 @@ export default function CrmPage() {
             </div>
           )}
           <div className="space-y-2">
-            {customers?.map((c: any) => (
+            {customers?.map((c) => (
               <Link
                 key={c.id}
                 href={`/dashboard/crm/${c.id}`}
@@ -68,7 +69,7 @@ export default function CrmPage() {
             </div>
           )}
           <div className="space-y-2">
-            {leads?.map((l: any) => (
+            {leads?.map((l) => (
               <div
                 key={l.id}
                 className="flex items-center justify-between rounded-lg border border-border/60 bg-card px-4 py-3 text-xs font-semibold"

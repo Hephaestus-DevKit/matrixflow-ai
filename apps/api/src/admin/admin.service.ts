@@ -49,14 +49,14 @@ export class AdminService {
     since.setDate(1);
     const items = await this.prisma.usageRecord.findMany({ where: { recordedAt: { gte: since } } });
     const aiCalls = items
-      .filter((i: any) => i.metric === 'ai_call')
-      .reduce((s: any, i: any) => s + i.value, 0);
+      .filter((item) => item.metric === 'ai_call')
+      .reduce((sum, item) => sum + item.value, 0);
     const tokenIn = items
-      .filter((i: any) => i.metric === 'token_input')
-      .reduce((s: any, i: any) => s + i.value, 0);
+      .filter((item) => item.metric === 'token_input')
+      .reduce((sum, item) => sum + item.value, 0);
     const tokenOut = items
-      .filter((i: any) => i.metric === 'token_output')
-      .reduce((s: any, i: any) => s + i.value, 0);
+      .filter((item) => item.metric === 'token_output')
+      .reduce((sum, item) => sum + item.value, 0);
     const tokenUsage = await this.prisma.tokenUsage.aggregate({
       _sum: { costUsd: true },
       where: { createdAt: { gte: since } },
@@ -90,12 +90,15 @@ export class AdminService {
     });
   }
   async approveItem(id: string) {
-    return this.prisma.marketplaceItem.update({ where: { id }, data: { status: 'approved' } });
+    return this.prisma.marketplaceItem.update({
+      where: { id },
+      data: { status: 'approved', moderationNote: null },
+    });
   }
   async rejectItem(id: string, reason: string) {
     return this.prisma.marketplaceItem.update({
       where: { id },
-      data: { status: 'rejected', metadata: { reason } } as any,
+      data: { status: 'rejected', moderationNote: reason.trim().slice(0, 2_000) },
     });
   }
   async auditLogs(page = 1, pageSize = 50) {

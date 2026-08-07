@@ -3,11 +3,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { ShieldAlert, Cpu } from 'lucide-react';
+import type { UsageSummary } from '@matrixflow/shared';
 
 export default function AnalyticsPage() {
   const { data: usage, isLoading } = useQuery({
     queryKey: ['usage'],
-    queryFn: () => apiClient.get<Record<string, any>>('/billing/usage'),
+    queryFn: () => apiClient.get<UsageSummary>('/billing/usage'),
   });
 
   return (

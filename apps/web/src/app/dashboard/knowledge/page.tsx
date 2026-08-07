@@ -5,11 +5,12 @@ import { apiClient } from '@/lib/api-client';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { FolderOpen, Plus, FileText } from 'lucide-react';
+import type { KnowledgeBaseSummary } from '@matrixflow/shared';
 
 export default function KbListPage() {
   const { data: kbs, isLoading } = useQuery({
     queryKey: ['kb'],
-    queryFn: () => apiClient.get<any[]>('/kb'),
+    queryFn: () => apiClient.get<KnowledgeBaseSummary[]>('/kb'),
   });
 
   return (

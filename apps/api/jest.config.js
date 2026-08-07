@@ -11,4 +11,8 @@ module.exports = {
     '^@matrixflow/workflow-engine$': '<rootDir>/../../packages/workflow-engine/src',
   },
   transform: { '^.+\\.ts$': 'ts-jest' },
+  collectCoverageFrom: ['src/**/*.ts'],
+  coverageThreshold: {
+    global: { statements: 20, branches: 20, functions: 15, lines: 20 },
+  },
 };

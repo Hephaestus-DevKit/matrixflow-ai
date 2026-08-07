@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Key, LogOut, Check, Save, Sparkles, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import Image from 'next/image';
+import { errorMessage } from '@/lib/errors';
 
 const PRESET_AVATARS = [
   { id: 'slate', color: '#607987', label: '柔蓝' },
@@ -67,8 +68,8 @@ export default function SettingsPage() {
     try {
       await updateProfile(name, avatarUrl);
       toast.success('个人身份及头像保存成功！');
-    } catch (err: any) {
-      toast.error(err.message ?? '保存失败，请稍后重试');
+    } catch (err: unknown) {
+      toast.error(errorMessage(err, '保存失败，请稍后重试'));
     } finally {
       setSaving(false);
     }

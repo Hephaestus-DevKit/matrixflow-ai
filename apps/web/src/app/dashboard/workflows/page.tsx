@@ -5,11 +5,12 @@ import { apiClient } from '@/lib/api-client';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { GitFork, Plus, ArrowRight } from 'lucide-react';
+import type { WorkflowSummary } from '@matrixflow/shared';
 
 export default function WorkflowListPage() {
   const { data: wfs, isLoading } = useQuery({
     queryKey: ['wfs'],
-    queryFn: () => apiClient.get<any[]>('/workflows'),
+    queryFn: () => apiClient.get<WorkflowSummary[]>('/workflows'),
   });
 
   return (

@@ -5,8 +5,9 @@
 1. 业务能力按领域模块归属，避免复制鉴权、租户查询和状态转换逻辑。
 2. Controller 负责协议与输入，Service 负责租户过滤、事务和业务编排。
 3. HTTP、队列和 Python Sidecar 是适配层；数据库记录是异步状态的事实来源。
-4. 共享输入 Schema 位于 `packages/shared`，框架无关执行核心位于独立 package。
+4. 共享输入 Schema、响应 DTO 与工作流 DSL 位于 `packages/shared`，框架无关执行核心位于独立 package。
 5. 数据结构仅通过版本化 Prisma migration 演进。
+6. 支付、邮件等外部系统通过领域端口与适配器接入；未配置实现必须明确失败。
 
 ## Workspace 职责
 
@@ -58,7 +59,11 @@ API 创建 PENDING 记录
 
 ## 工作流与 Webhook
 
-`packages/workflow-engine` 负责 DAG 验证、拓扑执行和节点协议；API 注入 AI、条件、转换与 Webhook handler。Webhook 在请求前解析 DNS，只接受公网地址，并让 HTTP dispatcher 连接到已验证地址，以消除解析检查和实际连接之间的 DNS rebinding 窗口；同时禁用重定向并限制超时和响应体。
+`packages/shared` 是节点、边、条件语义和负载上限的唯一契约来源；`packages/workflow-engine` 负责 DAG 验证、条件分支路由、拓扑执行和节点协议；API 注入 AI、转换、邮件与 Webhook handler。Webhook 在请求前解析 DNS，只接受公网地址，并让 HTTP dispatcher 连接到已验证地址，以消除解析检查和实际连接之间的 DNS rebinding 窗口；同时禁用重定向并限制超时和响应体。
+
+## 外部集成端口
+
+支付结账和邮件投递分别由 Billing、Workflow 领域定义接口，Nest Module 只负责绑定具体适配器。仓库默认绑定禁用适配器：付费结账返回 HTTP 402，邮件节点返回未实现错误。接入 Stripe、SMTP 或第三方邮件服务时，应新增 adapter，而不是把供应商 SDK、Webhook 状态机或凭据处理写入领域 Service。
 
 ## Sidecar 分层
 
@@ -78,3 +83,4 @@ API 和 Sidecar 均限制文件大小与格式；Sidecar 不信任文件名或 M
 5. 外部调用设置取消、超时、响应上限和安全错误映射。
 6. 为权限、并发、失败重试、租户隔离和不可信输入补测试。
 7. 更新 `.env.example`、README、生产部署和安全文档。
+8. 跨 API/Web/Engine 的结构先进入 `packages/shared`，禁止在消费端复制漂移的接口。

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@matrixflow/db';
+import { toInputJson } from './prisma-json';
 
 @Injectable()
 export class AuditService {
@@ -28,9 +28,7 @@ export class AuditService {
           ip: args.ip,
           userAgent: args.userAgent,
           metadata:
-            args.metadata === undefined
-              ? undefined
-              : (JSON.parse(JSON.stringify(args.metadata)) as Prisma.InputJsonValue),
+            args.metadata === undefined ? undefined : toInputJson(args.metadata, 'metadata'),
         },
       });
     } catch (e) {

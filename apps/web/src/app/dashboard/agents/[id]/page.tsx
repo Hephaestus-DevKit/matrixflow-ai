@@ -5,13 +5,14 @@ import { useParams, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Bot, ArrowLeft, Loader2, Sparkles, Cpu, Clock, DollarSign, Zap } from 'lucide-react';
+import type { AgentSummary } from '@matrixflow/shared';
 
 export default function AgentDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const { data: agent, isLoading } = useQuery({
     queryKey: ['agent', id],
-    queryFn: () => apiClient.get<any>(`/agents/${id}`),
+    queryFn: () => apiClient.get<AgentSummary>(`/agents/${id}`),
     enabled: !!id,
   });
 
@@ -63,12 +64,16 @@ export default function AgentDetailPage() {
               <h1 className="text-xl font-bold tracking-tight">{agent.name}</h1>
               <span
                 className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  agent.status === 'active' || agent.status === 'idle'
+                  agent.status === 'ACTIVE'
                     ? 'bg-success/5 border-success/15 text-success'
                     : 'bg-muted border-border text-muted-foreground'
                 }`}
               >
-                {agent.status === 'active' ? '运行中' : '空闲'}
+                {agent.status === 'ACTIVE'
+                  ? '运行中'
+                  : agent.status === 'DRAFT'
+                    ? '草稿'
+                    : '已归档'}
               </span>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide font-medium">
@@ -115,7 +120,7 @@ export default function AgentDetailPage() {
               <Zap className="h-3.5 w-3.5 text-primary" /> 掌握技能
             </h3>
             <div className="flex flex-wrap gap-1.5">
-              {agent.skills?.map((s: any) => (
+              {agent.skills?.map((s) => (
                 <span
                   key={s.skillKey}
                   className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground border border-border/50"
@@ -139,7 +144,9 @@ export default function AgentDetailPage() {
             </h3>
             <div className="bg-muted/30 border border-border/40 rounded-lg p-3 max-h-60 overflow-y-auto">
               <pre className="text-xs font-mono leading-relaxed whitespace-pre-wrap text-muted-foreground">
-                {agent.systemPrompt?.raw ?? '未配置详细人设。'}
+                {typeof agent.systemPrompt?.raw === 'string'
+                  ? agent.systemPrompt.raw
+                  : '未配置详细人设。'}
               </pre>
             </div>
           </div>
@@ -158,7 +165,7 @@ export default function AgentDetailPage() {
 
             {agent.runs && agent.runs.length > 0 && (
               <div className="space-y-2">
-                {agent.runs.slice(0, 10).map((r: any) => (
+                {agent.runs.slice(0, 10).map((r) => (
                   <div
                     key={r.id}
                     className="flex items-center justify-between rounded-xl border border-border/60 bg-card p-4 transition-all hover:border-border/80"

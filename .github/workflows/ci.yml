@@ -57,7 +57,7 @@ jobs:
       - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm lint
-      - run: pnpm test
+      - run: pnpm test:coverage
       - name: Python sidecar tests
         working-directory: apps/sidecar
         run: python -m unittest -v

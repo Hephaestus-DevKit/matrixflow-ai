@@ -17,7 +17,7 @@ pinned: false
 [![Node](https://img.shields.io/badge/Node.js-22-43853d)](https://nodejs.org/)
 [![pnpm](https://img.shields.io/badge/pnpm-11-f69220)](https://pnpm.io/)
 
-> 当前版本为 beta。计费、邮件、人工审批、调度和循环工作流尚未接入生产适配器；相关路径会明确返回未实现或需要付款的状态，不会伪造成功。
+> 当前版本为 beta。计费与邮件已定义稳定的端口/适配器边界，但默认未绑定生产 Provider；人工审批、调度和循环工作流也仍处于显式受限状态。未配置能力会明确失败，不会伪造成功。
 
 ## 已实现能力
 
@@ -25,7 +25,7 @@ pinned: false
 - AI 内容生成、流式输出、Provider fallback、用量核算、缓存和 Prompt 输入/输出校验。
 - PostgreSQL + pgvector 知识库，支持 PDF、DOCX、TXT、Markdown 和 CSV。
 - CRM 客户、线索、会话和消息，并在服务层强制组织隔离。
-- React Flow 工作流；支持 AI、条件、转换和受 DNS 固定与 SSRF 防护的 Webhook 节点。
+- React Flow 工作流；共享强类型 DSL 支持真实条件分支、AI、转换、可插拔邮件，以及受 DNS 固定与 SSRF 防护的 Webhook 节点。
 - BullMQ 文档/工作流任务，带重试、退避、幂等 job ID 和数据库执行租约。
 - 私有 MinIO、真实 liveness/readiness、Prometheus 指标、结构化日志与版本化 migration。
 
@@ -88,12 +88,13 @@ docker compose up -d --build
 | `pnpm typecheck`                          | TypeScript 类型检查         |
 | `pnpm lint`                               | ESLint 检查                 |
 | `pnpm test`                               | Node 单元测试               |
+| `pnpm test:coverage`                      | 单元测试与分包覆盖率门禁    |
 | `pnpm --filter @matrixflow/api test:e2e`  | API 集成测试                |
 | `python -m unittest -v`（`apps/sidecar`） | Sidecar 单元测试            |
 | `pnpm build`                              | 构建全部 workspace          |
 | `pnpm audit --prod --audit-level=high`    | 生产依赖审计                |
 
-CI 会运行以上检查，并构建 API、Worker、Sidecar 和 Hugging Face 组合镜像。生产发布顺序、回滚与 smoke test 见 [生产部署手册](docs/production-readiness.md)。
+CI 会运行格式、类型、lint、带覆盖率门禁的测试、API 集成测试和 Sidecar 测试，并构建 API、Worker、Sidecar 和 Hugging Face 组合镜像。生产发布顺序、回滚与 smoke test 见 [生产部署手册](docs/production-readiness.md)。
 
 ## 维护原则
 
@@ -101,6 +102,7 @@ CI 会运行以上检查，并构建 API、Worker、Sidecar 和 Hugging Face 组
 - HTTP 输入先通过共享 Zod Schema；禁止直接展开客户端对象写入数据库。
 - 数据库变更只能新增 Prisma migration，生产禁止 `prisma db push`。
 - Worker 只负责队列消费；核心业务和授权仍在 API 服务层。
+- 外部支付、邮件等能力通过领域端口接入；默认禁用适配器必须 fail closed。
 - 新环境变量必须同步更新 `.env.example`、生产校验和部署文档。
 - 不提交密钥、生成 Client、构建产物、缓存、Python 虚拟环境或临时数据。
 

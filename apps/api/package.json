@@ -13,6 +13,7 @@
     "lint:fix": "eslint \"src/**/*.ts\" --fix",
     "typecheck": "tsc --noEmit",
     "test": "jest --testPathIgnorePatterns=auth.e2e-spec.ts",
+    "test:coverage": "jest --coverage --runInBand --testPathIgnorePatterns=auth.e2e-spec.ts",
     "test:watch": "jest --watch",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "clean": "rimraf dist"

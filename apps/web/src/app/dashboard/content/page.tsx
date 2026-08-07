@@ -7,6 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Factory, Sparkles, Plus, Loader2, AlertCircle } from 'lucide-react';
+import type {
+  ContentGenerationView,
+  ContentItemSummary,
+  ContentProjectSummary,
+} from '@matrixflow/shared';
+import { errorMessage } from '@/lib/errors';
 
 const CONTENT_TYPES = [
   {
@@ -81,26 +87,26 @@ const CONTENT_TYPES = [
 export default function ContentFactoryPage() {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
-  const [results, setResults] = useState<Record<string, any>>({});
+  const [results, setResults] = useState<Record<string, ContentGenerationView>>({});
   const [isCreating, setIsCreating] = useState(false);
   const [projectName, setProjectName] = useState('');
   const [productDesc, setProductDesc] = useState('');
 
   const { data: projects, refetch: refetchProjects } = useQuery({
     queryKey: ['content-projects'],
-    queryFn: () => apiClient.get<any[]>('/content/projects'),
+    queryFn: () => apiClient.get<ContentProjectSummary[]>('/content/projects'),
   });
 
   const { data: items, refetch: refetchItems } = useQuery({
     queryKey: ['content-items', projectId],
-    queryFn: () => apiClient.get<any[]>(`/content/projects/${projectId}/items`),
+    queryFn: () => apiClient.get<ContentItemSummary[]>(`/content/projects/${projectId}/items`),
     enabled: !!projectId,
   });
 
   useEffect(() => {
     if (Array.isArray(items)) {
-      const mappedResults: Record<string, any> = {};
-      items.forEach((item: any) => {
+      const mappedResults: Record<string, ContentGenerationView> = {};
+      items.forEach((item) => {
         mappedResults[item.type] = {
           itemId: item.id,
           content: item.body?.parsed ?? item.body?.raw ?? '',
@@ -118,13 +124,13 @@ export default function ContentFactoryPage() {
     if (!projectId) return;
     setGenerating(type);
     try {
-      await apiClient.post<any>(`/content/projects/${projectId}/generate`, {
+      await apiClient.post(`/content/projects/${projectId}/generate`, {
         type,
         variables: { language: 'en' },
       });
       await refetchItems();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (error: unknown) {
+      alert(errorMessage(error));
     } finally {
       setGenerating(null);
     }
@@ -134,10 +140,10 @@ export default function ContentFactoryPage() {
     if (!projectId) return;
     setGenerating('all');
     try {
-      await apiClient.post<any>(`/content/projects/${projectId}/generate-all`, { language: 'en' });
+      await apiClient.post(`/content/projects/${projectId}/generate-all`, { language: 'en' });
       await refetchItems();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (error: unknown) {
+      alert(errorMessage(error));
     } finally {
       setGenerating(null);
     }
@@ -148,7 +154,7 @@ export default function ContentFactoryPage() {
     if (!projectName.trim()) return;
     setGenerating('create');
     try {
-      const res = await apiClient.post<any>('/content/projects', {
+      const res = await apiClient.post<ContentProjectSummary>('/content/projects', {
         name: projectName,
         productData: { title: projectName, description: productDesc },
       });
@@ -157,8 +163,8 @@ export default function ContentFactoryPage() {
       setProjectName('');
       setProductDesc('');
       setIsCreating(false);
-    } catch (e: any) {
-      alert(e.message);
+    } catch (error: unknown) {
+      alert(errorMessage(error));
     } finally {
       setGenerating(null);
     }
@@ -233,17 +239,17 @@ export default function ContentFactoryPage() {
           选择项目进行编辑
         </span>
         <div className="flex flex-wrap gap-2">
-          {projects?.map((p: any) => (
+          {projects?.map((project) => (
             <button
-              key={p.id}
-              onClick={() => setProjectId(p.id)}
+              key={project.id}
+              onClick={() => setProjectId(project.id)}
               className={`rounded-lg border px-3.5 py-1.5 text-xs font-medium transition-all ${
-                projectId === p.id
+                projectId === project.id
                   ? 'border-primary bg-primary/10 text-primary shadow-sm'
                   : 'border-border/60 text-muted-foreground hover:bg-muted/80 hover:text-foreground'
               }`}
             >
-              {p.name}
+              {project.name}
             </button>
           ))}
           {(!projects || projects.length === 0) && (
@@ -321,9 +327,7 @@ export default function ContentFactoryPage() {
                       AI 输出：
                     </span>
                     <pre className="max-h-40 overflow-auto rounded-lg bg-muted/40 p-3 text-[11px] font-mono leading-relaxed border border-border/40 whitespace-pre-wrap">
-                      {typeof results[ct.key].content === 'string'
-                        ? results[ct.key].content
-                        : JSON.stringify(results[ct.key].content, null, 2)}
+                      {formatContent(results[ct.key].content)}
                     </pre>
                   </div>
                 )}
@@ -334,4 +338,8 @@ export default function ContentFactoryPage() {
       )}
     </div>
   );
+}
+
+function formatContent(value: unknown): string {
+  return typeof value === 'string' ? value : JSON.stringify(value, null, 2);
 }

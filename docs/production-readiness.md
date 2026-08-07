@@ -45,7 +45,7 @@ pnpm db:generate
 pnpm format:check
 pnpm typecheck
 pnpm lint
-pnpm test
+pnpm test:coverage
 pnpm --filter @matrixflow/api test:e2e
 pnpm build
 pnpm audit --prod --audit-level=high
@@ -71,6 +71,6 @@ Sidecar 必须在使用 `apps/sidecar/requirements.txt` 创建的 Python 3.12 �
 
 ## 当前产品边界
 
-- 免费计划和免费市场项目可直接开通；收费项目在 Stripe 状态机完成前返回 HTTP 402。
-- AI、条件、转换和 Webhook 节点可执行；邮件、人工审批、Schedule 和 Loop 会明确返回未实现错误。
+- 免费计划和免费市场项目可直接开通；收费订阅通过 PaymentProvider 端口委托，默认禁用适配器在 Stripe 状态机完成前返回 HTTP 402。
+- AI、真实条件分支、转换和 Webhook 节点可执行；邮件通过 EmailDelivery 端口委托，默认禁用适配器会明确失败；人工审批、Schedule 和 Loop 仍返回未实现错误。
 - 文件解析支持 PDF、DOCX、TXT、Markdown 和 CSV。

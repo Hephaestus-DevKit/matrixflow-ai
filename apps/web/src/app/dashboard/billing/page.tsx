@@ -2,19 +2,20 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import type { BillingPlan, SubscriptionSummary, UsageSummary } from '@matrixflow/shared';
 
 export default function BillingPage() {
   const { data: plans } = useQuery({
     queryKey: ['plans'],
-    queryFn: () => apiClient.get<any[]>('/billing/plans'),
+    queryFn: () => apiClient.get<BillingPlan[]>('/billing/plans'),
   });
   const { data: current } = useQuery({
     queryKey: ['sub'],
-    queryFn: () => apiClient.get<any>('/billing/current'),
+    queryFn: () => apiClient.get<SubscriptionSummary | null>('/billing/current'),
   });
   const { data: usage } = useQuery({
     queryKey: ['usage'],
-    queryFn: () => apiClient.get<any>('/billing/usage'),
+    queryFn: () => apiClient.get<UsageSummary>('/billing/usage'),
   });
 
   return (
@@ -30,7 +31,7 @@ export default function BillingPage() {
         <pre className="rounded-lg bg-muted/50 p-4 text-sm">{JSON.stringify(usage, null, 2)}</pre>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
-        {plans?.map((p: any) => (
+        {plans?.map((p) => (
           <div key={p.id} className="rounded-xl border border-border bg-card p-5">
             <h3 className="font-semibold">{p.name}</h3>
             <p className="mt-1 text-2xl font-bold">

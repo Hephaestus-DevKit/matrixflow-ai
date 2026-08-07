@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AiService } from '../ai/ai.service';
 import { createContentProjectSchema } from '@matrixflow/shared';
 import { AuditService } from '../common/audit.service';
+import { asJsonRecord, jsonString, toInputJson } from '../common/prisma-json';
 
 // 15 类内容生成器 → prompt key 映射
 const CONTENT_PROMPT_MAP: Record<string, string> = {
@@ -41,7 +42,7 @@ export class ContentService {
       data: {
         organizationId,
         name: input.name,
-        productData: input.productData as any,
+        productData: toInputJson(input.productData, 'productData'),
         brandVoiceId: input.brandVoiceId,
       },
     });
@@ -88,13 +89,13 @@ export class ContentService {
     if (!promptKey) throw new NotFoundException(`Unknown content type: ${type}`);
 
     // 基于项目商品信息动态生成智能缺省变量
-    const pData: any = project.productData || {};
-    const pTitle = pData.title || project.name || 'Product';
-    const pDesc = pData.description || 'Quality product';
+    const pData = asJsonRecord(project.productData);
+    const pTitle = jsonString(pData, 'title') ?? project.name ?? 'Product';
+    const pDesc = jsonString(pData, 'description') ?? 'Quality product';
 
-    const defaultVariables: Record<string, any> = {};
+    const defaultVariables: Record<string, unknown> = {};
     if (type === 'product_title') {
-      defaultVariables.brand = pData.brand || 'Generic';
+      defaultVariables.brand = jsonString(pData, 'brand') ?? 'Generic';
       defaultVariables.platform = variables.platform || 'amazon';
       defaultVariables.maxLength = 150;
     } else if (type === 'listing') {
@@ -146,7 +147,7 @@ export class ContentService {
       responseFormat: 'json_object',
     });
 
-    let parsed: any = result.content;
+    let parsed: unknown = result.content;
     try {
       parsed = JSON.parse(result.content);
     } catch {
@@ -158,9 +159,9 @@ export class ContentService {
         projectId,
         organizationId,
         type,
-        title: typeof parsed === 'object' && parsed?.title ? parsed.title : type,
-        body: { raw: result.content, parsed } as any,
-        metadata: { usage: result.usage, cost: result.costUsd } as any,
+        title: jsonString(parsed, 'title') ?? type,
+        body: toInputJson({ raw: result.content, parsed }, 'content body'),
+        metadata: toInputJson({ usage: result.usage, cost: result.costUsd }, 'content metadata'),
       },
     });
     await this.audit.log({
@@ -169,7 +170,7 @@ export class ContentService {
       organizationId,
       resource: 'content',
       resourceId: item.id,
-      metadata: { type, promptKey } as any,
+      metadata: { type, promptKey },
     });
     return { itemId: item.id, content: parsed, usage: result.usage, cost: result.costUsd };
   }
@@ -231,16 +232,18 @@ export class ContentService {
     if (!item) throw new NotFoundException();
     const result = await this.ai.runPrompt({
       promptKey: 'content_score',
-      variables: { content: (item.body as any).raw, dimension },
+      variables: { content: jsonString(item.body, 'raw') ?? '', dimension },
       organizationId,
       userId: '',
       responseFormat: 'json_object',
     });
-    const parsed = JSON.parse(result.content);
+    const parsed = asJsonRecord(JSON.parse(result.content));
+    const score = Number(parsed.score);
+    const reason = typeof parsed.reason === 'string' ? parsed.reason : '';
     return this.prisma.contentScore.upsert({
       where: { itemId_dimension: { itemId, dimension } },
-      update: { score: parsed.score, reason: parsed.reason },
-      create: { itemId, dimension, score: parsed.score, reason: parsed.reason },
+      update: { score, reason },
+      create: { itemId, dimension, score, reason },
     });
   }
 }

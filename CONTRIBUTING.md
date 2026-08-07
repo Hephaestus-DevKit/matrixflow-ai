@@ -8,7 +8,7 @@
 2. 安装锁定依赖：`pnpm install --frozen-lockfile`。
 3. 数据结构变化必须创建新 Prisma migration，禁止修改已发布 migration。
 4. 为行为变更补充单元或集成测试，尤其是租户隔离、权限、失败与并发路径。
-5. 提交前运行 README 中的发布门禁；更新相关配置和文档。
+5. 提交前运行 README 中的发布门禁（包括 `pnpm test:coverage`）；更新相关配置和文档。
 6. 通过 Pull Request 合并，说明风险、migration、回滚和验证结果。
 
 ## 代码约定
@@ -17,6 +17,7 @@
 - Controller 不直接访问 Prisma；Service 的组织数据查询显式包含 `organizationId`。
 - 不信任客户端传入的角色、用户、组织、价格、状态或审计字段。
 - 外部网络调用必须有超时、取消、响应大小限制和安全错误映射。
+- 跨端契约归属 `packages/shared`；外部 Provider 通过领域端口/适配器接入，不把供应商逻辑写入通用 Service。
 - 不提交 `.env`、凭据、个人数据、构建产物、虚拟环境或生成的 Prisma Client。
 
 ## Commit 与 PR

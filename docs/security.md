@@ -9,14 +9,14 @@
 - 平台管理员仅接受 `PLATFORM_ADMIN_IDS` 中的用户 UUID，不接受可变邮箱白名单；组织 Owner 不等于平台管理员。
 - CRM、内容、市场、RAG、AI 缓存和跨实体引用在服务层按组织隔离；写入请求使用严格 Zod Schema 防止越权字段注入。
 - 认证入口采用独立且 fail-closed 的限流策略；普通请求按已验证用户或 IP 限流。
-- 生产 CORS 白名单、Helmet、CSP、frameguard、精确代理跳数和日志敏感 Header 脱敏。
+- 生产 CORS 白名单、所有环境启用 Helmet/CSP、frameguard、精确代理跳数和日志敏感 Header 脱敏。
 - 上传限制格式、大小、魔数、PDF 页数、DOCX 解压资源、提取字符和分块数；删除文档同步删除对象与向量数据。
 - Prompt 注入检测、结构化输出 Schema 校验、AI 超时/取消、组织限流和一致用量核算。
 - Webhook 限制方法、HTTPS、响应大小和超时；拒绝私网/本地/元数据地址，禁用重定向，并把连接固定到已验证 DNS 地址。
 - BullMQ 持久化重试、稳定 job ID 和数据库租约；内部任务端点使用常量时间共享密钥校验。
 - MinIO bucket 默认私有，Sidecar 只暴露到内部容器网络；生产数据库只运行版本化 migration。
 - Prometheus 指标端点使用独立长随机 Token；liveness 与依赖 readiness 分离。
-- CI 使用最小权限和不可变 SHA 固定 Actions，运行依赖审计、CodeQL、测试和全部容器构建；Dependabot 覆盖 npm、pip、Docker 和 Actions。
+- CI 使用最小权限和不可变 SHA 固定 Actions，运行依赖审计、CodeQL、分包覆盖率门禁、集成测试和全部容器构建；Dependabot 覆盖 npm、pip、Docker 和 Actions。
 
 ## 仍需外部或产品级控制
 

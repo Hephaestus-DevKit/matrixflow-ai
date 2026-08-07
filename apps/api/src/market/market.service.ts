@@ -14,6 +14,7 @@ import {
   publishMarketplaceItemSchema,
 } from '@matrixflow/shared';
 import { Prisma } from '@matrixflow/db';
+import { toInputJson } from '../common/prisma-json';
 
 const publicItemSelect = {
   id: true,
@@ -91,7 +92,7 @@ export class MarketService {
         description: input.description,
         category: input.category,
         priceUsd: input.priceUsd,
-        payload: input.payload as Prisma.InputJsonValue,
+        payload: toInputJson(input.payload, 'marketplace payload'),
         status: 'pending',
       },
     });
@@ -146,7 +147,7 @@ export class MarketService {
       organizationId,
       resource: 'item',
       resourceId: itemId,
-      metadata: { price: result.item.priceUsd } as Prisma.InputJsonValue,
+      metadata: toInputJson({ price: result.item.priceUsd }, 'purchase audit metadata'),
     });
     return { purchaseId: result.purchase.id, payload: result.item.payload };
   }

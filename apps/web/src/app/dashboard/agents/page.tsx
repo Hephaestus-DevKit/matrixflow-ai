@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Bot, Plus } from 'lucide-react';
+import type { AgentSummary } from '@matrixflow/shared';
 
 export default function AgentListPage() {
   const { data: agents, isLoading } = useQuery({
     queryKey: ['agents'],
-    queryFn: () => apiClient.get<any[]>('/agents'),
+    queryFn: () => apiClient.get<AgentSummary[]>('/agents'),
   });
 
   return (
@@ -69,7 +70,7 @@ export default function AgentListPage() {
 
       {agents && agents.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {agents.map((a: any) => (
+          {agents.map((a) => (
             <Link
               key={a.id}
               href={`/dashboard/agents/${a.id}`}
@@ -82,12 +83,12 @@ export default function AgentListPage() {
                   </div>
                   <span
                     className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                      a.status === 'active' || a.status === 'idle'
+                      a.status === 'ACTIVE'
                         ? 'bg-success/5 border-success/15 text-success'
                         : 'bg-muted border-border text-muted-foreground'
                     }`}
                   >
-                    {a.status === 'active' ? '运行中' : '空闲'}
+                    {a.status === 'ACTIVE' ? '运行中' : a.status === 'DRAFT' ? '草稿' : '已归档'}
                   </span>
                 </div>
                 <h3 className="mt-4 font-bold text-foreground text-sm group-hover:text-primary transition-colors">
@@ -100,7 +101,7 @@ export default function AgentListPage() {
 
               <div className="mt-5 border-t border-border/40 pt-3 flex flex-wrap gap-1">
                 {a.skills && a.skills.length > 0 ? (
-                  a.skills.slice(0, 3).map((s: any) => (
+                  a.skills.slice(0, 3).map((s) => (
                     <span
                       key={s.skillKey}
                       className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground border border-border/50"

@@ -15,6 +15,11 @@ import { Action, ADMIN_ACTIONS, ErrorCode, MEMBER_ACTIONS, RoleName } from '@mat
 import { registerSchema, loginSchema } from '@matrixflow/shared';
 import { AuditService } from '../common/audit.service';
 import { createHash } from 'crypto';
+import { Prisma } from '@matrixflow/db';
+
+type MembershipWithContext = Prisma.OrganizationMemberGetPayload<{
+  include: { role: { include: { permissions: true } }; organization: true };
+}>;
 
 @Injectable()
 export class AuthService {
@@ -38,7 +43,7 @@ export class AuthService {
     const appwriteId = appwriteUser.$id;
     const email = appwriteUser.email.trim().toLowerCase();
     const name = appwriteUser.name || email.split('@')[0] || 'User';
-    const user = await this.prisma.$transaction(async (tx: any) => {
+    const user = await this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`appwrite:${appwriteId}`}))`;
       const linked = await tx.account.findUnique({
         where: {
@@ -63,7 +68,7 @@ export class AuthService {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (targetOrgId && !isUuid.test(targetOrgId))
       throw new UnauthorizedException(ErrorCode.FORBIDDEN);
-    let membership: any = null;
+    let membership: MembershipWithContext | null = null;
 
     if (targetOrgId) {
       membership = await this.prisma.organizationMember.findFirst({
@@ -86,7 +91,7 @@ export class AuthService {
 
     let provisionedOrgId: string | undefined;
     if (!membership && !targetOrgId) {
-      const provisioned = await this.prisma.$transaction(async (tx: any) => {
+      const provisioned = await this.prisma.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`provision:${user.id}`}))`;
         const existing = await tx.organizationMember.findFirst({
           where: {
@@ -119,7 +124,7 @@ export class AuthService {
       });
     }
 
-    const permissions = membership.role.permissions.map((p: any) => p.action);
+    const permissions = membership.role.permissions.map((permission) => permission.action);
     return {
       id: user.id,
       email: user.email,
@@ -133,7 +138,7 @@ export class AuthService {
   async register(input: unknown, ip?: string, ua?: string) {
     const dto = registerSchema.parse(input);
     const hash = await bcrypt.hash(dto.password, Number(this.cfg.get('BCRYPT_ROUNDS', '12')));
-    const result = await this.prisma.$transaction(async (tx: any) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const exists = await tx.user.findUnique({ where: { email: dto.email } });
       if (exists) throw new ConflictException(ErrorCode.EMAIL_EXISTS);
       const user = await tx.user.create({
@@ -147,7 +152,7 @@ export class AuthService {
       return {
         user,
         org: membership.organization,
-        permissions: membership.role.permissions.map((p: any) => p.action),
+        permissions: membership.role.permissions.map((permission) => permission.action),
       };
     });
 
@@ -177,7 +182,7 @@ export class AuthService {
       include: { role: { include: { permissions: true } }, organization: true },
     });
     if (!membership) throw new NotFoundException(ErrorCode.ORG_NOT_FOUND);
-    const perms = membership.role.permissions.map((p: any) => p.action);
+    const perms = membership.role.permissions.map((permission) => permission.action);
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     await this.audit.log({
@@ -222,7 +227,7 @@ export class AuthService {
       include: { role: { include: { permissions: true } }, organization: true },
     });
     if (!membership) throw new UnauthorizedException(ErrorCode.ORG_NOT_FOUND);
-    const perms = membership.role.permissions.map((p: any) => p.action);
+    const perms = membership.role.permissions.map((permission) => permission.action);
     // Atomically claim the current session before issuing its replacement.
     // Only one concurrent refresh request can rotate a given token.
     const claimed = await this.prisma.session.updateMany({
@@ -264,12 +269,12 @@ export class AuthService {
       email: user.email,
       name: user.name,
       avatarUrl: user.avatarUrl,
-      memberships: user.memberships.map((m: any) => ({
-        organizationId: m.organizationId,
-        organizationName: m.organization.name,
-        slug: m.organization.slug,
-        role: m.role.name,
-        permissions: m.role.permissions.map((p: any) => p.action),
+      memberships: user.memberships.map((membership) => ({
+        organizationId: membership.organizationId,
+        organizationName: membership.organization.name,
+        slug: membership.organization.slug,
+        role: membership.role.name,
+        permissions: membership.role.permissions.map((permission) => permission.action),
       })),
     };
   }
@@ -323,7 +328,11 @@ export class AuthService {
     };
   }
 
-  private async createDefaultOrganization(tx: any, userId: string, organizationName: string) {
+  private async createDefaultOrganization(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    organizationName: string,
+  ) {
     let slugLock =
       organizationName
         .toLowerCase()
@@ -395,7 +404,10 @@ export class AuthService {
     }
   }
 
-  private async uniqueSlug(base: string, client: any = this.prisma): Promise<string> {
+  private async uniqueSlug(
+    base: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<string> {
     let slug =
       base
         .toLowerCase()

@@ -79,4 +79,53 @@ describe('WorkflowEngine', () => {
       ),
     ).resolves.toEqual({ input: { value: 1 }, transformed: true });
   });
+
+  it('routes conditional branches and skips inactive nodes', async () => {
+    const trueHandler = jest.fn(async () => 'true branch');
+    const falseHandler = jest.fn(async () => 'false branch');
+    const handled = new WorkflowEngine({
+      condition: async () => true,
+      ai: trueHandler,
+      content: falseHandler,
+    });
+    const dsl: WorkflowDSL = {
+      nodes: [
+        { id: 'start', type: 'trigger' },
+        { id: 'decision', type: 'condition' },
+        { id: 'yes', type: 'ai' },
+        { id: 'no', type: 'content' },
+      ],
+      edges: [
+        { source: 'start', target: 'decision' },
+        { source: 'decision', target: 'yes', condition: 'true' },
+        { source: 'decision', target: 'no', condition: 'false' },
+      ],
+    };
+
+    await expect(
+      handled.execute(dsl, {}, { organizationId: 'o', userId: 'u', workflowId: 'w', runId: 'r' }),
+    ).resolves.toBe('true branch');
+    expect(trueHandler).toHaveBeenCalledTimes(1);
+    expect(falseHandler).not.toHaveBeenCalled();
+  });
+
+  it('rejects duplicate and self-referencing edges', () => {
+    const duplicate: WorkflowDSL = {
+      nodes: [
+        { id: 'a', type: 'trigger' },
+        { id: 'b', type: 'ai' },
+      ],
+      edges: [
+        { source: 'a', target: 'b' },
+        { source: 'a', target: 'b' },
+      ],
+    };
+    expect(engine.validate(duplicate).errors).toContain('Duplicate edges');
+    expect(
+      engine.validate({
+        nodes: [{ id: 'a', type: 'trigger' }],
+        edges: [{ source: 'a', target: 'a' }],
+      }).errors,
+    ).toContain('Self edge a is not allowed');
+  });
 });

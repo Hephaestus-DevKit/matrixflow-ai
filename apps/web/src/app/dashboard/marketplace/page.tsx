@@ -4,13 +4,14 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import Link from 'next/link';
 import { Store, Bot, GitFork, FileText, Star } from 'lucide-react';
+import type { MarketplaceItemSummary, Paginated } from '@matrixflow/shared';
 
 export default function MarketplacePage() {
   const { data, isLoading } = useQuery({
     queryKey: ['market'],
-    queryFn: () => apiClient.get('/market/items?pageSize=24'),
+    queryFn: () => apiClient.get<Paginated<MarketplaceItemSummary>>('/market/items?pageSize=24'),
   });
-  const items = (data as any)?.data ?? [];
+  const items = data?.data ?? [];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -40,7 +41,7 @@ export default function MarketplacePage() {
 
       {items.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((it: any) => {
+          {items.map((it) => {
             const Icon = it.type === 'agent' ? Bot : it.type === 'workflow' ? GitFork : FileText;
             const typeLabel =
               it.type === 'agent' ? 'AI 员工' : it.type === 'workflow' ? '工作流' : '文档模板';

@@ -72,7 +72,7 @@ export default function LandingPage() {
                 免费开始体验 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href={'/demo' as any}>
+            <Link href="/login">
               <Button
                 variant="outline"
                 size="lg"

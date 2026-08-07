@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Send, CheckCircle2, Lock, Mail, Loader2 } from 'lucide-react';
+import { errorMessage } from '@/lib/errors';
 
 export default function LoginPage() {
   const [loginMode, setLoginMode] = useState<'otp' | 'password'>('password');
@@ -40,8 +41,8 @@ export default function LoginPage() {
       setUserId(uid);
       setStep('otp');
       setCountdown(60);
-    } catch (err: any) {
-      setError(err.message ?? '发送验证码失败，请重试');
+    } catch (err: unknown) {
+      setError(errorMessage(err, '发送验证码失败，请重试'));
     }
   }
 
@@ -52,8 +53,8 @@ export default function LoginPage() {
     try {
       await verifyOtp(userId, otpCode);
       router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message ?? '验证码错误或已失效');
+    } catch (err: unknown) {
+      setError(errorMessage(err, '验证码错误或已失效'));
     }
   }
 
@@ -63,8 +64,8 @@ export default function LoginPage() {
     try {
       await login(email, password);
       router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message ?? '登录失败，请检查账号和密码');
+    } catch (err: unknown) {
+      setError(errorMessage(err, '登录失败，请检查账号和密码'));
     }
   }
 
