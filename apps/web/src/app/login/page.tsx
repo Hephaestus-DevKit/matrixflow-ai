@@ -220,9 +220,7 @@ export default function LoginPage() {
                 <Label htmlFor="password" className="text-xs font-semibold">
                   密码
                 </Label>
-                <Link href="#" className="text-2xs text-primary hover:underline">
-                  忘记密码？
-                </Link>
+                <span className="text-2xs text-muted-foreground">忘记密码请联系管理员</span>
               </div>
               <Input
                 id="password"

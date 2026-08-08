@@ -22,12 +22,13 @@ pinned: false
 ## 已实现能力
 
 - Appwrite 生产认证与本地开发认证、组织/RBAC、Refresh Token 原子轮换。
-- AI 内容生成、流式输出、Provider fallback、用量核算、缓存和 Prompt 输入/输出校验。
+- AI 内容生成、流式输出、Provider fallback、用量核算、缓存和 Prompt 输入/输出校验；取消信号、瞬时错误重试和流式回退均有明确边界。
 - PostgreSQL + pgvector 知识库，支持 PDF、DOCX、TXT、Markdown 和 CSV。
 - CRM 客户、线索、会话和消息，并在服务层强制组织隔离。
 - React Flow 工作流；共享强类型 DSL 支持真实条件分支、AI、转换、可插拔邮件，以及受 DNS 固定与 SSRF 防护的 Webhook 节点。
 - BullMQ 文档/工作流任务，带重试、退避、幂等 job ID 和数据库执行租约。
 - 私有 MinIO、真实 liveness/readiness、Prometheus 指标、结构化日志与版本化 migration。
+- 响应式 Web 工作台，具备移动导航、暗/亮主题、统一加载/错误/空状态、键盘焦点与组织切换缓存隔离。
 
 ## 仓库结构
 

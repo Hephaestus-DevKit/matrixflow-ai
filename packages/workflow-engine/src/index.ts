@@ -33,9 +33,11 @@ export class WorkflowEngine {
     const validation = this.validate(dsl);
     if (!validation.valid) throw new Error(`Invalid workflow: ${validation.errors.join('; ')}`);
     const sorted = this.topoSort(dsl.nodes, dsl.edges);
+    const incomingByNode = new Map<string, WorkflowEdge[]>(dsl.nodes.map((node) => [node.id, []]));
+    for (const edge of dsl.edges) incomingByNode.get(edge.target)?.push(edge);
     const state: Record<string, unknown | typeof SKIPPED> = { __input: input };
     for (const node of sorted) {
-      const incoming = dsl.edges.filter((edge) => edge.target === node.id);
+      const incoming = incomingByNode.get(node.id) ?? [];
       const sources = incoming
         .filter((edge) => {
           const sourceOutput = state[edge.source];
@@ -88,6 +90,7 @@ export class WorkflowEngine {
   }
 
   private topoSort(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode[] {
+    const nodesById = new Map(nodes.map((node) => [node.id, node]));
     const indeg = new Map<string, number>(nodes.map((n) => [n.id, 0]));
     const adj = new Map<string, string[]>(nodes.map((n) => [n.id, [] as string[]]));
     for (const e of edges) {
@@ -96,9 +99,11 @@ export class WorkflowEngine {
     }
     const q: string[] = nodes.filter((n) => (indeg.get(n.id) ?? 0) === 0).map((n) => n.id);
     const out: WorkflowNode[] = [];
-    while (q.length) {
-      const id = q.shift()!;
-      out.push(nodes.find((n) => n.id === id)!);
+    for (let cursor = 0; cursor < q.length; cursor++) {
+      const id = q[cursor];
+      const node = nodesById.get(id);
+      if (!node) continue;
+      out.push(node);
       for (const next of adj.get(id) ?? []) {
         indeg.set(next, (indeg.get(next) ?? 1) - 1);
         if ((indeg.get(next) ?? 0) === 0) q.push(next);

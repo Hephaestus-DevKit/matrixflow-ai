@@ -1,144 +1,143 @@
 'use client';
 
+import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowRight, Bot, Factory, FolderOpen, GitFork, Sparkles, Zap } from 'lucide-react';
+import type {
+  AgentSummary,
+  ContentProjectSummary,
+  KnowledgeBaseSummary,
+  UsageSummary,
+} from '@matrixflow/shared';
 import { useAuth } from '@/lib/auth-store';
 import { apiClient } from '@/lib/api-client';
-import { useQuery } from '@tanstack/react-query';
-import { Bot, Factory, Zap, FolderOpen, ArrowRight, Sparkles } from 'lucide-react';
-import Link from 'next/link';
+import { ErrorState, LoadingCards } from '@/components/ui/states';
+import { PageHeader, SectionHeading, StatCard } from '@/components/ui/page';
+
+const QUICK_ACTIONS = [
+  {
+    href: '/dashboard/content',
+    icon: Factory,
+    title: '启动内容矩阵',
+    description: '从产品资料批量生成 Listing、广告和社媒内容。',
+  },
+  {
+    href: '/dashboard/agents/new',
+    icon: Bot,
+    title: '部署 AI 员工',
+    description: '配置角色、模型、提示词和可调用的业务技能。',
+  },
+  {
+    href: '/dashboard/workflows/new',
+    icon: GitFork,
+    title: '编排自动化',
+    description: '将 AI、判断、Webhook 与业务动作连接成流程。',
+  },
+] as const;
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { data: agents } = useQuery({
+  const agents = useQuery({
     queryKey: ['agents'],
-    queryFn: () => apiClient.get('/agents'),
-    enabled: !!user,
+    queryFn: () => apiClient.get<AgentSummary[]>('/agents'),
   });
-  const { data: projects } = useQuery({
+  const projects = useQuery({
     queryKey: ['content-projects'],
-    queryFn: () => apiClient.get('/content/projects'),
-    enabled: !!user,
+    queryFn: () => apiClient.get<ContentProjectSummary[]>('/content/projects'),
   });
-
-  const agentCount = Array.isArray(agents) ? agents.length : 0;
-  const projectCount = Array.isArray(projects) ? projects.length : 0;
+  const knowledge = useQuery({
+    queryKey: ['kb'],
+    queryFn: () => apiClient.get<KnowledgeBaseSummary[]>('/kb'),
+  });
+  const usage = useQuery({
+    queryKey: ['usage'],
+    queryFn: () => apiClient.get<UsageSummary>('/billing/usage'),
+  });
+  const queries = [agents, projects, knowledge, usage];
+  const isLoading = queries.some((query) => query.isLoading);
+  const hasError = queries.some((query) => query.isError);
+  const retry = () => void Promise.all(queries.map((query) => query.refetch()));
+  const activeAgents = agents.data?.filter((agent) => agent.status === 'ACTIVE').length ?? 0;
+  const aiCalls = usage.data?.ai_call ?? 0;
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="flex items-center justify-between border-b border-border/40 pb-5">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">欢迎回来，{user?.name}</h1>
-          <p className="mt-1 text-sm text-muted-foreground flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            您的专属跨境 AI 运营团队正在后台高效运行中
-          </p>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          {
-            label: '活跃 AI 员工',
-            value: agentCount,
-            icon: Bot,
-            color: 'text-primary',
-            bg: 'bg-primary/5',
-          },
-          {
-            label: '内容工厂项目',
-            value: projectCount,
-            icon: Factory,
-            color: 'text-success',
-            bg: 'bg-success/5',
-          },
-          {
-            label: '本月 AI 调用',
-            value: '—',
-            icon: Zap,
-            color: 'text-warning',
-            bg: 'bg-warning/5',
-          },
-          {
-            label: '关联知识库',
-            value: '—',
-            icon: FolderOpen,
-            color: 'text-primary',
-            bg: 'bg-primary/5',
-          },
-        ].map((s, idx) => {
-          const Icon = s.icon;
-          return (
-            <div
-              key={idx}
-              className="rounded-xl border border-border/60 bg-card p-5 shadow-sm transition-all hover:border-border hover:shadow"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  {s.label}
-                </span>
-                <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${s.bg}`}>
-                  <Icon className={`h-4.5 w-4.5 ${s.color}`} />
-                </div>
-              </div>
-              <p className="mt-4 text-3xl font-bold tracking-tight text-foreground">{s.value}</p>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="space-y-4">
-        <h2 className="text-base font-bold tracking-tight">快捷入口</h2>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Link
-            href="/dashboard/content/new"
-            className="group rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/5 text-primary group-hover:bg-primary/10 transition-colors">
-              <Factory className="h-5 w-5" />
-            </div>
-            <h3 className="mt-4 font-bold text-foreground group-hover:text-primary transition-colors text-sm flex items-center gap-1.5">
-              新建内容项目{' '}
-              <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
-            </h3>
-            <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-              导入商品细节，一键批量产出标题、Listing 描述、TikTok 脚本等 15 种文案。
-            </p>
-          </Link>
-
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow="Operations overview"
+        title={<>欢迎回来，{user?.name || '伙伴'}</>}
+        description="集中查看 AI 团队、内容项目、知识资产与本月资源消耗。"
+        actions={
           <Link
             href="/dashboard/agents/new"
-            className="group rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md"
+            className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-primary/15"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/5 text-primary group-hover:bg-primary/10 transition-colors">
-              <Bot className="h-5 w-5" />
-            </div>
-            <h3 className="mt-4 font-bold text-foreground group-hover:text-primary transition-colors text-sm flex items-center gap-1.5">
-              配置 AI 员工{' '}
-              <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
-            </h3>
-            <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-              从行业标杆模板库快速创建客服、文案策划、竞品分析或SEO优化员工。
-            </p>
+            <Sparkles className="h-3.5 w-3.5" /> 部署新员工
           </Link>
+        }
+      />
 
-          <Link
-            href="/dashboard/knowledge/new"
-            className="group rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/5 text-primary group-hover:bg-primary/10 transition-colors">
-              <FolderOpen className="h-5 w-5" />
-            </div>
-            <h3 className="mt-4 font-bold text-foreground group-hover:text-primary transition-colors text-sm flex items-center gap-1.5">
-              新建知识库{' '}
-              <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
-            </h3>
-            <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-              上传私域商品资料、历史邮件或客服Q&A，赋能 AI 员工以实现精确回答。
-            </p>
-          </Link>
+      {hasError ? (
+        <ErrorState message="部分工作台指标未能加载，请检查连接后重试。" onRetry={retry} />
+      ) : isLoading ? (
+        <LoadingCards count={4} />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="活跃 AI 员工"
+            value={activeAgents}
+            detail={`共 ${agents.data?.length ?? 0} 个角色`}
+            icon={Bot}
+          />
+          <StatCard
+            label="内容项目"
+            value={projects.data?.length ?? 0}
+            detail="已沉淀的内容生产任务"
+            icon={Factory}
+            tone="success"
+          />
+          <StatCard
+            label="本月 AI 调用"
+            value={aiCalls.toLocaleString()}
+            detail="按当前组织汇总"
+            icon={Zap}
+            tone="warning"
+          />
+          <StatCard
+            label="关联知识库"
+            value={knowledge.data?.length ?? 0}
+            detail="可用于检索增强生成"
+            icon={FolderOpen}
+            tone="info"
+          />
         </div>
-      </div>
+      )}
+
+      <section className="space-y-4">
+        <SectionHeading title="快捷入口" description="从最常用的操作开始，减少工作流转路径。" />
+        <div className="grid gap-4 md:grid-cols-3">
+          {QUICK_ACTIONS.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Link
+                key={action.href}
+                href={action.href}
+                className="interactive-card group p-5 sm:p-6"
+              >
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span className="mt-5 flex items-center gap-2 text-sm font-bold text-foreground group-hover:text-primary">
+                  {action.title}
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </span>
+                <span className="mt-2 block text-xs leading-5 text-muted-foreground">
+                  {action.description}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 // AI Gateway · Provider 抽象基类
 import type { ChatRequest, ChatResponse, StreamChunk, ProviderClient } from '../types';
-import { AiGatewayError } from '../types';
+import { AiGatewayError, isAbortError, isRetryableProviderError } from '../types';
 
 export abstract class BaseProvider implements ProviderClient {
   abstract name: import('@matrixflow/shared').Provider;
@@ -26,18 +26,11 @@ export abstract class BaseProvider implements ProviderClient {
         return await fn();
       } catch (e) {
         lastErr = e;
-        if (e instanceof AiGatewayError && e.status === 429) {
-          await new Promise((r) => setTimeout(r, backoffMs * 2 ** i));
-          continue;
-        }
-        if (i === maxRetry - 1) break;
+        if (!isRetryableProviderError(e) || i === maxRetry - 1) break;
         await new Promise((r) => setTimeout(r, backoffMs * 2 ** i));
       }
     }
-    if (
-      lastErr instanceof Error &&
-      (lastErr.name === 'AbortError' || lastErr.name === 'TimeoutError')
-    ) {
+    if (isAbortError(lastErr)) {
       throw new AiGatewayError('AI_TIMEOUT', `${this.name} request timed out`, 504);
     }
     throw lastErr instanceof Error

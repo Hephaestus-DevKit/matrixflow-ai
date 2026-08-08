@@ -13,7 +13,10 @@ import {
 
 export default function LandingPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground antialiased selection:bg-primary/20">
+    <div
+      id="main-content"
+      className="flex min-h-screen flex-col bg-background text-foreground antialiased selection:bg-primary/20"
+    >
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
@@ -72,13 +75,13 @@ export default function LandingPage() {
                 免费开始体验 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href="/login">
+            <Link href="#capabilities">
               <Button
                 variant="outline"
                 size="lg"
                 className="text-sm font-semibold border-border hover:bg-muted/50 transition-colors"
               >
-                观看演示视频
+                查看产品能力
               </Button>
             </Link>
           </div>
@@ -86,7 +89,10 @@ export default function LandingPage() {
       </section>
 
       {/* Features */}
-      <section className="border-t border-border/40 bg-muted/10 px-4 py-24 relative">
+      <section
+        id="capabilities"
+        className="scroll-mt-16 border-t border-border/40 bg-muted/10 px-4 py-24 relative"
+      >
         <div className="mx-auto max-w-6xl relative z-10">
           <div className="text-center mb-16">
             <h2 className="text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
@@ -177,13 +183,9 @@ export default function LandingPage() {
       <footer className="border-t border-border/40 px-4 py-8 text-center text-xs text-muted-foreground">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <span>© 2026 MatrixFlow AI · 跨境电商 AI 员工操作系统 · 版权所有</span>
-          <div className="flex gap-4">
-            <a href="#" className="hover:text-foreground transition-colors">
-              服务协议
-            </a>
-            <a href="#" className="hover:text-foreground transition-colors">
-              隐私政策
-            </a>
+          <div className="flex gap-4" aria-label="法律信息">
+            <span>服务协议筹备中</span>
+            <span>隐私政策筹备中</span>
           </div>
         </div>
       </footer>
