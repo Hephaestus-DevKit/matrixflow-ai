@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Key, LogOut, Check, Save, Sparkles, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import Image from 'next/image';
+import { errorMessage } from '@/lib/errors';
 
 const PRESET_AVATARS = [
   { id: 'slate', color: '#607987', label: '柔蓝' },
@@ -25,12 +26,13 @@ function makeSvgAvatar(color: string): string {
 }
 
 export default function SettingsPage() {
-  const { user, updateProfile, logout } = useAuth();
+  const { user, organizationId, setOrg, updateProfile, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'enterprise'>('profile');
   const [name, setName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [customAvatar, setCustomAvatar] = useState('');
   const [saving, setSaving] = useState(false);
+  const membership = user?.memberships.find((item) => item.organizationId === organizationId);
 
   useEffect(() => {
     if (user) {
@@ -67,8 +69,8 @@ export default function SettingsPage() {
     try {
       await updateProfile(name, avatarUrl);
       toast.success('个人身份及头像保存成功！');
-    } catch (err: any) {
-      toast.error(err.message ?? '保存失败，请稍后重试');
+    } catch (err: unknown) {
+      toast.error(errorMessage(err, '保存失败，请稍后重试'));
     } finally {
       setSaving(false);
     }
@@ -244,17 +246,41 @@ export default function SettingsPage() {
                 <p className="text-[10px] text-muted-foreground font-semibold uppercase">
                   所属企业组织
                 </p>
-                <p className="font-bold text-foreground mt-1">MatrixFlow AI</p>
+                <p className="font-bold text-foreground mt-1">
+                  {membership?.organizationName ?? '未选择组织'}
+                </p>
               </div>
               <div className="bg-muted/10 p-3 rounded-lg border border-border/40">
                 <p className="text-[10px] text-muted-foreground font-semibold uppercase">
                   组织角色定位
                 </p>
                 <p className="font-bold text-primary mt-1 flex items-center gap-1">
-                  创始人 (OWNER)
+                  {membership?.role ?? '未分配'}
                 </p>
               </div>
             </div>
+            {user && user.memberships.length > 1 && (
+              <div className="space-y-1.5">
+                <Label htmlFor="organization" className="text-xs font-semibold text-foreground">
+                  当前工作组织
+                </Label>
+                <select
+                  id="organization"
+                  value={organizationId ?? ''}
+                  onChange={(event) => setOrg(event.target.value)}
+                  className="flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {user.memberships.map((item) => (
+                    <option key={item.organizationId} value={item.organizationId}>
+                      {item.organizationName} · {item.role}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[0.6875rem] text-muted-foreground">
+                  切换后，后续 API 请求会自动限定到所选组织。
+                </p>
+              </div>
+            )}
           </div>
 
           {/* API Key */}

@@ -32,7 +32,7 @@ Web 还需要 `NEXT_PUBLIC_APPWRITE_PROJECT_ID`、`NEXT_PUBLIC_APPWRITE_ENDPOINT
 3. 运行一次性 migration job：`pnpm db:migrate`。失败立即中止，不启动新版本。
 4. 部署 Sidecar、API 和 Worker；先不接入外部流量。
 5. 等待 `/api/v1/health/live` 和 `/api/v1/health/ready` 返回 200。
-6. 运行登录、组织隔离、内容生成、文件解析、RAG、CRM 和工作流 smoke test。
+6. 运行登录、组织切换与缓存隔离、内容生成、文件解析、RAG、CRM 和工作流 smoke test，并检查桌面与移动断点。
 7. 小流量切换，观察错误率、延迟、队列积压和数据库连接，再完成发布。
 
 禁止在生产使用 `prisma db push`、`--accept-data-loss`、示例密钥、默认对象存储密码或开放的 Sidecar 端口。
@@ -45,7 +45,7 @@ pnpm db:generate
 pnpm format:check
 pnpm typecheck
 pnpm lint
-pnpm test
+pnpm test:coverage
 pnpm --filter @matrixflow/api test:e2e
 pnpm build
 pnpm audit --prod --audit-level=high
@@ -71,6 +71,6 @@ Sidecar 必须在使用 `apps/sidecar/requirements.txt` 创建的 Python 3.12 �
 
 ## 当前产品边界
 
-- 免费计划和免费市场项目可直接开通；收费项目在 Stripe 状态机完成前返回 HTTP 402。
-- AI、条件、转换和 Webhook 节点可执行；邮件、人工审批、Schedule 和 Loop 会明确返回未实现错误。
+- 免费计划和免费市场项目可直接开通；收费订阅通过 PaymentProvider 端口委托，默认禁用适配器在 Stripe 状态机完成前返回 HTTP 402。
+- AI、真实条件分支、转换和 Webhook 节点可执行；邮件通过 EmailDelivery 端口委托，默认禁用适配器会明确失败；人工审批、Schedule 和 Loop 仍返回未实现错误。
 - 文件解析支持 PDF、DOCX、TXT、Markdown 和 CSV。

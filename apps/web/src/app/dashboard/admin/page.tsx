@@ -3,19 +3,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
+import type { AdminRevenue, MarketplaceItemSummary, ModelUsageSummary } from '@matrixflow/shared';
 
 export default function AdminPage() {
   const { data: revenue } = useQuery({
     queryKey: ['admin-revenue'],
-    queryFn: () => apiClient.get<any>('/admin/revenue'),
+    queryFn: () => apiClient.get<AdminRevenue>('/admin/revenue'),
   });
   const { data: models } = useQuery({
     queryKey: ['admin-models'],
-    queryFn: () => apiClient.get<any[]>('/admin/models'),
+    queryFn: () => apiClient.get<ModelUsageSummary[]>('/admin/models'),
   });
   const { data: pending } = useQuery({
     queryKey: ['admin-pending'],
-    queryFn: () => apiClient.get<any[]>('/admin/items/pending'),
+    queryFn: () => apiClient.get<MarketplaceItemSummary[]>('/admin/items/pending'),
   });
 
   return (
@@ -69,7 +70,7 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {models?.map((m: any) => (
+              {models?.map((m) => (
                 <tr key={m.provider + m.model} className="border-b border-border last:border-0">
                   <td className="px-4 py-2">{m.provider}</td>
                   <td className="px-4 py-2 font-mono text-xs">{m.model}</td>
@@ -94,7 +95,7 @@ export default function AdminPage() {
           待审核模板（{pending?.length ?? 0}）
         </h2>
         <div className="space-y-2">
-          {pending?.map((item: any) => (
+          {pending?.map((item) => (
             <div
               key={item.id}
               className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm"

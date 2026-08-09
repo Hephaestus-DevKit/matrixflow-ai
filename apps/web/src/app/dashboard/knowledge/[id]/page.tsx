@@ -6,15 +6,16 @@ import { useParams } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import type { KnowledgeBaseDetail, RagAnswer } from '@matrixflow/shared';
 
 export default function KbDetailPage() {
   const { id } = useParams();
   const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState<any>(null);
+  const [answer, setAnswer] = useState<RagAnswer | null>(null);
   const [asking, setAsking] = useState(false);
   const { data: kb } = useQuery({
     queryKey: ['kb', id],
-    queryFn: () => apiClient.get<any>(`/kb/${id}`),
+    queryFn: () => apiClient.get<KnowledgeBaseDetail>(`/kb/${id}`),
     enabled: !!id,
   });
 
@@ -31,7 +32,7 @@ export default function KbDetailPage() {
     if (!question) return;
     setAsking(true);
     try {
-      const r = await apiClient.post(`/kb/${id}/ask`, { question });
+      const r = await apiClient.post<RagAnswer>(`/kb/${id}/ask`, { question });
       setAnswer(r);
     } finally {
       setAsking(false);
@@ -46,13 +47,13 @@ export default function KbDetailPage() {
       </div>
       <div>
         <h2 className="mb-2 text-sm font-semibold text-muted-foreground">文档列表</h2>
-        {kb?.documents?.map((d: any) => (
+        {kb?.documents?.map((document) => (
           <div
-            key={d.id}
+            key={document.id}
             className="flex items-center justify-between rounded-lg border border-border px-4 py-2 text-sm"
           >
-            <span>{d.title}</span>
-            <span className="text-muted-foreground">{d.status}</span>
+            <span>{document.title}</span>
+            <span className="text-muted-foreground">{document.status}</span>
           </div>
         ))}
       </div>

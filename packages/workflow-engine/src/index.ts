@@ -1,38 +1,14 @@
 // @matrixflow/workflow-engine · 工作流 DSL + DAG 执行器
-export interface WorkflowNode {
-  id: string;
-  type:
-    | 'trigger'
-    | 'ai'
-    | 'condition'
-    | 'transform'
-    | 'webhook'
-    | 'email'
-    | 'content'
-    | 'human'
-    | 'schedule'
-    | 'loop';
-  config?: Record<string, unknown>;
-  position?: { x: number; y: number };
-}
+import {
+  WORKFLOW_NODE_TYPES,
+  workflowDslSchema,
+  type ExecutionContext,
+  type WorkflowDSL,
+  type WorkflowEdge,
+  type WorkflowNode,
+} from '@matrixflow/shared';
 
-export interface WorkflowEdge {
-  source: string;
-  target: string;
-  condition?: string;
-}
-
-export interface WorkflowDSL {
-  nodes: WorkflowNode[];
-  edges: WorkflowEdge[];
-}
-
-export interface ExecutionContext {
-  organizationId: string;
-  userId: string;
-  workflowId: string;
-  runId: string;
-}
+export type { ExecutionContext, WorkflowDSL, WorkflowEdge, WorkflowNode } from '@matrixflow/shared';
 
 export interface NodeResult {
   nodeId: string;
@@ -46,6 +22,8 @@ export type WorkflowNodeHandler = (
   context: ExecutionContext,
 ) => Promise<unknown>;
 
+const SKIPPED = Symbol('workflow-node-skipped');
+
 export class WorkflowEngine {
   constructor(
     private readonly handlers: Partial<Record<WorkflowNode['type'], WorkflowNodeHandler>> = {},
@@ -55,11 +33,21 @@ export class WorkflowEngine {
     const validation = this.validate(dsl);
     if (!validation.valid) throw new Error(`Invalid workflow: ${validation.errors.join('; ')}`);
     const sorted = this.topoSort(dsl.nodes, dsl.edges);
-    const state: Record<string, unknown> = { __input: input };
+    const incomingByNode = new Map<string, WorkflowEdge[]>(dsl.nodes.map((node) => [node.id, []]));
+    for (const edge of dsl.edges) incomingByNode.get(edge.target)?.push(edge);
+    const state: Record<string, unknown | typeof SKIPPED> = { __input: input };
     for (const node of sorted) {
-      const sources = dsl.edges
-        .filter((edge) => edge.target === node.id)
+      const incoming = incomingByNode.get(node.id) ?? [];
+      const sources = incoming
+        .filter((edge) => {
+          const sourceOutput = state[edge.source];
+          return sourceOutput !== SKIPPED && this.edgeMatches(edge, sourceOutput);
+        })
         .map((edge) => edge.source);
+      if (incoming.length > 0 && sources.length === 0) {
+        state[node.id] = SKIPPED;
+        continue;
+      }
       const nodeInput =
         sources.length === 0
           ? input
@@ -68,8 +56,26 @@ export class WorkflowEngine {
             : Object.fromEntries(sources.map((source) => [source, state[source]]));
       state[node.id] = await this.runNode(node, nodeInput, ctx);
     }
-    const last = sorted.filter((n) => n.type !== 'trigger').pop();
+    const last = sorted
+      .filter((node) => node.type !== 'trigger' && state[node.id] !== SKIPPED)
+      .pop();
     return last ? state[last.id] : input;
+  }
+
+  private edgeMatches(edge: WorkflowEdge, sourceOutput: unknown): boolean {
+    switch (edge.condition ?? 'always') {
+      case 'always':
+        return true;
+      case 'true':
+        return sourceOutput === true;
+      case 'false':
+        return sourceOutput === false;
+      case 'truthy':
+        return Boolean(sourceOutput);
+      case 'falsy':
+        return !sourceOutput;
+    }
+    return false;
   }
 
   private async runNode(
@@ -84,6 +90,7 @@ export class WorkflowEngine {
   }
 
   private topoSort(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode[] {
+    const nodesById = new Map(nodes.map((node) => [node.id, node]));
     const indeg = new Map<string, number>(nodes.map((n) => [n.id, 0]));
     const adj = new Map<string, string[]>(nodes.map((n) => [n.id, [] as string[]]));
     for (const e of edges) {
@@ -92,9 +99,11 @@ export class WorkflowEngine {
     }
     const q: string[] = nodes.filter((n) => (indeg.get(n.id) ?? 0) === 0).map((n) => n.id);
     const out: WorkflowNode[] = [];
-    while (q.length) {
-      const id = q.shift()!;
-      out.push(nodes.find((n) => n.id === id)!);
+    for (let cursor = 0; cursor < q.length; cursor++) {
+      const id = q[cursor];
+      const node = nodesById.get(id);
+      if (!node) continue;
+      out.push(node);
       for (const next of adj.get(id) ?? []) {
         indeg.set(next, (indeg.get(next) ?? 1) - 1);
         if ((indeg.get(next) ?? 0) === 0) q.push(next);
@@ -110,24 +119,21 @@ export class WorkflowEngine {
     if (!Array.isArray(dsl.edges)) return { valid: false, errors: ['No edges array'] };
     const ids = new Set(dsl.nodes.map((n) => n.id));
     if (ids.size !== dsl.nodes.length) errors.push('Duplicate node IDs');
-    const allowedTypes = new Set<WorkflowNode['type']>([
-      'trigger',
-      'ai',
-      'condition',
-      'transform',
-      'webhook',
-      'email',
-      'content',
-      'human',
-      'schedule',
-      'loop',
-    ]);
+    const shape = workflowDslSchema.safeParse(dsl);
+    if (!shape.success) {
+      errors.push(...shape.error.issues.map((issue) => issue.message));
+      return { valid: false, errors };
+    }
+    const allowedTypes = new Set<WorkflowNode['type']>(WORKFLOW_NODE_TYPES);
     for (const node of dsl.nodes)
       if (!allowedTypes.has(node.type)) errors.push(`Unsupported node type ${node.type}`);
     for (const e of dsl.edges) {
       if (!ids.has(e.source)) errors.push(`Edge source ${e.source} not found`);
       if (!ids.has(e.target)) errors.push(`Edge target ${e.target} not found`);
+      if (e.source === e.target) errors.push(`Self edge ${e.source} is not allowed`);
     }
+    const edgeKeys = new Set(dsl.edges.map((edge) => `${edge.source}\u0000${edge.target}`));
+    if (edgeKeys.size !== dsl.edges.length) errors.push('Duplicate edges');
     // 检测环
     const visited = new Set<string>();
     const stack = new Set<string>();

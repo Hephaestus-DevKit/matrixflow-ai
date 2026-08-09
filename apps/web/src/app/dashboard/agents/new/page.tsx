@@ -16,6 +16,7 @@ import {
   Loader2,
   Sparkles,
 } from 'lucide-react';
+import { errorMessage } from '@/lib/errors';
 
 const TEMPLATES = [
   {
@@ -78,8 +79,8 @@ export default function NewAgentPage() {
     try {
       await apiClient.post(`/agents/from-template/${templateId}`, { name: finalName });
       router.push('/dashboard/agents');
-    } catch (e: any) {
-      alert(e.message);
+    } catch (error: unknown) {
+      alert(errorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -97,8 +98,8 @@ export default function NewAgentPage() {
         tools: [],
       });
       router.push('/dashboard/agents');
-    } catch (e: any) {
-      alert(e.message);
+    } catch (error: unknown) {
+      alert(errorMessage(error));
     } finally {
       setLoading(false);
     }

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Send, CheckCircle2, Loader2 } from 'lucide-react';
+import { errorMessage } from '@/lib/errors';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -43,8 +44,8 @@ export default function RegisterPage() {
       setUserId(uid);
       setStep('otp');
       setCountdown(60);
-    } catch (err: any) {
-      setError(err.message ?? '注册失败或该邮箱已被注册');
+    } catch (err: unknown) {
+      setError(errorMessage(err, '注册失败或该邮箱已被注册'));
     }
   }
 
@@ -55,8 +56,8 @@ export default function RegisterPage() {
     try {
       await verifyOtp(userId, otpCode);
       router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message ?? '验证码不正确或已过期');
+    } catch (err: unknown) {
+      setError(errorMessage(err, '验证码不正确或已过期'));
     }
   }
 

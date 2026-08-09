@@ -827,6 +827,7 @@ model MarketplaceItem {
   iconUrl         String?   @map("icon_url")
   coverUrl        String?   @map("cover_url")
   status          String    @default("pending") // pending | approved | rejected | delisted
+  moderationNote  String?   @map("moderation_note")
   installs        Int       @default(0)
   ratingAvg       Float     @default(0) @map("rating_avg")
   ratingCount     Int       @default(0) @map("rating_count")

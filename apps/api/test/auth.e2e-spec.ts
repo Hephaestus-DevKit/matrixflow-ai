@@ -4,6 +4,8 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { UuidParamPipe } from '../src/common/pipes/uuid-param.pipe';
+import { randomUUID } from 'crypto';
 
 describe('Auth (e2e)', () => {
   let app: INestApplication;
@@ -11,12 +13,21 @@ describe('Auth (e2e)', () => {
   const testEmail = `e2e-${Date.now()}@test.com`;
   let organizationId: string | undefined;
   let refreshToken: string | undefined;
+  let accessToken: string | undefined;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
     app.setGlobalPrefix('api/v1');
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new UuidParamPipe(),
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     prisma = app.get(PrismaService);
     await app.init();
   });
@@ -37,6 +48,7 @@ describe('Auth (e2e)', () => {
     expect(res.body.organizationId).toBeDefined();
     organizationId = res.body.organizationId;
     refreshToken = res.body.refreshToken;
+    accessToken = res.body.accessToken;
   });
 
   it('POST /auth/register duplicate → 409', async () => {
@@ -89,5 +101,23 @@ describe('Auth (e2e)', () => {
 
   it('GET /agents without token → 401', async () => {
     await request(app.getHttpServer()).get('/api/v1/agents').expect(401);
+  });
+
+  it('rejects an organization path outside the authenticated context', async () => {
+    await request(app.getHttpServer())
+      .get(`/api/v1/orgs/${randomUUID()}/members`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(403);
+  });
+
+  it('rejects malformed workflow contracts before persistence', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/workflows')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        name: 'Invalid workflow',
+        dsl: { nodes: [{ id: 'bad id', type: 'unknown' }], edges: [] },
+      })
+      .expect(400);
   });
 });

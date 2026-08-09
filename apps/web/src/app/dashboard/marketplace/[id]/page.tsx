@@ -4,13 +4,14 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
+import type { MarketplaceItemSummary } from '@matrixflow/shared';
 
 export default function ItemDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const { data: item } = useQuery({
     queryKey: ['item', id],
-    queryFn: () => apiClient.get<any>(`/market/items/${id}`),
+    queryFn: () => apiClient.get<MarketplaceItemSummary>(`/market/items/${id}`),
     enabled: !!id,
   });
   const buy = useMutation({
@@ -34,10 +35,10 @@ export default function ItemDetailPage() {
       </div>
       <div>
         <h2 className="mb-2 text-sm font-semibold">评论</h2>
-        {item.reviews?.map((r: any) => (
-          <div key={r.id} className="rounded border border-border p-3 text-sm">
-            <span>{'⭐'.repeat(r.rating)}</span>
-            <p>{r.comment}</p>
+        {item.reviews?.map((review) => (
+          <div key={review.id} className="rounded border border-border p-3 text-sm">
+            <span>{'⭐'.repeat(review.rating)}</span>
+            <p>{review.comment}</p>
           </div>
         ))}
       </div>

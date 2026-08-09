@@ -1,5 +1,6 @@
 // @matrixflow/shared · Zod schemas (前后端共享校验)
 import { z } from 'zod';
+import { workflowDslSchema } from '../workflow';
 
 export const emailSchema = z.string().email().max(255).toLowerCase();
 export const passwordSchema = z.string().min(8).max(128);
@@ -36,17 +37,17 @@ export const createAgentSchema = z.object({
   name: nameSchema,
   role: z.string().min(1),
   description: z.string().max(2000).optional(),
-  systemPrompt: z.record(z.any()),
+  systemPrompt: z.record(z.unknown()),
   model: z.string().default('glm-4-plus'),
   temperature: z.number().min(0).max(2).default(0.7),
   maxTokens: z.number().int().min(1).max(32000).default(2000),
   memoryMode: z.enum(['short', 'long', 'none']).default('short'),
-  skills: z.array(z.object({ skillKey: z.string(), config: z.any().optional() })).default([]),
-  tools: z.array(z.object({ toolKey: z.string(), config: z.any().optional() })).default([]),
+  skills: z.array(z.object({ skillKey: z.string(), config: z.unknown().optional() })).default([]),
+  tools: z.array(z.object({ toolKey: z.string(), config: z.unknown().optional() })).default([]),
 });
 
 export const runAgentSchema = z.object({
-  input: z.record(z.any()),
+  input: z.record(z.unknown()),
   stream: z.boolean().default(false),
 });
 
@@ -55,7 +56,7 @@ export const productDataSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
   features: z.array(z.string()).default([]),
-  specs: z.record(z.any()).default({}),
+  specs: z.record(z.unknown()).default({}),
   images: z.array(z.string().url()).default([]),
   price: z.number().nonnegative().optional(),
   currency: z.string().length(3).default('USD'),
@@ -144,6 +145,12 @@ export const marketplaceReviewSchema = z
   })
   .strict();
 
+export const rejectMarketplaceItemSchema = z
+  .object({ reason: z.string().trim().min(1).max(2_000) })
+  .strict();
+
+export const executeWorkflowJobSchema = z.object({ userId: uuidSchema }).strict();
+
 export const aiPromptRequestSchema = z
   .object({
     promptKey: z.string().trim().min(1).max(100),
@@ -181,23 +188,17 @@ const jsonPayloadSchema = z.unknown().superRefine((value, ctx) => {
   }
 });
 
-const workflowDslPayloadSchema = z.record(z.unknown()).superRefine((value, ctx) => {
-  if (JSON.stringify(value).length > 1_000_000) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Workflow DSL exceeds 1 MB' });
-  }
-});
-
 export const createWorkflowSchema = z
   .object({
     name: nameSchema.transform((value) => value.trim()),
     description: z.string().trim().max(2_000).optional(),
-    dsl: workflowDslPayloadSchema,
+    dsl: workflowDslSchema,
   })
   .strict();
 
 export const saveWorkflowVersionSchema = z
   .object({
-    dsl: workflowDslPayloadSchema,
+    dsl: workflowDslSchema,
     changeNote: z.string().trim().max(500).optional(),
   })
   .strict();

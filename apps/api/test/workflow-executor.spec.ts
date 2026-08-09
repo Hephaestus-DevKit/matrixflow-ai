@@ -3,7 +3,10 @@ import { WorkflowExecutor } from '../src/workflow/workflow.executor';
 
 describe('WorkflowExecutor', () => {
   const ai = { runPrompt: jest.fn(async () => ({ content: 'ok' })) };
-  const executor = new WorkflowExecutor(ai as any);
+  const emailDelivery = {
+    send: jest.fn(async () => ({ provider: 'test', messageId: 'message-1' })),
+  };
+  const executor = new WorkflowExecutor(ai as any, emailDelivery);
   const context = { organizationId: 'org', userId: 'user', workflowId: 'workflow', runId: 'run' };
 
   beforeEach(() => jest.clearAllMocks());
@@ -27,6 +30,26 @@ describe('WorkflowExecutor', () => {
     expect(output).toBe(true);
   });
 
+  it('normalizes numeric condition values from the visual editor', async () => {
+    await expect(
+      executor.execute(
+        {
+          nodes: [
+            { id: 'trigger', type: 'trigger' },
+            {
+              id: 'condition',
+              type: 'condition',
+              config: { field: 'score', operator: 'eq', value: '10' },
+            },
+          ],
+          edges: [{ source: 'trigger', target: 'condition' }],
+        },
+        { score: 10 },
+        context,
+      ),
+    ).resolves.toBe(true);
+  });
+
   it('calls the configured AI prompt instead of returning a stub', async () => {
     await executor.execute(
       {
@@ -38,6 +61,33 @@ describe('WorkflowExecutor', () => {
     );
     expect(ai.runPrompt).toHaveBeenCalledWith(
       expect.objectContaining({ promptKey: 'summary', organizationId: 'org' }),
+    );
+  });
+
+  it('delegates email delivery through the configured port', async () => {
+    await expect(
+      executor.execute(
+        {
+          nodes: [
+            { id: 'trigger', type: 'trigger' },
+            {
+              id: 'email',
+              type: 'email',
+              config: { to: 'owner@example.com', subject: 'Result', body: 'Output: {{input}}' },
+            },
+          ],
+          edges: [{ source: 'trigger', target: 'email' }],
+        },
+        { score: 10 },
+        context,
+      ),
+    ).resolves.toEqual({ provider: 'test', messageId: 'message-1' });
+    expect(emailDelivery.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org',
+        to: 'owner@example.com',
+        body: 'Output: {"score":10}',
+      }),
     );
   });
 

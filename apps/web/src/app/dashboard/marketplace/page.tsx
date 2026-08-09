@@ -4,43 +4,39 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import Link from 'next/link';
 import { Store, Bot, GitFork, FileText, Star } from 'lucide-react';
+import type { MarketplaceItemSummary, Paginated } from '@matrixflow/shared';
+import { EmptyState, ErrorState, LoadingCards } from '@/components/ui/states';
+import { PageHeader } from '@/components/ui/page';
 
 export default function MarketplacePage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['market'],
-    queryFn: () => apiClient.get('/market/items?pageSize=24'),
+    queryFn: () => apiClient.get<Paginated<MarketplaceItemSummary>>('/market/items?pageSize=24'),
   });
-  const items = (data as any)?.data ?? [];
+  const items = data?.data ?? [];
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="border-b border-border/40 pb-5">
-        <h1 className="text-xl font-bold tracking-tight">模板生态市场</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          一键部署行业专家的 AI 员工人设与自动化业务流方案
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Template ecosystem"
+        title="模板生态市场"
+        description="部署行业专家创建的 AI 员工与自动化业务流方案。"
+      />
 
-      {isLoading && (
-        <div className="flex items-center justify-center p-12 text-muted-foreground text-sm gap-2">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-          加载中...
-        </div>
-      )}
+      {isLoading && <LoadingCards />}
+      {isError && <ErrorState onRetry={() => void refetch()} />}
 
-      {!isLoading && items.length === 0 && (
-        <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 p-12 text-center flex flex-col items-center justify-center">
-          <Store className="h-10 w-10 text-muted-foreground/60 mb-3 animate-pulse-slow" />
-          <p className="text-sm font-semibold text-foreground">模板市场暂未开放</p>
-          <p className="mt-1 text-xs text-muted-foreground max-w-[280px]">
-            官方与生态开发者模板正在上架准备中，敬请期待。
-          </p>
-        </div>
+      {!isLoading && !isError && items.length === 0 && (
+        <EmptyState
+          icon={Store}
+          title="模板市场暂未开放"
+          description="官方与生态开发者模板正在准备上架。"
+        />
       )}
 
       {items.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((it: any) => {
+          {items.map((it) => {
             const Icon = it.type === 'agent' ? Bot : it.type === 'workflow' ? GitFork : FileText;
             const typeLabel =
               it.type === 'agent' ? 'AI 员工' : it.type === 'workflow' ? '工作流' : '文档模板';
@@ -48,7 +44,7 @@ export default function MarketplacePage() {
               <Link
                 key={it.id}
                 href={`/dashboard/marketplace/${it.id}`}
-                className="group rounded-xl border border-border/60 bg-card p-5 transition-all duration-300 hover:border-primary/30 hover:shadow-sm flex flex-col justify-between"
+                className="interactive-card group flex flex-col justify-between p-5"
               >
                 <div>
                   <div className="flex items-center justify-between">
