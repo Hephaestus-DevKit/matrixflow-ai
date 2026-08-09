@@ -1,9 +1,10 @@
 # syntax=docker/dockerfile:1.7
 # Combined image for single-container platforms such as Hugging Face Spaces.
 # Normal deployments should use the separate API, Worker and Sidecar images.
-FROM node:22.14.0-alpine AS builder
+FROM node:26.5.1-alpine AS builder
 RUN apk add --no-cache libc6-compat openssl
-RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
+RUN npm install --global corepack@0.35.0 \
+    && corepack prepare pnpm@11.9.0 --activate
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 WORKDIR /app
@@ -12,9 +13,10 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 RUN DATABASE_URL=postgresql://build:build@localhost:5432/build pnpm db:generate
 RUN pnpm --filter @matrixflow/api... build && pnpm --filter @matrixflow/worker build
 
-FROM node:22.14.0-alpine AS runner
+FROM node:26.5.1-alpine AS runner
 RUN apk add --no-cache dumb-init libc6-compat openssl python3 py3-pip
-RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
+RUN npm install --global corepack@0.35.0 \
+    && corepack prepare pnpm@11.9.0 --activate
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 ENV NODE_ENV=production
