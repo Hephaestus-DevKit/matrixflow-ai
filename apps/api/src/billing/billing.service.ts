@@ -1,10 +1,14 @@
-import { Injectable, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
+import { Inject, Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@matrixflow/db';
+import { PAYMENT_PROVIDER, type PaymentProvider } from './ports/payment-provider';
 
 @Injectable()
 export class BillingService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(PAYMENT_PROVIDER) private readonly payments: PaymentProvider,
+  ) {}
 
   async plans() {
     return this.prisma.plan.findMany({
@@ -24,11 +28,9 @@ export class BillingService {
     const plan = await this.prisma.plan.findUnique({ where: { id: planId } });
     if (!plan) throw new BadRequestException('Plan not found');
     const price = interval === 'year' ? plan.priceYearlyUsd : plan.priceMonthlyUsd;
-    if (price > 0)
-      throw new HttpException(
-        'Paid subscription checkout is not configured',
-        HttpStatus.PAYMENT_REQUIRED,
-      );
+    if (price > 0) {
+      return this.payments.createCheckout({ organizationId, planId, interval, amountUsd: price });
+    }
     const start = new Date();
     const end = new Date();
     end.setMonth(end.getMonth() + (interval === 'year' ? 12 : 1));

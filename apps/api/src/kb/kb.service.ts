@@ -6,6 +6,7 @@ import { AuditService } from '../common/audit.service';
 import { randomUUID } from 'crypto';
 import { basename, extname } from 'path';
 import { QueueService } from '../queue/queue.service';
+import { asJsonRecord, jsonString } from '../common/prisma-json';
 
 const CHUNK_SIZE = 800; // 字符
 const CHUNK_OVERLAP = 100;
@@ -278,14 +279,14 @@ export class KbService {
       userId: userId ?? '',
       responseFormat: 'json_object',
     });
-    let parsed: any;
+    let parsed: unknown;
     try {
       parsed = JSON.parse(answer.content);
     } catch {
       parsed = { answer: answer.content, citations: [] };
     }
     return {
-      answer: parsed.answer ?? answer.content,
+      answer: jsonString(asJsonRecord(parsed), 'answer') ?? answer.content,
       citations: results.map((r) => ({
         docId: r.document_id,
         chunkId: r.chunk_id,

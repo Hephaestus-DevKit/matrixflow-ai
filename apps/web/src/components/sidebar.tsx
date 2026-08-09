@@ -3,103 +3,126 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-store';
 import { cn } from '@/lib/cn';
-import {
-  LayoutDashboard,
-  Bot,
-  Factory,
-  FolderOpen,
-  GitFork,
-  MessageSquare,
-  Store,
-  LineChart,
-  Settings,
-} from 'lucide-react';
+import { DASHBOARD_NAVIGATION } from '@/components/dashboard-navigation';
 
-const NAV = [
-  { href: '/dashboard', icon: LayoutDashboard, label: '总览' },
-  { href: '/dashboard/agents', icon: Bot, label: 'AI 员工' },
-  { href: '/dashboard/content', icon: Factory, label: '内容工厂' },
-  { href: '/dashboard/knowledge', icon: FolderOpen, label: '知识库' },
-  { href: '/dashboard/workflows', icon: GitFork, label: '工作流' },
-  { href: '/dashboard/crm', icon: MessageSquare, label: 'CRM' },
-  { href: '/dashboard/marketplace', icon: Store, label: '模板市场' },
-  { href: '/dashboard/analytics', icon: LineChart, label: '数据看板' },
-  { href: '/dashboard/settings', icon: Settings, label: '设置' },
-] as const;
-
-export function Sidebar() {
+export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, organizationId } = useAuth();
+  const membership = user?.memberships.find((item) => item.organizationId === organizationId);
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 flex w-56 flex-col border-r border-border bg-card/90 backdrop-blur-md shadow-dark-sm">
-      {/* Logo */}
-      <div className="flex h-14 items-center gap-2.5 border-b border-border/80 px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-primary via-indigo-500 to-primary text-primary-foreground text-xs font-black shadow-glow-sm hover:rotate-6 transition-transform duration-300">
-          M
-        </div>
-        <span className="font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground/90 to-primary bg-clip-text text-transparent text-sm">
-          MatrixFlow AI
-        </span>
+    <aside
+      className={cn(
+        'inset-y-0 left-0 flex w-64 flex-col border-r border-border/70 bg-card/95 shadow-sm backdrop-blur-xl',
+        mobile ? 'h-full' : 'fixed z-40 hidden lg:flex',
+      )}
+    >
+      <div className="flex h-16 items-center gap-3 border-b border-border/70 px-4">
+        <Link
+          href="/dashboard"
+          className="flex min-w-0 flex-1 items-center gap-3"
+          onClick={onClose}
+        >
+          <span className="brand-mark" aria-hidden="true">
+            M
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-bold tracking-tight">MatrixFlow AI</span>
+            <span className="block text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Command center
+            </span>
+          </span>
+        </Link>
+        {mobile && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="关闭导航"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 py-4">
-        {NAV.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 rounded-xl px-3.5 py-2 text-xs transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]',
-                isActive
-                  ? 'bg-primary/10 text-primary font-bold shadow-glow-sm border border-primary/20'
-                  : 'text-muted-foreground hover:bg-muted/65 hover:text-foreground',
-              )}
-            >
-              <Icon
-                className={cn(
-                  'h-4 w-4 transition-transform duration-200 group-hover:scale-105',
-                  isActive ? 'text-primary' : 'text-muted-foreground',
-                )}
-              />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+      <nav aria-label="主导航" className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
+        {DASHBOARD_NAVIGATION.map((group) => (
+          <div key={group.label}>
+            <p className="mb-2 px-3 text-[0.625rem] font-bold uppercase tracking-[0.16em] text-muted-foreground/75">
+              {group.label}
+            </p>
+            <div className="space-y-1">
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const isActive =
+                  pathname === item.href ||
+                  (item.href !== '/dashboard' && pathname.startsWith(`${item.href}/`));
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onClose}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={cn(
+                      'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      isActive
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors',
+                        isActive
+                          ? 'bg-primary text-primary-foreground shadow-glow-sm'
+                          : 'bg-muted/70',
+                      )}
+                    >
+                      <Icon className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate leading-4">{item.label}</span>
+                      <span className="mt-0.5 block truncate text-[0.625rem] font-normal text-muted-foreground">
+                        {item.description}
+                      </span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      {/* User */}
-      <div className="border-t border-border p-3 bg-muted/20">
+      <div className="border-t border-border/70 p-3">
         <Link
           href="/dashboard/settings"
-          className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-muted/60 transition-all duration-200 cursor-pointer group"
-          title="点击查看个人资料设置"
+          onClick={onClose}
+          className="flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {user?.avatarUrl ? (
             <Image
               src={user.avatarUrl}
-              alt={user.name}
-              width={32}
-              height={32}
+              alt=""
+              width={36}
+              height={36}
               unoptimized
-              className="h-8 w-8 rounded-full object-cover border border-primary/20 group-hover:scale-105 transition-transform"
+              className="h-9 w-9 rounded-xl border border-border object-cover"
             />
           ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold border border-primary/20 group-hover:scale-105 transition-transform uppercase">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold uppercase text-primary">
               {user?.name?.[0] ?? '?'}
-            </div>
+            </span>
           )}
-          <div className="flex-1 overflow-hidden">
-            <p className="truncate text-xs font-bold text-foreground group-hover:text-primary transition-colors">
-              {user?.name ?? '个人用户'}
-            </p>
-            <p className="truncate text-[10px] text-muted-foreground">{user?.email ?? ''}</p>
-          </div>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-xs font-bold">{user?.name ?? '个人用户'}</span>
+            <span className="mt-0.5 block truncate text-[0.625rem] text-muted-foreground">
+              {membership?.organizationName ?? user?.email ?? ''}
+            </span>
+          </span>
         </Link>
       </div>
     </aside>

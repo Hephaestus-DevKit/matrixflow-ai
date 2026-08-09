@@ -231,8 +231,10 @@ Response: { data: { answer, sources: [{ content, documentName, score }], usage }
 Request: {
   name: string,
   description?: string,
-  nodes: [{ id, type, label, config, position: {x,y} }],
-  edges: [{ source, target, condition? }]
+  dsl: {
+    nodes: [{ id, type, config?, position?: {x,y} }],
+    edges: [{ source, target, condition?: "always"|"true"|"false"|"truthy"|"falsy" }]
+  }
 }
 ```
 
@@ -240,26 +242,26 @@ Request: {
 
 详情（含版本/触发器）
 
-### PATCH /workflows/:id
+### POST /workflows/:id/versions
 
-更新（自动版本+1）
-
-### DELETE /workflows/:id
-
-软删除
+保存新版本 `{ dsl, changeNote? }`（版本原子递增）
 
 ### POST /workflows/:id/run
 
-执行工作流
+提交异步工作流运行
 
 ```
 Request: { input: object }
-Response: { data: { runId, outputs, states } }
+Response: { runId, status: "PENDING" }
 ```
 
-### GET /workflows/:id/runs
+### GET /workflows/:id/logs
 
 执行日志
+
+### GET /workflows/:id/export
+
+导出名称、描述和最新 DSL
 
 ---
 
@@ -337,13 +339,13 @@ AI 回复建议
 
 套餐列表
 
-### GET /billing/subscription
+### GET /billing/current
 
 当前订阅
 
-### POST /billing/checkout
+### POST /billing/subscribe
 
-创建订阅结账 `{ planId }`
+开通免费订阅或委托付费结账 `{ planId, interval?: "month"|"year" }`
 
 ### GET /billing/usage
 
@@ -352,6 +354,10 @@ AI 回复建议
 ### GET /billing/invoices
 
 发票列表
+
+### GET /billing/tokens
+
+本月 Token 用量明细
 
 ---
 

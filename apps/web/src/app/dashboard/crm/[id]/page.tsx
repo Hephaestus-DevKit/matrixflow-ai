@@ -6,24 +6,30 @@ import { useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import type { AiReply, CustomerDetail } from '@matrixflow/shared';
 
 export default function CustomerDetailPage() {
   const { id } = useParams();
   const [reply, setReply] = useState('');
   const { data: c } = useQuery({
     queryKey: ['customer', id],
-    queryFn: () => apiClient.get<any>(`/crm/customers/${id}`),
+    queryFn: () => apiClient.get<CustomerDetail>(`/crm/customers/${id}`),
     enabled: !!id,
   });
   const conv = c?.conversations?.[0];
   const send = useMutation({
     mutationFn: (content: string) =>
-      apiClient.post(`/crm/conversations/${conv.id}/messages`, { role: 'agent', content }),
+      conv
+        ? apiClient.post(`/crm/conversations/${conv.id}/messages`, { role: 'agent', content })
+        : Promise.reject(new Error('Conversation not found')),
     onSuccess: () => setReply(''),
   });
   const aiReply = useMutation({
-    mutationFn: () => apiClient.post<any>(`/crm/conversations/${conv?.id}/ai-reply`, {}),
-    onSuccess: (r: any) => setReply(r?.reply ?? JSON.stringify(r)),
+    mutationFn: () =>
+      conv
+        ? apiClient.post<AiReply>(`/crm/conversations/${conv.id}/ai-reply`, {})
+        : Promise.reject(new Error('Conversation not found')),
+    onSuccess: (response) => setReply(response.reply ?? JSON.stringify(response)),
   });
 
   if (!c) return <p className="text-muted-foreground">加载中...</p>;
@@ -37,18 +43,18 @@ export default function CustomerDetailPage() {
         <div>
           <h2 className="text-sm font-semibold">标签</h2>
           <div className="flex flex-wrap gap-1">
-            {c.tags?.map((t: any) => (
-              <span key={t.tag} className="rounded bg-muted px-2 py-0.5 text-xs">
-                {t.tag}
+            {c.tags?.map((tag) => (
+              <span key={tag.tag} className="rounded bg-muted px-2 py-0.5 text-xs">
+                {tag.tag}
               </span>
             ))}
           </div>
         </div>
         <div>
           <h2 className="text-sm font-semibold">备注</h2>
-          {c.notes?.map((n: any) => (
-            <p key={n.id} className="text-sm">
-              {n.content}
+          {c.notes?.map((note) => (
+            <p key={note.id} className="text-sm">
+              {note.content}
             </p>
           ))}
         </div>
@@ -66,12 +72,12 @@ export default function CustomerDetailPage() {
           </Button>
         </div>
         <div className="max-h-96 space-y-2 overflow-auto rounded-lg border border-border p-3">
-          {conv?.messages?.map((m: any) => (
+          {conv?.messages?.map((message) => (
             <div
-              key={m.id}
-              className={`text-sm ${m.role === 'customer' ? 'text-left' : 'text-right'}`}
+              key={message.id}
+              className={`text-sm ${message.role === 'customer' ? 'text-left' : 'text-right'}`}
             >
-              <span className="rounded bg-muted px-2 py-1 inline-block">{m.content}</span>
+              <span className="rounded bg-muted px-2 py-1 inline-block">{message.content}</span>
             </div>
           ))}
         </div>

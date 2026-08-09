@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AiService } from '../ai/ai.service';
 import { createAgentSchema, runAgentSchema } from '@matrixflow/shared';
 import { AuditService } from '../common/audit.service';
+import { toInputJson, jsonString } from '../common/prisma-json';
 
 @Injectable()
 export class AgentService {
@@ -36,9 +37,20 @@ export class AgentService {
       data: {
         ...data,
         organizationId,
-        systemPrompt: data.systemPrompt as any,
-        skills: { create: skills },
-        tools: { create: tools },
+        systemPrompt: toInputJson(data.systemPrompt, 'systemPrompt'),
+        skills: {
+          create: skills.map((skill) => ({
+            skillKey: skill.skillKey,
+            config:
+              skill.config === undefined ? undefined : toInputJson(skill.config, 'skill.config'),
+          })),
+        },
+        tools: {
+          create: tools.map((tool) => ({
+            toolKey: tool.toolKey,
+            config: tool.config === undefined ? undefined : toInputJson(tool.config, 'tool.config'),
+          })),
+        },
       },
     });
     await this.audit.log({
@@ -54,34 +66,50 @@ export class AgentService {
   async update(organizationId: string, userId: string, id: string, input: unknown) {
     const dto = createAgentSchema.partial().parse(input);
     const { skills, tools, ...data } = dto;
-    return this.prisma.$transaction(async (tx: any) => {
+    const agent = await this.prisma.$transaction(async (tx) => {
       const existing = await tx.agent.findFirst({ where: { id, organizationId, deletedAt: null } });
       if (!existing) throw new NotFoundException();
       const agent = await tx.agent.update({
         where: { id },
-        data: { ...data, systemPrompt: data.systemPrompt as any },
+        data: {
+          ...data,
+          systemPrompt:
+            data.systemPrompt === undefined
+              ? undefined
+              : toInputJson(data.systemPrompt, 'systemPrompt'),
+        },
       });
       if (skills) {
         await tx.agentSkill.deleteMany({ where: { agentId: id } });
         await tx.agentSkill.createMany({
-          data: skills.map((s) => ({ agentId: id, skillKey: s.skillKey, config: s.config as any })),
+          data: skills.map((skill) => ({
+            agentId: id,
+            skillKey: skill.skillKey,
+            config:
+              skill.config === undefined ? undefined : toInputJson(skill.config, 'skill.config'),
+          })),
         });
       }
       if (tools) {
         await tx.agentTool.deleteMany({ where: { agentId: id } });
         await tx.agentTool.createMany({
-          data: tools.map((t) => ({ agentId: id, toolKey: t.toolKey, config: t.config as any })),
+          data: tools.map((tool) => ({
+            agentId: id,
+            toolKey: tool.toolKey,
+            config: tool.config === undefined ? undefined : toInputJson(tool.config, 'tool.config'),
+          })),
         });
       }
-      await this.audit.log({
-        action: 'agent.update',
-        userId,
-        organizationId,
-        resource: 'agent',
-        resourceId: id,
-      });
       return agent;
     });
+    await this.audit.log({
+      action: 'agent.update',
+      userId,
+      organizationId,
+      resource: 'agent',
+      resourceId: id,
+    });
+    return agent;
   }
 
   async remove(organizationId: string, userId: string, id: string) {
@@ -110,13 +138,13 @@ export class AgentService {
       data: {
         agentId: id,
         organizationId,
-        input: dto.input as any,
+        input: toInputJson(dto.input, 'agent input'),
         status: 'RUNNING',
         startedAt: new Date(),
       },
     });
     try {
-      const promptKey = (agent.systemPrompt as any)?.templateKey ?? 'rag_qa';
+      const promptKey = jsonString(agent.systemPrompt, 'templateKey') ?? 'rag_qa';
       const result = await this.ai.runPrompt({
         promptKey,
         variables: dto.input,
@@ -128,7 +156,7 @@ export class AgentService {
         where: { id: run.id },
         data: {
           status: 'SUCCESS',
-          output: { content: result.content } as any,
+          output: toInputJson({ content: result.content }, 'agent output'),
           tokensUsed: result.usage.totalTokens,
           costUsd: result.costUsd,
           finishedAt: new Date(),
@@ -168,9 +196,9 @@ export class AgentService {
         name: name ?? tpl.name,
         role: tpl.role,
         description: tpl.description,
-        systemPrompt: tpl.systemPrompt as any,
-        skills: { create: tpl.defaultSkills.map((k: any) => ({ skillKey: k })) },
-        tools: { create: tpl.defaultTools.map((k: any) => ({ toolKey: k })) },
+        systemPrompt: toInputJson(tpl.systemPrompt, 'template systemPrompt'),
+        skills: { create: tpl.defaultSkills.map((skillKey) => ({ skillKey })) },
+        tools: { create: tpl.defaultTools.map((toolKey) => ({ toolKey })) },
       },
     });
     await this.prisma.agentTemplate.update({
@@ -183,7 +211,7 @@ export class AgentService {
       organizationId,
       resource: 'agent',
       resourceId: agent.id,
-      metadata: { templateId } as any,
+      metadata: { templateId },
     });
     return agent;
   }

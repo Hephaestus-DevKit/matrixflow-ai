@@ -1,6 +1,6 @@
 // AI Gateway 主入口 · 路由 + fallback + 计量 + 缓存
 import type { ChatRequest, ChatResponse, StreamChunk, ProviderClient } from './types';
-import { AiGatewayError } from './types';
+import { AiGatewayError, isAbortError } from './types';
 import { createProviders } from './providers';
 import { Provider } from '@matrixflow/shared';
 
@@ -61,6 +61,7 @@ export class AiGateway {
         return res;
       } catch (e) {
         lastErr = e;
+        if (req.signal?.aborted || isAbortError(e)) throw e;
       }
     }
     throw lastErr instanceof Error
@@ -72,10 +73,12 @@ export class AiGateway {
     // 流式只走首选 provider，失败则降级为非流式
     const primary = this.providers[this.chain[0]];
     if (!primary) throw new AiGatewayError('AI_PROVIDER_ERROR', 'No primary provider');
+    let emitted = false;
     try {
       const providerName = this.chain[0];
       const providerRequest = this.forProvider(req, providerName);
       for await (const chunk of primary.chatStream(providerRequest)) {
+        emitted ||= chunk.delta.length > 0;
         yield { ...chunk, provider: providerName, model: providerRequest.model };
         if (chunk.usage) {
           this.onUsage?.(
@@ -90,8 +93,9 @@ export class AiGateway {
         }
       }
     } catch (error) {
-      if (req.signal?.aborted) throw error;
-      // 降级非流式
+      if (req.signal?.aborted || emitted || isAbortError(error)) throw error;
+      // Only fall back before any content has reached the caller. Once a stream
+      // is visible, replaying a full response would duplicate partial output.
       const res = await this.chat({ ...req, stream: false });
       yield {
         delta: res.content,

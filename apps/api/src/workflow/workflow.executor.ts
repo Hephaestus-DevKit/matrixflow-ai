@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotImplementedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotImplementedException } from '@nestjs/common';
 import { lookup } from 'dns/promises';
 import { isIP } from 'net';
 import { Agent, fetch as undiciFetch } from 'undici';
@@ -9,21 +9,23 @@ import {
   WorkflowNode,
   ExecutionContext,
 } from '@matrixflow/workflow-engine';
+import { EMAIL_DELIVERY, type EmailDelivery } from './ports/email-delivery';
 
 @Injectable()
 export class WorkflowExecutor {
   private readonly engine: WorkflowEngine;
 
-  constructor(private readonly ai: AiService) {
+  constructor(
+    private readonly ai: AiService,
+    @Inject(EMAIL_DELIVERY) private readonly emailDelivery: EmailDelivery,
+  ) {
     this.engine = new WorkflowEngine({
       ai: (node, inputs, context) => this.runAiNode(node, inputs, context),
       content: (node, inputs, context) => this.runAiNode(node, inputs, context),
       condition: async (node, inputs) => this.evaluateCondition(node.config ?? {}, inputs),
       transform: async (node, inputs) => this.runTransform(node, inputs),
       webhook: (node, inputs) => this.callWebhook(node.config ?? {}, inputs),
-      email: async () => {
-        throw new NotImplementedException('Email workflow nodes require an SMTP delivery adapter');
-      },
+      email: (node, inputs, context) => this.runEmailNode(node, inputs, context),
       human: async () => {
         throw new NotImplementedException(
           'Human approval nodes require a persisted pause/resume state',
@@ -64,11 +66,29 @@ export class WorkflowExecutor {
     );
   }
 
+  private runEmailNode(node: WorkflowNode, inputs: unknown, context: ExecutionContext) {
+    const config = node.config ?? {};
+    const to = this.requiredString(config.to, 'email.to');
+    const subject = this.requiredString(config.subject, 'email.subject');
+    const template = this.requiredString(config.body, 'email.body');
+    const body = template.replace(/\{\{\s*input\s*\}\}/g, () =>
+      typeof inputs === 'string' ? inputs : JSON.stringify(inputs),
+    );
+    return this.emailDelivery.send({
+      organizationId: context.organizationId,
+      workflowId: context.workflowId,
+      runId: context.runId,
+      to,
+      subject,
+      body,
+    });
+  }
+
   private evaluateCondition(config: Record<string, unknown>, inputs: unknown): boolean {
     const field = this.requiredString(config.field, 'condition.field');
     const operator = this.requiredString(config.operator, 'condition.operator');
     const actual = this.resolvePath(inputs, field);
-    const expected = config.value;
+    const expected = this.conditionLiteral(config.value);
     switch (operator) {
       case 'eq':
         return actual === expected;
@@ -231,5 +251,15 @@ export class WorkflowExecutor {
     if (typeof value !== 'string' || !value.trim())
       throw new BadRequestException(`${field} is required`);
     return value.trim();
+  }
+
+  private conditionLiteral(value: unknown): unknown {
+    if (typeof value !== 'string') return value;
+    const normalized = value.trim();
+    if (/^-?(?:\d+\.?\d*|\.\d+)$/.test(normalized)) return Number(normalized);
+    if (normalized === 'true') return true;
+    if (normalized === 'false') return false;
+    if (normalized === 'null') return null;
+    return value;
   }
 }

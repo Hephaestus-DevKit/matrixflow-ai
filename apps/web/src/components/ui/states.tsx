@@ -1,86 +1,100 @@
-import { cn } from '@/lib/utils';
+import { AlertTriangle, LoaderCircle, type LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/cn';
 
-function Loader2({ className }: { className?: string }) {
+export function Spinner({ className }: { className?: string }) {
   return (
-    <svg
-      className={cn('animate-spin', className)}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M21 12a9 9 0 1 1-9-9c1.7 0 3.3.5 4.7 1.3" />
-    </svg>
+    <LoaderCircle
+      aria-hidden="true"
+      className={cn('h-5 w-5 animate-spin text-primary', className)}
+    />
   );
 }
 
-export function Spinner({ className }: { className?: string }) {
-  return <Loader2 className={cn('h-5 w-5 text-brand-500', className)} />;
+export function PageLoader({ label = '正在加载' }: { label?: string }) {
+  return (
+    <div
+      role="status"
+      className="flex min-h-64 flex-col items-center justify-center gap-3 text-center"
+    >
+      <span className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
+        <Spinner className="h-6 w-6" />
+      </span>
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+    </div>
+  );
 }
 
-export function PageLoader() {
+export function LoadingCards({ count = 3 }: { count?: number }) {
   return (
-    <div className="flex h-[50vh] items-center justify-center">
-      <Spinner className="h-8 w-8" />
+    <div
+      role="status"
+      aria-label="正在加载内容"
+      className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+    >
+      {Array.from({ length: count }, (_, index) => (
+        <div key={index} className="surface-card animate-pulse p-5">
+          <div className="h-10 w-10 rounded-xl bg-muted" />
+          <div className="mt-5 h-4 w-2/5 rounded bg-muted" />
+          <div className="mt-2 h-3 w-3/5 rounded bg-muted/80" />
+          <div className="mt-6 h-px bg-border" />
+          <div className="mt-3 h-3 w-1/4 rounded bg-muted/70" />
+        </div>
+      ))}
     </div>
   );
 }
 
 export function EmptyState({
-  icon,
+  icon: Icon,
   title,
   description,
   action,
 }: {
-  icon?: React.ReactNode;
+  icon?: LucideIcon;
   title: string;
   description?: string;
-  action?: React.ReactNode;
+  action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      {icon && <div className="mb-4 text-muted-foreground">{icon}</div>}
-      <h3 className="text-lg font-semibold">{title}</h3>
-      {description && <p className="mt-1 text-sm text-muted-foreground max-w-md">{description}</p>}
-      {action && <div className="mt-4">{action}</div>}
-    </div>
+    <section className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/45 px-6 py-14 text-center">
+      {Icon && (
+        <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <Icon className="h-6 w-6" aria-hidden="true" />
+        </span>
+      )}
+      <h2 className="text-base font-bold text-foreground">{title}</h2>
+      {description && (
+        <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{description}</p>
+      )}
+      {action && <div className="mt-5">{action}</div>}
+    </section>
   );
 }
 
-export function ErrorState({ message, onRetry }: { message?: string; onRetry?: () => void }) {
+export function ErrorState({
+  message = '暂时无法获取数据，请稍后重试。',
+  onRetry,
+}: {
+  message?: string;
+  onRetry?: () => void;
+}) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="mb-4 rounded-full bg-danger/10 p-3 text-danger">
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <line x1="15" y1="9" x2="9" y2="15" />
-          <line x1="9" y1="9" x2="15" y2="15" />
-        </svg>
-      </div>
-      <h3 className="text-lg font-semibold">Something went wrong</h3>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {message || 'An unexpected error occurred.'}
-      </p>
+    <section
+      role="alert"
+      className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-destructive/20 bg-destructive/5 px-6 py-12 text-center"
+    >
+      <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+        <AlertTriangle className="h-6 w-6" aria-hidden="true" />
+      </span>
+      <h2 className="text-base font-bold text-foreground">数据加载失败</h2>
+      <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{message}</p>
       {onRetry && (
-        <button
-          onClick={onRetry}
-          className="mt-4 rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
-        >
-          Retry
-        </button>
+        <Button variant="outline" size="sm" onClick={onRetry} className="mt-5">
+          重新加载
+        </Button>
       )}
-    </div>
+    </section>
   );
 }

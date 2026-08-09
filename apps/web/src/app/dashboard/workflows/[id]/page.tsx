@@ -11,6 +11,8 @@ import ReactFlow, {
   useEdgesState,
   addEdge,
   MarkerType,
+  type Connection,
+  type Node,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { apiClient } from '@/lib/api-client';
@@ -18,11 +20,30 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Save, Play, Trash2, ArrowLeft, Settings2, HelpCircle } from 'lucide-react';
+import type {
+  WorkflowDetail,
+  WorkflowDSL,
+  WorkflowEdge,
+  WorkflowNode,
+  WorkflowRunAccepted,
+} from '@matrixflow/shared';
+import { errorMessage } from '@/lib/errors';
 
-const NODE_TYPES = [
+interface EditorNodeData {
+  label: string;
+  rawNode: WorkflowNode;
+}
+
+type EditorNode = Node<EditorNodeData>;
+
+interface EditorEdgeData {
+  condition?: WorkflowEdge['condition'];
+}
+
+const NODE_TYPES: Array<{ type: WorkflowNode['type']; label: string; desc: string }> = [
   { type: 'trigger', label: '手动触发器 (Trigger)', desc: '作为流的起点接收初始参数输入。' },
   { type: 'ai', label: 'AI 大模型节点 (AI)', desc: '调用 Zhipu GLM 生成文案或执行分类推理。' },
-  { type: 'email', label: '邮件通知节点 (Email)', desc: '预留节点；当前执行会明确返回未实现。' },
+  { type: 'email', label: '邮件通知节点 (Email)', desc: '通过可插拔邮件适配器发送通知。' },
   { type: 'webhook', label: '网络钩子节点 (Webhook)', desc: '向外部系统发送 HTTP POST 数据请求。' },
   {
     type: 'transform',
@@ -58,12 +79,12 @@ export default function WorkflowEditorPage() {
   const [mounted, setMounted] = useState(false);
 
   // ReactFlow Nodes and Edges State
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [selectedNode, setSelectedNode] = useState<any>(null);
+  const [nodes, setNodes, onNodesChange] = useNodesState<EditorNodeData>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<EditorEdgeData>([]);
+  const [selectedNode, setSelectedNode] = useState<EditorNode | null>(null);
 
   // Node Editing Form State
-  const [editConfig, setEditConfig] = useState<Record<string, any>>({});
+  const [editConfig, setEditConfig] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     setMounted(true);
@@ -71,7 +92,7 @@ export default function WorkflowEditorPage() {
 
   const { data: wf } = useQuery({
     queryKey: ['wf', id],
-    queryFn: () => apiClient.get<any>(`/workflows/${id}`),
+    queryFn: () => apiClient.get<WorkflowDetail>(`/workflows/${id}`),
     enabled: !!id,
   });
 
@@ -80,24 +101,26 @@ export default function WorkflowEditorPage() {
     if (wf?.versions?.[0]?.dsl) {
       const dsl = wf.versions[0].dsl;
       const initialNodes =
-        dsl.nodes?.map((n: any) => ({
-          id: n.id,
+        dsl.nodes?.map((node) => ({
+          id: node.id,
           type: 'default',
           position: {
-            x: n.position?.x ?? Math.random() * 300 + 100,
-            y: n.position?.y ?? Math.random() * 300 + 100,
+            x: node.position?.x ?? Math.random() * 300 + 100,
+            y: node.position?.y ?? Math.random() * 300 + 100,
           },
           data: {
-            label: `${n.type.toUpperCase()}: ${n.config?.promptKey || n.config?.to || n.config?.url || ''}`,
-            rawNode: n,
+            label: `${node.type.toUpperCase()}: ${configLabel(node.config)}`,
+            rawNode: node,
           },
         })) ?? [];
 
       const initialEdges =
-        dsl.edges?.map((e: any, i: number) => ({
-          id: `e${i}`,
-          source: e.source,
-          target: e.target,
+        dsl.edges?.map((edge, index) => ({
+          id: `e${index}`,
+          source: edge.source,
+          target: edge.target,
+          data: { condition: edge.condition },
+          label: edge.condition && edge.condition !== 'always' ? edge.condition : undefined,
           markerEnd: {
             type: MarkerType.ArrowClosed,
             color: '#3b82f6',
@@ -112,42 +135,55 @@ export default function WorkflowEditorPage() {
 
   // Connect two nodes
   const onConnect = useCallback(
-    (params: any) =>
-      setEdges((eds) =>
+    (params: Connection) => {
+      const source = nodes.find((node) => node.id === params.source);
+      const isCondition = source?.data.rawNode.type === 'condition';
+      const hasTrueBranch = edges.some(
+        (edge) => edge.source === params.source && edge.data?.condition === 'true',
+      );
+      const condition: WorkflowEdge['condition'] | undefined = isCondition
+        ? hasTrueBranch
+          ? 'false'
+          : 'true'
+        : undefined;
+      setEdges((current) =>
         addEdge(
           {
             ...params,
+            data: { condition },
+            label: condition,
             markerEnd: { type: MarkerType.ArrowClosed, color: '#3b82f6' },
             style: { stroke: '#3b82f6', strokeWidth: 2 },
           },
-          eds,
+          current,
         ),
-      ),
-    [setEdges],
+      );
+    },
+    [edges, nodes, setEdges],
   );
 
   // Trigger executing the workflow run
   const runMutation = useMutation({
-    mutationFn: () => apiClient.post<any>(`/workflows/${id}/run`, {}),
-    onSuccess: (r: any) =>
-      alert(`工作流运行成功！运行结果: ${JSON.stringify(r?.output).slice(0, 300)}...`),
+    mutationFn: () => apiClient.post<WorkflowRunAccepted>(`/workflows/${id}/run`, {}),
+    onSuccess: (result) =>
+      alert(`工作流已提交！运行状态: ${result.status}，运行 ID: ${result.runId}`),
   });
 
   // Save new workflow DSL version back to database
   const saveMutation = useMutation({
-    mutationFn: (body: { dsl: any; changeNote: string }) =>
-      apiClient.post<any>(`/workflows/${id}/versions`, body),
+    mutationFn: (body: { dsl: WorkflowDSL; changeNote: string }) =>
+      apiClient.post(`/workflows/${id}/versions`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wf', id] });
       alert('工作流配置已成功保存！');
     },
-    onError: (e: any) => {
-      alert(`保存失败: ${e.message}`);
+    onError: (error: unknown) => {
+      alert(`保存失败: ${errorMessage(error)}`);
     },
   });
 
   // When node is clicked, show editor pane
-  const onNodeClick = (_: any, node: any) => {
+  const onNodeClick = (_event: React.MouseEvent, node: EditorNode) => {
     setSelectedNode(node);
     setEditConfig(node.data?.rawNode?.config || {});
   };
@@ -158,9 +194,9 @@ export default function WorkflowEditorPage() {
   };
 
   // Add a new node to the canvas
-  const addNode = (type: string) => {
+  const addNode = (type: WorkflowNode['type']) => {
     const newId = `${type}_${Date.now().toString().slice(-4)}`;
-    const newNode: any = {
+    const newNode: EditorNode = {
       id: newId,
       type: 'default',
       position: { x: 250, y: 150 },
@@ -196,7 +232,7 @@ export default function WorkflowEditorPage() {
       nds.map((n) => {
         if (n.id === selectedNode.id) {
           const updatedRaw = { ...n.data.rawNode, config: editConfig };
-          const labelText = editConfig.promptKey || editConfig.to || editConfig.url || '已配置';
+          const labelText = configLabel(editConfig) || '已配置';
           return {
             ...n,
             data: {
@@ -227,6 +263,7 @@ export default function WorkflowEditorPage() {
     const dslEdges = edges.map((e) => ({
       source: e.source,
       target: e.target,
+      condition: e.data?.condition,
     }));
 
     saveMutation.mutate({
@@ -345,7 +382,7 @@ export default function WorkflowEditorPage() {
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold">选择 AI 提示词模板 (Prompt Key)</Label>
                   <select
-                    value={editConfig.promptKey || ''}
+                    value={configText(editConfig, 'promptKey')}
                     onChange={(e) => setEditConfig({ ...editConfig, promptKey: e.target.value })}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border-border/80 text-foreground"
                   >
@@ -366,10 +403,25 @@ export default function WorkflowEditorPage() {
                   <Label className="text-xs font-semibold">通知收件人邮箱 (Email Address)</Label>
                   <Input
                     type="email"
-                    value={editConfig.to || ''}
+                    value={configText(editConfig, 'to')}
                     onChange={(e) => setEditConfig({ ...editConfig, to: e.target.value })}
                     placeholder="e.g. boss@company.com"
                     className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
+                  />
+                  <Label className="text-xs font-semibold">邮件主题</Label>
+                  <Input
+                    value={configText(editConfig, 'subject')}
+                    onChange={(e) => setEditConfig({ ...editConfig, subject: e.target.value })}
+                    placeholder="工作流执行结果"
+                    className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
+                  />
+                  <Label className="text-xs font-semibold">邮件正文模板</Label>
+                  <textarea
+                    value={configText(editConfig, 'body')}
+                    onChange={(e) => setEditConfig({ ...editConfig, body: e.target.value })}
+                    placeholder="执行结果：{{input}}"
+                    rows={4}
+                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   />
                 </div>
               )}
@@ -379,7 +431,7 @@ export default function WorkflowEditorPage() {
                   <Label className="text-xs font-semibold">网络钩子地址 (Webhook URL)</Label>
                   <Input
                     type="url"
-                    value={editConfig.url || ''}
+                    value={configText(editConfig, 'url')}
                     onChange={(e) => setEditConfig({ ...editConfig, url: e.target.value })}
                     placeholder="e.g. https://api.mycrm.com/v1/leads"
                     className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
@@ -391,7 +443,7 @@ export default function WorkflowEditorPage() {
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold">转换模板内容 (JSON/Txt Template)</Label>
                   <textarea
-                    value={editConfig.template || ''}
+                    value={configText(editConfig, 'template')}
                     onChange={(e) => setEditConfig({ ...editConfig, template: e.target.value })}
                     placeholder="e.g. {{ai.content}} converted to text..."
                     rows={4}
@@ -401,14 +453,38 @@ export default function WorkflowEditorPage() {
               )}
 
               {selectedNode.data?.rawNode?.type === 'condition' && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold">条件表达式 (JS Expression)</Label>
+                <div className="space-y-3">
+                  <Label className="text-xs font-semibold">比较字段路径</Label>
                   <Input
-                    value={editConfig.expression || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, expression: e.target.value })}
-                    placeholder="e.g. state.confidence > 0.8"
+                    value={configText(editConfig, 'field')}
+                    onChange={(e) => setEditConfig({ ...editConfig, field: e.target.value })}
+                    placeholder="e.g. score"
                     className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
                   />
+                  <Label className="text-xs font-semibold">比较操作符</Label>
+                  <select
+                    value={configText(editConfig, 'operator') || 'eq'}
+                    onChange={(e) => setEditConfig({ ...editConfig, operator: e.target.value })}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    {['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'contains', 'truthy'].map(
+                      (operator) => (
+                        <option key={operator} value={operator}>
+                          {operator}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                  <Label className="text-xs font-semibold">期望值</Label>
+                  <Input
+                    value={configText(editConfig, 'value')}
+                    onChange={(e) => setEditConfig({ ...editConfig, value: e.target.value })}
+                    placeholder="e.g. 0.8"
+                    className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    条件节点的第一条出边标记为 true，第二条出边标记为 false。
+                  </p>
                 </div>
               )}
 
@@ -480,4 +556,16 @@ export default function WorkflowEditorPage() {
       </div>
     </div>
   );
+}
+
+function configText(config: Record<string, unknown>, key: string): string {
+  const value = config[key];
+  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+    ? String(value)
+    : '';
+}
+
+function configLabel(config: Record<string, unknown> | undefined): string {
+  if (!config) return '';
+  return ['promptKey', 'to', 'url'].map((key) => configText(config, key)).find(Boolean) ?? '';
 }

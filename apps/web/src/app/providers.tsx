@@ -1,19 +1,44 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ThemeProvider } from 'next-themes';
+import { ApiError } from '@/lib/api-client';
+import { useAuth } from '@/lib/auth-store';
+
+function OrganizationCacheBoundary({ queryClient }: { queryClient: QueryClient }) {
+  const organizationId = useAuth((state) => state.organizationId);
+  const previousOrganizationId = useRef(organizationId);
+
+  useEffect(() => {
+    if (previousOrganizationId.current !== organizationId) queryClient.clear();
+    previousOrganizationId.current = organizationId;
+  }, [organizationId, queryClient]);
+  return null;
+}
 
 export function Providers({ children }: { children: ReactNode }) {
   const [qc] = useState(
     () =>
       new QueryClient({
-        defaultOptions: { queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false } },
+        defaultOptions: {
+          queries: {
+            staleTime: 30_000,
+            retry: (failureCount, error) => {
+              if (failureCount >= 2) return false;
+              if (!(error instanceof ApiError)) return true;
+              return error.status === 408 || error.status === 429 || error.status >= 500;
+            },
+            refetchOnWindowFocus: false,
+          },
+          mutations: { retry: false },
+        },
       }),
   );
   return (
     <QueryClientProvider client={qc}>
+      <OrganizationCacheBoundary queryClient={qc} />
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
         {children}
       </ThemeProvider>

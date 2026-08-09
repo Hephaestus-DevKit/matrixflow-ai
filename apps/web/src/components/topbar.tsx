@@ -1,77 +1,63 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { useTheme } from 'next-themes';
+import { LogOut, Menu, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/lib/auth-store';
 import { Button } from '@/components/ui/button';
-import { useTheme } from 'next-themes';
-import { useState, useEffect } from 'react';
-import { Sun, Moon, LogOut } from 'lucide-react';
-import Image from 'next/image';
+import { navigationItemForPath } from '@/components/dashboard-navigation';
 
-export function Topbar() {
-  const { user, logout } = useAuth();
-  const { theme, setTheme } = useTheme();
+export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
+  const pathname = usePathname();
+  const { logout } = useAuth();
+  const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const current = navigationItemForPath(pathname);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => setMounted(true), []);
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/60 bg-background/60 px-6 backdrop-blur-md transition-colors duration-300 shadow-xs">
-      <div className="text-2xs font-extrabold tracking-widest text-muted-foreground/80 uppercase">
-        AI 员工操作系统 · Dashboard
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border/70 bg-background/85 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
+      <div className="flex min-w-0 items-center gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onOpenNavigation}
+          className="h-9 w-9 lg:hidden"
+          aria-label="打开导航"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold text-foreground">{current.label}</p>
+          <p className="hidden truncate text-[0.6875rem] text-muted-foreground sm:block">
+            {current.description}
+          </p>
+        </div>
       </div>
-      <div className="flex items-center gap-4">
-        {/* Muted Morandi Theme Toggle */}
+      <div className="flex items-center gap-1.5">
         {mounted && (
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all"
-            title={theme === 'dark' ? '切换为莫兰迪亮色模式' : '切换为暗色模式'}
+            onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+            className="h-9 w-9 text-muted-foreground"
+            aria-label={resolvedTheme === 'dark' ? '切换为亮色模式' : '切换为暗色模式'}
           >
-            {theme === 'dark' ? (
-              <Sun className="h-4 w-4 text-amber-500 animate-pulse-glow" />
-            ) : (
-              <Moon className="h-4 w-4 text-slate-500" />
-            )}
+            {resolvedTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
         )}
-
-        <div className="h-4 w-px bg-border/60" />
-
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-muted/30 border border-border/40 hover:bg-muted/50 transition-colors cursor-pointer">
-            {user?.avatarUrl ? (
-              <Image
-                src={user.avatarUrl}
-                alt={user.name}
-                width={20}
-                height={20}
-                unoptimized
-                className="h-5 w-5 rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-primary text-[10px] font-black uppercase">
-                {user?.name?.[0] ?? '?'}
-              </div>
-            )}
-            <span className="text-xs font-semibold text-foreground max-w-[100px] truncate">
-              {user?.name}
-            </span>
-          </div>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={logout}
-            className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1.5 rounded-lg"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            退出
-          </Button>
-        </div>
+        <span className="mx-1 h-5 w-px bg-border" aria-hidden="true" />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => void logout()}
+          className="h-9 gap-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+        >
+          <LogOut className="h-4 w-4" />
+          <span className="hidden sm:inline">退出</span>
+        </Button>
       </div>
     </header>
   );

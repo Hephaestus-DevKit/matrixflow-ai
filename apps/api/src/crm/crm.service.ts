@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiService } from '../ai/ai.service';
 import { createCustomerSchema, createLeadSchema, sendCrmMessageSchema } from '@matrixflow/shared';
-import { Prisma } from '@matrixflow/db';
+import { asJsonRecord, jsonString, toInputJson } from '../common/prisma-json';
 
 @Injectable()
 export class CrmService {
@@ -40,7 +40,8 @@ export class CrmService {
     return this.prisma.customer.create({
       data: {
         ...data,
-        metadata: data.metadata as Prisma.InputJsonValue | undefined,
+        metadata:
+          data.metadata === undefined ? undefined : toInputJson(data.metadata, 'customer metadata'),
         organizationId,
       },
     });
@@ -98,7 +99,9 @@ export class CrmService {
   }
   async aiReply(organizationId: string, convId: string, userId: string) {
     const conv = await this.conversation(organizationId, convId);
-    const history = conv.messages.map((m: any) => `${m.role}: ${m.content}`).join('\n');
+    const history = conv.messages
+      .map((message) => `${message.role}: ${message.content}`)
+      .join('\n');
     const res = await this.ai.runPrompt({
       promptKey: 'customer_service_reply',
       variables: { history, customerName: conv.customer?.name ?? '' },
@@ -106,17 +109,19 @@ export class CrmService {
       userId,
       responseFormat: 'json_object',
     });
-    let parsed: any;
+    let parsed: unknown;
     try {
       parsed = JSON.parse(res.content);
     } catch {
       parsed = { reply: res.content };
     }
-    return parsed;
+    return asJsonRecord(parsed);
   }
   async summarize(organizationId: string, convId: string, userId: string) {
     const conv = await this.conversation(organizationId, convId);
-    const history = conv.messages.map((m: any) => `${m.role}: ${m.content}`).join('\n');
+    const history = conv.messages
+      .map((message) => `${message.role}: ${message.content}`)
+      .join('\n');
     const res = await this.ai.runPrompt({
       promptKey: 'conversation_summary',
       variables: { history },
@@ -124,10 +129,10 @@ export class CrmService {
       userId,
       responseFormat: 'json_object',
     });
-    const parsed = JSON.parse(res.content);
+    const parsed = asJsonRecord(JSON.parse(res.content));
     await this.prisma.conversation.update({
       where: { id: convId },
-      data: { summary: parsed.summary ?? res.content },
+      data: { summary: jsonString(parsed, 'summary') ?? res.content },
     });
     return parsed;
   }

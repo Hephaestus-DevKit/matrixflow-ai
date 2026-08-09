@@ -3,6 +3,7 @@ import { Public } from '../common/guards/jwt-auth.guard';
 import { KbService } from '../kb/kb.service';
 import { WorkflowService } from '../workflow/workflow.service';
 import { InternalJobGuard } from './internal-job.guard';
+import { executeWorkflowJobSchema } from '@matrixflow/shared';
 
 @Public()
 @UseGuards(InternalJobGuard)
@@ -20,7 +21,7 @@ export class InternalJobsController {
   }
 
   @Post('workflows/:runId/execute')
-  executeWorkflow(@Param('runId') runId: string, @Body() body: { userId: string }) {
-    return this.workflows.processRun(runId, body.userId);
+  executeWorkflow(@Param('runId') runId: string, @Body() body: unknown) {
+    return this.workflows.processRun(runId, executeWorkflowJobSchema.parse(body).userId);
   }
 }

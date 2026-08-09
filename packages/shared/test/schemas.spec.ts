@@ -8,7 +8,10 @@ import {
   publishMarketplaceItemSchema,
   refreshTokenSchema,
   registerSchema,
+  rejectMarketplaceItemSchema,
+  executeWorkflowJobSchema,
   updateProfileSchema,
+  workflowDslSchema,
 } from '../src';
 
 describe('Auth schemas', () => {
@@ -41,6 +44,14 @@ describe('Tenant-facing write schemas', () => {
     expect(() =>
       createCustomerSchema.parse({ name: 'Customer', organizationId: 'other-org' }),
     ).toThrow();
+  });
+
+  it('validates privileged moderation and internal job payloads strictly', () => {
+    expect(rejectMarketplaceItemSchema.parse({ reason: ' policy violation ' })).toEqual({
+      reason: 'policy violation',
+    });
+    expect(() => rejectMarketplaceItemSchema.parse({ reason: '', status: 'approved' })).toThrow();
+    expect(() => executeWorkflowJobSchema.parse({ userId: 'not-a-uuid' })).toThrow();
   });
 
   it('bounds lead scores and requires UUID customer IDs', () => {
@@ -82,5 +93,31 @@ describe('Product data schema', () => {
   it('validates product', () => {
     expect(() => productDataSchema.parse({ title: 'Test Product' })).not.toThrow();
     expect(() => productDataSchema.parse({})).toThrow();
+  });
+});
+
+describe('Workflow DSL schema', () => {
+  it('accepts a bounded typed workflow', () => {
+    expect(() =>
+      workflowDslSchema.parse({
+        nodes: [
+          { id: 'trigger', type: 'trigger' },
+          { id: 'condition', type: 'condition', config: { field: 'score', operator: 'gte' } },
+        ],
+        edges: [{ source: 'trigger', target: 'condition', condition: 'truthy' }],
+      }),
+    ).not.toThrow();
+  });
+
+  it('rejects unknown node types and unbounded workflow payloads', () => {
+    expect(() =>
+      workflowDslSchema.parse({ nodes: [{ id: 'node', type: 'shell' }], edges: [] }),
+    ).toThrow();
+    expect(() =>
+      workflowDslSchema.parse({
+        nodes: [{ id: 'node', type: 'trigger', config: { value: 'x'.repeat(1_000_000) } }],
+        edges: [],
+      }),
+    ).toThrow('Workflow DSL exceeds 1 MB');
   });
 });

@@ -15,6 +15,7 @@ import {
   Action,
 } from '@matrixflow/shared';
 import { AuditService } from '../common/audit.service';
+import { Prisma } from '@matrixflow/db';
 
 @Injectable()
 export class OrgService {
@@ -28,19 +29,19 @@ export class OrgService {
       where: { userId, organization: { deletedAt: null, status: { not: 'SUSPENDED' } } },
       include: { organization: true, role: { include: { permissions: true } } },
     });
-    return ms.map((m: any) => ({
-      id: m.organization.id,
-      name: m.organization.name,
-      slug: m.organization.slug,
-      plan: m.organization.plan,
-      role: m.role.name,
-      permissions: m.role.permissions.map((p: any) => p.action),
+    return ms.map((member) => ({
+      id: member.organization.id,
+      name: member.organization.name,
+      slug: member.organization.slug,
+      plan: member.organization.plan,
+      role: member.role.name,
+      permissions: member.role.permissions.map((permission) => permission.action),
     }));
   }
 
   async create(userId: string, input: unknown) {
     const dto = createOrgSchema.parse(input);
-    const org = await this.prisma.$transaction(async (tx: any) => {
+    const org = await this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`org-slug:${dto.slug}`}))`;
       const exists = await tx.organization.findUnique({ where: { slug: dto.slug } });
       if (exists) throw new ConflictException(ErrorCode.CONFLICT);
@@ -119,7 +120,7 @@ export class OrgService {
 
   async changeRole(userId: string, orgId: string, targetUserId: string, roleName: string) {
     if (userId === targetUserId) throw new ForbiddenException('Cannot change own role');
-    await this.prisma.$transaction(async (tx: any) => {
+    await this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`org-owners:${orgId}`}))`;
       const role = await tx.role.findFirst({ where: { organizationId: orgId, name: roleName } });
       if (!role) throw new NotFoundException('Role not found');
@@ -143,7 +144,7 @@ export class OrgService {
 
   async remove(userId: string, orgId: string, targetUserId: string) {
     if (userId === targetUserId) throw new ForbiddenException('Cannot remove self');
-    await this.prisma.$transaction(async (tx: any) => {
+    await this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`org-owners:${orgId}`}))`;
       const member = await tx.organizationMember.findUnique({
         where: { organizationId_userId: { organizationId: orgId, userId: targetUserId } },
@@ -162,7 +163,11 @@ export class OrgService {
     return { ok: true };
   }
 
-  private async assertOwnerRemains(client: any, organizationId: string, roleId: string) {
+  private async assertOwnerRemains(
+    client: Prisma.TransactionClient,
+    organizationId: string,
+    roleId: string,
+  ) {
     const role = await client.role.findUnique({ where: { id: roleId } });
     if (role?.name !== RoleName.OWNER) return;
     const ownerCount = await client.organizationMember.count({
