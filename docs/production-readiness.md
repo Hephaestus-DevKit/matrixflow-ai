@@ -32,7 +32,7 @@ Web 还需要 `NEXT_PUBLIC_APPWRITE_PROJECT_ID`、`NEXT_PUBLIC_APPWRITE_ENDPOINT
 3. 运行一次性 migration job：`pnpm db:migrate`。失败立即中止，不启动新版本。
 4. 部署 Sidecar、API 和 Worker；先不接入外部流量。
 5. 等待 `/api/v1/health/live` 和 `/api/v1/health/ready` 返回 200。
-6. 运行登录、组织隔离、内容生成、文件解析、RAG、CRM 和工作流 smoke test。
+6. 运行登录、组织切换与缓存隔离、内容生成、文件解析、RAG、CRM 和工作流 smoke test，并检查桌面与移动断点。
 7. 小流量切换，观察错误率、延迟、队列积压和数据库连接，再完成发布。
 
 禁止在生产使用 `prisma db push`、`--accept-data-loss`、示例密钥、默认对象存储密码或开放的 Sidecar 端口。

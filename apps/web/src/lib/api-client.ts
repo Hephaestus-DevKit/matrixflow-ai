@@ -5,6 +5,20 @@ const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3002/api/
 
 let cachedJwt = '';
 let tokenExpiresAt = 0;
+let pendingJwt: Promise<string | null> | null = null;
+let tokenGeneration = 0;
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code?: string,
+    public readonly requestId?: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
 
 function decodeExpiry(token: string): number {
   try {
@@ -36,33 +50,48 @@ function persistedOrganizationId(): string | undefined {
 }
 
 export async function getAppwriteToken(): Promise<string | null> {
-  try {
-    const now = Date.now();
-    if (cachedJwt && tokenExpiresAt > now + 3 * 60 * 1000) {
+  const now = Date.now();
+  if (cachedJwt && tokenExpiresAt > now + 3 * 60 * 1000) return cachedJwt;
+  if (pendingJwt) return pendingJwt;
+
+  const generation = tokenGeneration;
+  const refresh = (async () => {
+    try {
+      const session = await account.getSession('current').catch(() => null);
+      if (!session) {
+        if (generation === tokenGeneration) {
+          cachedJwt = '';
+          tokenExpiresAt = 0;
+        }
+        return null;
+      }
+
+      const res = await account.createJWT();
+      if (generation !== tokenGeneration) return null;
+      cachedJwt = res.jwt;
+      tokenExpiresAt = decodeExpiry(res.jwt) || Date.now() + 10 * 60 * 1000;
       return cachedJwt;
-    }
-
-    const session = await account.getSession('current').catch(() => null);
-    if (!session) {
-      cachedJwt = '';
-      tokenExpiresAt = 0;
+    } catch {
+      if (generation === tokenGeneration) {
+        cachedJwt = '';
+        tokenExpiresAt = 0;
+      }
       return null;
+    } finally {
+      // A cache reset advances the generation before allowing another refresh.
+      // The older request must not clear that newer request when it settles.
+      if (generation === tokenGeneration) pendingJwt = null;
     }
-
-    const res = await account.createJWT();
-    cachedJwt = res.jwt;
-    tokenExpiresAt = decodeExpiry(res.jwt) || Date.now() + 10 * 60 * 1000;
-    return cachedJwt;
-  } catch {
-    cachedJwt = '';
-    tokenExpiresAt = 0;
-    return null;
-  }
+  })();
+  pendingJwt = refresh;
+  return refresh;
 }
 
 export function clearAppwriteCache() {
   cachedJwt = '';
   tokenExpiresAt = 0;
+  pendingJwt = null;
+  tokenGeneration += 1;
 }
 
 export function clearOrganizationContext() {
@@ -78,13 +107,19 @@ export async function api<T = unknown>(path: string, opts: RequestInit = {}): Pr
   }
 
   if (!res.ok) {
-    const payload = (await res.json().catch(() => ({}))) as {
+    const payload = (await res
+      .clone()
+      .json()
+      .catch(() => ({}))) as {
       error?: { message?: string; code?: string };
     };
-    throw Object.assign(new Error(payload.error?.message ?? res.statusText), {
-      code: payload.error?.code,
-      status: res.status,
-    });
+    const fallbackMessage = (await res.text().catch(() => '')).trim();
+    throw new ApiError(
+      payload.error?.message || fallbackMessage || `请求失败（HTTP ${res.status}）`,
+      res.status,
+      payload.error?.code,
+      res.headers.get('x-request-id') ?? undefined,
+    );
   }
 
   if (res.status === 204) return undefined as T;

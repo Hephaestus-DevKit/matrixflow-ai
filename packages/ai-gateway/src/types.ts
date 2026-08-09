@@ -72,3 +72,22 @@ export class AiGatewayError extends Error {
     this.name = 'AiGatewayError';
   }
 }
+
+export function isAbortError(error: unknown): boolean {
+  return (
+    (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) ||
+    (error instanceof AiGatewayError && error.code === 'AI_ABORTED')
+  );
+}
+
+export function isRetryableProviderError(error: unknown): boolean {
+  if (isAbortError(error)) return false;
+  if (!(error instanceof AiGatewayError) || error.status === undefined) return true;
+  return (
+    error.status === 408 ||
+    error.status === 409 ||
+    error.status === 425 ||
+    error.status === 429 ||
+    error.status >= 500
+  );
+}
