@@ -3,7 +3,8 @@
 # Normal deployments should use the separate API, Worker and Sidecar images.
 FROM node:26.5.1-alpine AS builder
 RUN apk add --no-cache libc6-compat openssl
-RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
+RUN npm install --global corepack@0.35.0 \
+    && corepack prepare pnpm@11.9.0 --activate
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 WORKDIR /app
@@ -14,7 +15,8 @@ RUN pnpm --filter @matrixflow/api... build && pnpm --filter @matrixflow/worker b
 
 FROM node:26.5.1-alpine AS runner
 RUN apk add --no-cache dumb-init libc6-compat openssl python3 py3-pip
-RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
+RUN npm install --global corepack@0.35.0 \
+    && corepack prepare pnpm@11.9.0 --activate
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 ENV NODE_ENV=production
