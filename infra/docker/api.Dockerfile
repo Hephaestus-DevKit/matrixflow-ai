@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1.7
 FROM node:26.5.1-alpine AS base
 RUN apk add --no-cache libc6-compat openssl
-RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
+RUN npm install --global corepack@0.35.0 \
+    && corepack prepare pnpm@11.9.0 --activate
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 WORKDIR /workspace
