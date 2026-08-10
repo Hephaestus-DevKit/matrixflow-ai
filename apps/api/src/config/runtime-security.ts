@@ -5,12 +5,11 @@ const PRODUCTION_REQUIRED_KEYS = [
   'DATABASE_URL',
   'REDIS_URL',
   'CORS_ALLOWED_ORIGINS',
-  'MINIO_ENDPOINT',
-  'MINIO_ACCESS_KEY',
-  'MINIO_SECRET_KEY',
   'INTERNAL_JOB_SECRET',
   'METRICS_TOKEN',
 ] as const;
+
+const OPTIONAL_FEATURE_FLAGS = ['AI_PROVIDER_REQUIRED', 'OBJECT_STORAGE_REQUIRED'] as const;
 
 export function createCorsOptions(env: NodeJS.ProcessEnv): CorsOptions {
   const configured = env.CORS_ALLOWED_ORIGINS ?? env.CORS_ORIGINS;
@@ -49,12 +48,16 @@ export function createHelmetOptions(env: NodeJS.ProcessEnv): HelmetOptions {
 export function validateEnvironment(env: NodeJS.ProcessEnv): void {
   validateNumericSetting(env.PORT, 'PORT', { min: 1, max: 65_535 });
   validateNumericSetting(env.TRUST_PROXY_HOPS, 'TRUST_PROXY_HOPS', { min: 0, max: 32 });
+  for (const key of OPTIONAL_FEATURE_FLAGS) validateBooleanSetting(env[key], key);
   if (env.NODE_ENV !== 'production') return;
 
   const authMode = env.AUTH_MODE ?? 'appwrite';
   const required: string[] = [...PRODUCTION_REQUIRED_KEYS];
   if (authMode === 'appwrite') required.push('APPWRITE_PROJECT_ID', 'APPWRITE_ENDPOINT');
   if (authMode === 'local') required.push('JWT_SECRET');
+  if (isFeatureRequired(env.OBJECT_STORAGE_REQUIRED)) {
+    required.push('MINIO_ENDPOINT', 'MINIO_ACCESS_KEY', 'MINIO_SECRET_KEY');
+  }
   if (!['appwrite', 'local'].includes(authMode)) {
     throw new Error('AUTH_MODE must be appwrite or local');
   }
@@ -63,7 +66,11 @@ export function validateEnvironment(env: NodeJS.ProcessEnv): void {
   if (missing.length) {
     throw new Error(`Missing required production configuration: ${missing.join(', ')}`);
   }
-  if (!env.GLM_API_KEY?.trim() && !env.OPENAI_API_KEY?.trim()) {
+  if (
+    isFeatureRequired(env.AI_PROVIDER_REQUIRED) &&
+    !env.GLM_API_KEY?.trim() &&
+    !env.OPENAI_API_KEY?.trim()
+  ) {
     throw new Error('At least one AI provider API key is required');
   }
 
@@ -84,6 +91,10 @@ export function validateEnvironment(env: NodeJS.ProcessEnv): void {
   if (authMode === 'local') assertSecretLength(env.JWT_SECRET, 'JWT_SECRET');
 }
 
+export function isFeatureRequired(value: string | undefined): boolean {
+  return value?.trim().toLowerCase() !== 'false';
+}
+
 function assertSecretLength(value: string | undefined, key: string): void {
   if ((value?.length ?? 0) < 32) throw new Error(`${key} must contain at least 32 characters`);
 }
@@ -97,5 +108,12 @@ function validateNumericSetting(
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < range.min || parsed > range.max) {
     throw new Error(`${key} must be an integer between ${range.min} and ${range.max}`);
+  }
+}
+
+function validateBooleanSetting(value: string | undefined, key: string): void {
+  if (value === undefined) return;
+  if (!['true', 'false'].includes(value.trim().toLowerCase())) {
+    throw new Error(`${key} must be true or false`);
   }
 }

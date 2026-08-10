@@ -28,6 +28,7 @@ export function Providers({ children }: { children: ReactNode }) {
             retry: (failureCount, error) => {
               if (failureCount >= 2) return false;
               if (!(error instanceof ApiError)) return true;
+              if (error.status === 0) return true;
               return error.status === 408 || error.status === 429 || error.status >= 500;
             },
             refetchOnWindowFocus: false,

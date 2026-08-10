@@ -36,6 +36,28 @@ describe('runtime security configuration', () => {
     expect(() => validateEnvironment(productionEnvironment)).not.toThrow();
   });
 
+  it('allows explicitly disabled optional production integrations', () => {
+    const environment = {
+      ...productionEnvironment,
+      AI_PROVIDER_REQUIRED: 'false',
+      OBJECT_STORAGE_REQUIRED: 'false',
+      GLM_API_KEY: '',
+      MINIO_ENDPOINT: '',
+      MINIO_ACCESS_KEY: '',
+      MINIO_SECRET_KEY: '',
+    };
+    expect(() => validateEnvironment(environment)).not.toThrow();
+  });
+
+  it('requires optional integrations by default', () => {
+    expect(() =>
+      validateEnvironment({ ...productionEnvironment, GLM_API_KEY: '', OPENAI_API_KEY: '' }),
+    ).toThrow('AI provider');
+    expect(() => validateEnvironment({ ...productionEnvironment, MINIO_ENDPOINT: '' })).toThrow(
+      'MINIO_ENDPOINT',
+    );
+  });
+
   it('rejects unsafe production origins and weak secrets', () => {
     expect(() =>
       validateEnvironment({ ...productionEnvironment, CORS_ALLOWED_ORIGINS: '*' }),
@@ -50,5 +72,8 @@ describe('runtime security configuration', () => {
       'TRUST_PROXY_HOPS',
     );
     expect(() => validateEnvironment({ NODE_ENV: 'test', PORT: 'invalid' })).toThrow('PORT');
+    expect(() => validateEnvironment({ AI_PROVIDER_REQUIRED: 'sometimes' })).toThrow(
+      'AI_PROVIDER_REQUIRED',
+    );
   });
 });

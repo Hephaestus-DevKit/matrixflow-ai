@@ -66,7 +66,7 @@ pnpm db:seed
 pnpm dev
 ```
 
-至少需要设置 Appwrite 项目、一个 AI Provider 密钥和两个内部长随机密钥。完整说明见 [.env.example](.env.example)。本地服务默认地址：
+至少需要设置 Appwrite 项目、一个 AI Provider 密钥、对象存储和两个内部长随机密钥；受限环境可通过显式开关降级运行认证核心服务。完整说明见 [.env.example](.env.example)。本地服务默认地址：
 
 - Web：`http://localhost:3000`
 - API：`http://localhost:3001/api/v1`

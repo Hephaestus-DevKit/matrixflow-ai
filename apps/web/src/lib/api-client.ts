@@ -1,7 +1,7 @@
 // API Client — 统一封装 fetch + Appwrite auth + error
 import { account } from './appwrite';
 
-const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3002/api/v1';
+const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001/api/v1';
 
 let cachedJwt = '';
 let tokenExpiresAt = 0;
@@ -99,11 +99,11 @@ export function clearOrganizationContext() {
 }
 
 export async function api<T = unknown>(path: string, opts: RequestInit = {}): Promise<T> {
-  let res = await request(path, opts, await getAppwriteToken());
+  let res = await performRequest(path, opts, await getAppwriteToken());
 
   if (res.status === 401) {
     clearAppwriteCache();
-    res = await request(path, opts, await getAppwriteToken());
+    res = await performRequest(path, opts, await getAppwriteToken());
   }
 
   if (!res.ok) {
@@ -124,6 +124,28 @@ export async function api<T = unknown>(path: string, opts: RequestInit = {}): Pr
 
   if (res.status === 204) return undefined as T;
   return res.json();
+}
+
+async function performRequest(
+  path: string,
+  opts: RequestInit,
+  token: string | null,
+): Promise<Response> {
+  try {
+    return await request(path, opts, token);
+  } catch (error) {
+    if (opts.signal?.aborted) throw error;
+    const timedOut =
+      (typeof DOMException !== 'undefined' &&
+        error instanceof DOMException &&
+        error.name === 'TimeoutError') ||
+      (error instanceof Error && /timeout|timed out/i.test(error.message));
+    throw new ApiError(
+      timedOut ? 'MatrixFlow API 响应超时，请稍后重试' : '无法连接 MatrixFlow API，请检查服务状态',
+      0,
+      timedOut ? 'REQUEST_TIMEOUT' : 'NETWORK_ERROR',
+    );
+  }
 }
 
 async function request(path: string, opts: RequestInit, token: string | null): Promise<Response> {

@@ -7,14 +7,16 @@
 生产 API 会在启动时校验：
 
 - `DATABASE_URL`、`REDIS_URL`
-- `MINIO_ENDPOINT`、`MINIO_ACCESS_KEY`、`MINIO_SECRET_KEY`
 - 非通配符 `CORS_ALLOWED_ORIGINS`
 - 至少 32 字符的 `INTERNAL_JOB_SECRET` 与 `METRICS_TOKEN`
 - Appwrite 模式下的 `APPWRITE_PROJECT_ID` 与 HTTPS `APPWRITE_ENDPOINT`
 - 本地认证模式下至少 32 字符的 `JWT_SECRET`
-- `GLM_API_KEY` 或 `OPENAI_API_KEY` 至少一个
+- 默认需要 `MINIO_ENDPOINT`、`MINIO_ACCESS_KEY`、`MINIO_SECRET_KEY`
+- 默认需要 `GLM_API_KEY` 或 `OPENAI_API_KEY` 至少一个
 
 Web 还需要 `NEXT_PUBLIC_APPWRITE_PROJECT_ID`、`NEXT_PUBLIC_APPWRITE_ENDPOINT` 和 `NEXT_PUBLIC_API_BASE_URL`。反向代理部署必须将 `TRUST_PROXY_HOPS` 设为真实且精确的代理跳数。所有密钥应由 Secret Manager 注入，不写入镜像或仓库。
+
+身份认证等核心能力可以在受限环境中独立部署：将 `AI_PROVIDER_REQUIRED=false` 或 `OBJECT_STORAGE_REQUIRED=false` 可允许对应集成缺失时降级启动。此时 AI 或文件相关接口不会伪造成功；`/health/ready` 会把未配置的对象存储报告为 `down`，整体状态为 `degraded`，但数据库或 Redis 故障仍返回 503。完整产品部署应保留两个开关的默认值 `true`。
 
 ## 镜像与职责
 
@@ -31,7 +33,7 @@ Web 还需要 `NEXT_PUBLIC_APPWRITE_PROJECT_ID`、`NEXT_PUBLIC_APPWRITE_ENDPOINT
 2. 创建 PostgreSQL + pgvector、Redis 和私有对象存储；使用独立最小权限凭据。
 3. 运行一次性 migration job：`pnpm db:migrate`。失败立即中止，不启动新版本。
 4. 部署 Sidecar、API 和 Worker；先不接入外部流量。
-5. 等待 `/api/v1/health/live` 和 `/api/v1/health/ready` 返回 200。
+5. 等待 `/api/v1/health/live` 和 `/api/v1/health/ready` 返回 200；完整部署的 readiness 必须为 `ready`，明确采用降级部署时允许为 `degraded`。
 6. 运行登录、组织切换与缓存隔离、内容生成、文件解析、RAG、CRM 和工作流 smoke test，并检查桌面与移动断点。
 7. 小流量切换，观察错误率、延迟、队列积压和数据库连接，再完成发布。
 

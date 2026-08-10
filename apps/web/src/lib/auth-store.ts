@@ -23,15 +23,37 @@ interface AuthState {
   organizationId: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
   registerWithOtp: (email: string, password: string, name: string) => Promise<string>;
   sendOtp: (email: string) => Promise<string>;
   verifyOtp: (userId: string, code: string, name?: string) => Promise<void>;
   updateProfile: (name: string, avatarUrl: string) => Promise<void>;
   logout: () => Promise<void>;
-  fetchMe: () => Promise<void>;
+  fetchMe: () => Promise<User>;
   setOrg: (orgId: string) => void;
   hasPerm: (action: string) => boolean;
+}
+
+interface AppwriteErrorLike {
+  code?: number;
+  type?: string;
+}
+
+function isExistingAccount(error: unknown): boolean {
+  const candidate = error as AppwriteErrorLike;
+  return candidate.code === 409 || candidate.type === 'user_already_exists';
+}
+
+async function clearSession() {
+  clearAppwriteCache();
+  await account.deleteSession({ sessionId: 'current' }).catch(() => undefined);
+}
+
+async function requireVerifiedAccount() {
+  const current = await account.get();
+  if (!current.emailVerification) {
+    throw new Error('邮箱尚未完成验证，请使用邮箱验证码登录');
+  }
+  return current;
 }
 
 export const useAuth = create<AuthState>()(
@@ -44,27 +66,16 @@ export const useAuth = create<AuthState>()(
       login: async (email, password) => {
         set({ loading: true });
         try {
-          clearAppwriteCache();
+          await clearSession();
           clearOrganizationContext();
           set({ user: null, organizationId: null });
-          await account.deleteSession('current').catch(() => {});
-          await account.createEmailPasswordSession(email, password);
+          await account.createEmailPasswordSession({ email, password });
+          await requireVerifiedAccount();
           await get().fetchMe();
-        } finally {
-          set({ loading: false });
-        }
-      },
-
-      register: async (email, password, name) => {
-        set({ loading: true });
-        try {
-          clearAppwriteCache();
-          clearOrganizationContext();
+        } catch (error) {
+          await clearSession();
           set({ user: null, organizationId: null });
-          await account.deleteSession('current').catch(() => {});
-          await account.create(ID.unique(), email, password, name);
-          await account.createEmailPasswordSession(email, password);
-          await get().fetchMe();
+          throw error;
         } finally {
           set({ loading: false });
         }
@@ -73,13 +84,18 @@ export const useAuth = create<AuthState>()(
       registerWithOtp: async (email, password, name) => {
         set({ loading: true });
         try {
-          clearAppwriteCache();
+          await clearSession();
           clearOrganizationContext();
           set({ user: null, organizationId: null });
-          await account.deleteSession('current').catch(() => {});
           const userId = ID.unique();
-          await account.create(userId, email, password, name);
-          const token = await account.createEmailToken(userId, email);
+          try {
+            await account.create({ userId, email, password, name });
+          } catch (error) {
+            // Allow an interrupted registration to resume verification. Appwrite
+            // ignores userId for an email that is already registered.
+            if (!isExistingAccount(error)) throw error;
+          }
+          const token = await account.createEmailToken({ userId, email });
           return token.userId;
         } finally {
           set({ loading: false });
@@ -89,11 +105,10 @@ export const useAuth = create<AuthState>()(
       sendOtp: async (email) => {
         set({ loading: true });
         try {
-          clearAppwriteCache();
+          await clearSession();
           clearOrganizationContext();
           set({ user: null, organizationId: null });
-          await account.deleteSession('current').catch(() => {});
-          const token = await account.createEmailToken(ID.unique(), email);
+          const token = await account.createEmailToken({ userId: ID.unique(), email });
           return token.userId;
         } finally {
           set({ loading: false });
@@ -104,11 +119,16 @@ export const useAuth = create<AuthState>()(
         set({ loading: true });
         try {
           clearAppwriteCache();
-          await account.createSession(userId, code);
+          await account.createSession({ userId, secret: code });
+          await requireVerifiedAccount();
           if (name) {
-            await account.updateName(name).catch(() => {});
+            await account.updateName({ name }).catch(() => undefined);
           }
           await get().fetchMe();
+        } catch (error) {
+          await clearSession();
+          set({ user: null, organizationId: null });
+          throw error;
         } finally {
           set({ loading: false });
         }
@@ -118,7 +138,7 @@ export const useAuth = create<AuthState>()(
         set({ loading: true });
         try {
           const updatedUser = await apiClient.put<User>('/auth/me', { name, avatarUrl });
-          await account.updateName(name).catch(() => {});
+          await account.updateName({ name }).catch(() => undefined);
           set({ user: updatedUser });
         } finally {
           set({ loading: false });
@@ -126,9 +146,8 @@ export const useAuth = create<AuthState>()(
       },
 
       logout: async () => {
-        clearAppwriteCache();
+        await clearSession();
         clearOrganizationContext();
-        await account.deleteSession('current').catch(() => {});
         set({ user: null, organizationId: null });
       },
 
@@ -137,8 +156,10 @@ export const useAuth = create<AuthState>()(
           const me = await apiClient.get<User>('/auth/me');
           const orgId = me.memberships[0]?.organizationId ?? null;
           set({ user: me, organizationId: orgId });
-        } catch {
+          return me;
+        } catch (error) {
           set({ user: null, organizationId: null });
+          throw error;
         }
       },
 
