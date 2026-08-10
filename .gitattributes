@@ -1,0 +1,8 @@
+* text=auto
+
+# Runtime and container entrypoints must remain Unix-compatible even when the
+# repository is prepared or archived on Windows.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.Dockerfile text eol=lf
+*.py text eol=lf
