@@ -30,7 +30,7 @@ echo "Symlinks verified"
 # Apply versioned, non-destructive production migrations. A failed migration
 # must stop startup rather than launching against an unknown schema.
 echo "Applying database migrations..."
-pnpm --filter @matrixflow/db exec prisma migrate deploy --schema prisma/schema.prisma
+./node_modules/.bin/prisma migrate deploy --schema packages/db/prisma/schema.prisma
 
 echo "Starting Python Sidecar..."
 export SIDECAR_PYTHON_URL=${SIDECAR_PYTHON_URL:-http://localhost:8001}
