@@ -1,0 +1,974 @@
+[
+  {
+    "$id": "agents",
+    "databaseId": "matrixflow",
+    "name": "Agents",
+    "$permissions": ["create(\"users/verified\")"],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "name",
+        "type": "varchar",
+        "size": 128,
+        "required": true
+      },
+      {
+        "key": "role",
+        "type": "varchar",
+        "size": 128,
+        "required": true
+      },
+      {
+        "key": "model",
+        "type": "varchar",
+        "size": 128,
+        "required": false,
+        "default": "glm-4-plus"
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 24,
+        "required": false,
+        "default": "ACTIVE"
+      },
+      {
+        "key": "systemPrompt",
+        "type": "longtext",
+        "required": false,
+        "default": "{}"
+      },
+      {
+        "key": "skills",
+        "type": "longtext",
+        "required": false,
+        "default": "[]"
+      },
+      {
+        "key": "configuration",
+        "type": "longtext",
+        "required": false,
+        "default": "{}"
+      }
+    ],
+    "indexes": [
+      {
+        "key": "agents_org_status",
+        "type": "key",
+        "columns": ["organizationId", "status"],
+        "orders": ["ASC", "ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "agent_runs",
+    "databaseId": "matrixflow",
+    "name": "Agent runs",
+    "$permissions": ["create(\"users/verified\")"],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "agentId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 24,
+        "required": false,
+        "default": "PENDING"
+      },
+      {
+        "key": "input",
+        "type": "longtext",
+        "required": false,
+        "default": "{}"
+      },
+      {
+        "key": "output",
+        "type": "longtext",
+        "required": false,
+        "default": "{}"
+      },
+      {
+        "key": "error",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "tokensUsed",
+        "type": "integer",
+        "required": false,
+        "default": 0,
+        "min": 0
+      },
+      {
+        "key": "costUsd",
+        "type": "double",
+        "required": false,
+        "default": 0
+      },
+      {
+        "key": "durationMs",
+        "type": "integer",
+        "required": false,
+        "default": 0,
+        "min": 0
+      },
+      {
+        "key": "startedAt",
+        "type": "datetime",
+        "required": false
+      },
+      {
+        "key": "completedAt",
+        "type": "datetime",
+        "required": false
+      }
+    ],
+    "indexes": [
+      {
+        "key": "runs_org_agent",
+        "type": "key",
+        "columns": ["organizationId", "agentId"],
+        "orders": ["ASC", "ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "content_projects",
+    "databaseId": "matrixflow",
+    "name": "Content projects",
+    "$permissions": ["create(\"users/verified\")"],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "name",
+        "type": "varchar",
+        "size": 180,
+        "required": true
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 24,
+        "required": false,
+        "default": "ACTIVE"
+      },
+      {
+        "key": "productData",
+        "type": "longtext",
+        "required": false,
+        "default": "{}"
+      }
+    ],
+    "indexes": [
+      {
+        "key": "projects_org",
+        "type": "key",
+        "columns": ["organizationId"],
+        "orders": ["ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "content_items",
+    "databaseId": "matrixflow",
+    "name": "Content items",
+    "$permissions": ["create(\"users/verified\")"],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "projectId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "type",
+        "type": "varchar",
+        "size": 64,
+        "required": true
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 24,
+        "required": false,
+        "default": "DRAFT"
+      },
+      {
+        "key": "body",
+        "type": "longtext",
+        "required": false,
+        "default": "{}"
+      },
+      {
+        "key": "metadata",
+        "type": "longtext",
+        "required": false,
+        "default": "{}"
+      }
+    ],
+    "indexes": [
+      {
+        "key": "items_project_type",
+        "type": "key",
+        "columns": ["projectId", "type"],
+        "orders": ["ASC", "ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "knowledge_bases",
+    "databaseId": "matrixflow",
+    "name": "Knowledge bases",
+    "$permissions": ["create(\"users/verified\")"],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "name",
+        "type": "varchar",
+        "size": 180,
+        "required": true
+      },
+      {
+        "key": "description",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 24,
+        "required": false,
+        "default": "ACTIVE"
+      }
+    ],
+    "indexes": [
+      {
+        "key": "kb_org",
+        "type": "key",
+        "columns": ["organizationId"],
+        "orders": ["ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "knowledge_documents",
+    "databaseId": "matrixflow",
+    "name": "Knowledge documents",
+    "$permissions": ["create(\"users/verified\")"],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "knowledgeBaseId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "title",
+        "type": "varchar",
+        "size": 255,
+        "required": true
+      },
+      {
+        "key": "fileId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "mimeType",
+        "type": "varchar",
+        "size": 128,
+        "required": true
+      },
+      {
+        "key": "size",
+        "type": "integer",
+        "required": true,
+        "min": 0
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 24,
+        "required": false,
+        "default": "UPLOADED"
+      },
+      {
+        "key": "extractedText",
+        "type": "longtext",
+        "required": false
+      },
+      {
+        "key": "error",
+        "type": "text",
+        "required": false
+      }
+    ],
+    "indexes": [
+      {
+        "key": "docs_kb",
+        "type": "key",
+        "columns": ["knowledgeBaseId"],
+        "orders": ["ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "workflows",
+    "databaseId": "matrixflow",
+    "name": "Workflows",
+    "$permissions": ["create(\"users/verified\")"],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "name",
+        "type": "varchar",
+        "size": 180,
+        "required": true
+      },
+      {
+        "key": "description",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 24,
+        "required": false,
+        "default": "DRAFT"
+      },
+      {
+        "key": "currentVersion",
+        "type": "integer",
+        "required": false,
+        "default": 1,
+        "min": 1
+      },
+      {
+        "key": "dsl",
+        "type": "longtext",
+        "required": true
+      }
+    ],
+    "indexes": [
+      {
+        "key": "workflows_org",
+        "type": "key",
+        "columns": ["organizationId"],
+        "orders": ["ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "workflow_runs",
+    "databaseId": "matrixflow",
+    "name": "Workflow runs",
+    "$permissions": ["create(\"users/verified\")"],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "workflowId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 24,
+        "required": false,
+        "default": "PENDING"
+      },
+      {
+        "key": "version",
+        "type": "integer",
+        "required": false,
+        "default": 1,
+        "min": 1
+      },
+      {
+        "key": "triggerType",
+        "type": "varchar",
+        "size": 24,
+        "required": false,
+        "default": "manual"
+      },
+      {
+        "key": "currentNodeId",
+        "type": "varchar",
+        "size": 100,
+        "required": false
+      },
+      {
+        "key": "output",
+        "type": "longtext",
+        "required": false,
+        "default": "{}"
+      },
+      {
+        "key": "logs",
+        "type": "longtext",
+        "required": false,
+        "default": "[]"
+      },
+      {
+        "key": "error",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "durationMs",
+        "type": "integer",
+        "required": false,
+        "default": 0,
+        "min": 0
+      }
+    ],
+    "indexes": [
+      {
+        "key": "workflow_runs_parent",
+        "type": "key",
+        "columns": ["workflowId"],
+        "orders": ["ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "customers",
+    "databaseId": "matrixflow",
+    "name": "Customers",
+    "$permissions": ["create(\"users/verified\")"],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "name",
+        "type": "varchar",
+        "size": 180,
+        "required": false
+      },
+      {
+        "key": "email",
+        "type": "varchar",
+        "size": 320,
+        "required": false,
+        "format": "email"
+      },
+      {
+        "key": "phone",
+        "type": "varchar",
+        "size": 40,
+        "required": false
+      },
+      {
+        "key": "stage",
+        "type": "varchar",
+        "size": 40,
+        "required": false,
+        "default": "prospect"
+      },
+      {
+        "key": "source",
+        "type": "varchar",
+        "size": 80,
+        "required": false
+      },
+      {
+        "key": "tags",
+        "type": "longtext",
+        "required": false,
+        "default": "[]"
+      },
+      {
+        "key": "notes",
+        "type": "longtext",
+        "required": false,
+        "default": "[]"
+      }
+    ],
+    "indexes": [
+      {
+        "key": "customers_org_stage",
+        "type": "key",
+        "columns": ["organizationId", "stage"],
+        "orders": ["ASC", "ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "leads",
+    "databaseId": "matrixflow",
+    "name": "Leads",
+    "$permissions": ["create(\"users/verified\")"],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "customerId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "score",
+        "type": "integer",
+        "required": false,
+        "default": 0,
+        "min": 0,
+        "max": 100
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 40,
+        "required": false,
+        "default": "new"
+      },
+      {
+        "key": "source",
+        "type": "varchar",
+        "size": 80,
+        "required": false
+      }
+    ],
+    "indexes": [
+      {
+        "key": "leads_org",
+        "type": "key",
+        "columns": ["organizationId"],
+        "orders": ["ASC"]
+      },
+      {
+        "key": "leads_customer",
+        "type": "key",
+        "columns": ["customerId"],
+        "orders": ["ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "conversations",
+    "databaseId": "matrixflow",
+    "name": "Conversations",
+    "$permissions": ["create(\"users/verified\")"],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "customerId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "channel",
+        "type": "varchar",
+        "size": 40,
+        "required": false,
+        "default": "web"
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 40,
+        "required": false,
+        "default": "open"
+      },
+      {
+        "key": "summary",
+        "type": "text",
+        "required": false
+      }
+    ],
+    "indexes": [
+      {
+        "key": "conversations_customer",
+        "type": "key",
+        "columns": ["customerId"],
+        "orders": ["ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "messages",
+    "databaseId": "matrixflow",
+    "name": "Conversation messages",
+    "$permissions": ["create(\"users/verified\")"],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "conversationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "role",
+        "type": "varchar",
+        "size": 24,
+        "required": true
+      },
+      {
+        "key": "content",
+        "type": "longtext",
+        "required": true
+      }
+    ],
+    "indexes": [
+      {
+        "key": "messages_conversation",
+        "type": "key",
+        "columns": ["conversationId"],
+        "orders": ["ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "marketplace_items",
+    "databaseId": "matrixflow",
+    "name": "Marketplace items",
+    "$permissions": ["create(\"users/verified\")"],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "ownerOrganizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "type",
+        "type": "varchar",
+        "size": 32,
+        "required": true
+      },
+      {
+        "key": "name",
+        "type": "varchar",
+        "size": 180,
+        "required": true
+      },
+      {
+        "key": "description",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 24,
+        "required": false,
+        "default": "draft"
+      },
+      {
+        "key": "priceUsd",
+        "type": "double",
+        "required": false,
+        "default": 0
+      },
+      {
+        "key": "installs",
+        "type": "integer",
+        "required": false,
+        "default": 0,
+        "min": 0
+      },
+      {
+        "key": "ratingAvg",
+        "type": "double",
+        "required": false,
+        "default": 0
+      },
+      {
+        "key": "configuration",
+        "type": "longtext",
+        "required": false,
+        "default": "{}"
+      }
+    ],
+    "indexes": [
+      {
+        "key": "market_status_type",
+        "type": "key",
+        "columns": ["status", "type"],
+        "orders": ["ASC", "ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "marketplace_purchases",
+    "databaseId": "matrixflow",
+    "name": "Marketplace purchases",
+    "$permissions": ["create(\"users/verified\")"],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "itemId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "priceUsd",
+        "type": "double",
+        "required": false,
+        "default": 0
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 24,
+        "required": false,
+        "default": "active"
+      }
+    ],
+    "indexes": [
+      {
+        "key": "purchases_org_item",
+        "type": "unique",
+        "columns": ["organizationId", "itemId"],
+        "orders": ["ASC", "ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "marketplace_reviews",
+    "databaseId": "matrixflow",
+    "name": "Marketplace reviews",
+    "$permissions": ["create(\"users/verified\")"],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "itemId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "rating",
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "max": 5
+      },
+      {
+        "key": "comment",
+        "type": "text",
+        "required": false
+      }
+    ],
+    "indexes": [
+      {
+        "key": "reviews_item",
+        "type": "key",
+        "columns": ["itemId"],
+        "orders": ["ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "usage_records",
+    "databaseId": "matrixflow",
+    "name": "Usage records",
+    "$permissions": ["create(\"users/verified\")"],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "metric",
+        "type": "varchar",
+        "size": 64,
+        "required": true
+      },
+      {
+        "key": "value",
+        "type": "integer",
+        "required": true,
+        "min": 0
+      },
+      {
+        "key": "metadata",
+        "type": "longtext",
+        "required": false,
+        "default": "{}"
+      },
+      {
+        "key": "recordedAt",
+        "type": "datetime",
+        "required": true
+      }
+    ],
+    "indexes": [
+      {
+        "key": "usage_org_metric",
+        "type": "key",
+        "columns": ["organizationId", "metric"],
+        "orders": ["ASC", "ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "audit_logs",
+    "databaseId": "matrixflow",
+    "name": "Audit logs",
+    "$permissions": ["create(\"users/verified\")"],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "userId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "action",
+        "type": "varchar",
+        "size": 128,
+        "required": true
+      },
+      {
+        "key": "resource",
+        "type": "varchar",
+        "size": 80,
+        "required": false
+      },
+      {
+        "key": "resourceId",
+        "type": "varchar",
+        "size": 36,
+        "required": false
+      },
+      {
+        "key": "metadata",
+        "type": "longtext",
+        "required": false,
+        "default": "{}"
+      }
+    ],
+    "indexes": [
+      {
+        "key": "audit_org_action",
+        "type": "key",
+        "columns": ["organizationId", "action"],
+        "orders": ["ASC", "ASC"]
+      }
+    ]
+  }
+]

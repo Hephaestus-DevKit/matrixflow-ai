@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { X } from 'lucide-react';
+import { Cloud, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-store';
 import { cn } from '@/lib/cn';
 import { DASHBOARD_NAVIGATION } from '@/components/dashboard-navigation';
@@ -98,6 +98,16 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
       </nav>
 
       <div className="border-t border-border/70 p-3">
+        <div className="mb-2 flex items-center gap-2 rounded-xl border border-emerald-500/15 bg-emerald-500/[0.06] px-3 py-2 text-[0.6875rem] text-emerald-700 dark:text-emerald-300">
+          <span className="relative flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10">
+            <Cloud className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-card" />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate font-semibold">Appwrite Cloud</span>
+            <span className="block text-[0.625rem] text-muted-foreground">新加坡区域 · 已连接</span>
+          </span>
+        </div>
         <Link
           href="/dashboard/settings"
           onClick={onClose}

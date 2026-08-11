@@ -1,0 +1,27 @@
+[
+  {
+    "$id": "matrixflow-core",
+    "name": "MatrixFlow Core",
+    "path": "../../apps/functions/matrixflow-core",
+    "runtime": "node-22",
+    "entrypoint": "src/main.js",
+    "commands": "npm ci --omit=dev",
+    "execute": ["users/verified"],
+    "enabled": true,
+    "logging": true,
+    "timeout": 900,
+    "scopes": [
+      "teams.read",
+      "rows.read",
+      "rows.write",
+      "buckets.read",
+      "files.read",
+      "files.write"
+    ],
+    "vars": {
+      "MATRIXFLOW_DATABASE_ID": "matrixflow",
+      "MATRIXFLOW_KNOWLEDGE_BUCKET_ID": "knowledge-files"
+    },
+    "ignore": "node_modules,.git,*.log"
+  }
+]

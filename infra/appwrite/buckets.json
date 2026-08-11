@@ -1,0 +1,14 @@
+[
+  {
+    "$id": "knowledge-files",
+    "name": "Knowledge files",
+    "$permissions": ["create(\"users/verified\")"],
+    "fileSecurity": true,
+    "enabled": true,
+    "maximumFileSize": 20971520,
+    "allowedFileExtensions": ["pdf", "docx", "txt", "md", "csv"],
+    "compression": "gzip",
+    "encryption": true,
+    "antivirus": true
+  }
+]

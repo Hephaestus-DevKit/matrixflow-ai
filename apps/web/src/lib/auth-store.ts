@@ -1,22 +1,16 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { apiClient, clearAppwriteCache, clearOrganizationContext } from '@/lib/api-client';
+import { clearAppwriteCache, clearOrganizationContext } from '@/lib/api-client';
+import { setOrganizationContext } from '@/lib/backend/organization-context';
+import {
+  getCurrentIdentity,
+  updateCurrentProfile,
+  type MatrixFlowUser,
+} from '@/lib/backend/session';
 import { account } from './appwrite';
 import { ID } from 'appwrite';
 
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  avatarUrl?: string | null;
-  memberships: {
-    organizationId: string;
-    organizationName: string;
-    slug: string;
-    role: string;
-    permissions: string[];
-  }[];
-}
+type User = MatrixFlowUser;
 
 interface AuthState {
   user: User | null;
@@ -137,8 +131,7 @@ export const useAuth = create<AuthState>()(
       updateProfile: async (name, avatarUrl) => {
         set({ loading: true });
         try {
-          const updatedUser = await apiClient.put<User>('/auth/me', { name, avatarUrl });
-          await account.updateName({ name }).catch(() => undefined);
+          const updatedUser = await updateCurrentProfile(name, avatarUrl);
           set({ user: updatedUser });
         } finally {
           set({ loading: false });
@@ -153,8 +146,12 @@ export const useAuth = create<AuthState>()(
 
       fetchMe: async () => {
         try {
-          const me = await apiClient.get<User>('/auth/me');
-          const orgId = me.memberships[0]?.organizationId ?? null;
+          const me = await getCurrentIdentity();
+          const persisted = get().organizationId;
+          const orgId = me.memberships.some((membership) => membership.organizationId === persisted)
+            ? persisted
+            : (me.memberships[0]?.organizationId ?? null);
+          setOrganizationContext(orgId);
           set({ user: me, organizationId: orgId });
           return me;
         } catch (error) {
@@ -164,6 +161,7 @@ export const useAuth = create<AuthState>()(
       },
 
       setOrg: (orgId) => {
+        setOrganizationContext(orgId);
         set({ organizationId: orgId });
       },
 

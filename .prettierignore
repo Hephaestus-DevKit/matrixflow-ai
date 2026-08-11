@@ -1,0 +1,11 @@
+**/node_modules/
+**/.next/
+**/dist/
+**/.turbo/
+apps/api/
+apps/worker/
+apps/sidecar/
+packages/db/
+packages/ai-gateway/
+packages/workflow-engine/
+.tmp/

@@ -1,114 +1,84 @@
----
-title: MatrixFlow AI API
-emoji: 🐳
-colorFrom: indigo
-colorTo: blue
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 # MatrixFlow AI
 
-面向团队的多租户 AI 运营平台，包含 AI 内容生成、知识库 RAG、CRM、市场和可视化工作流。
+面向团队的 AI 运营工作台。前端使用 Next.js，身份、团队、业务数据、文件和受保护的 AI/工作流执行统一由 Appwrite 承载，不再依赖 Hugging Face、PostgreSQL、Redis、MinIO 或常驻 Worker。
 
 [![CI](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/codeql.yml/badge.svg)](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/codeql.yml)
-[![Node](https://img.shields.io/badge/Node.js-22-43853d)](https://nodejs.org/)
-[![pnpm](https://img.shields.io/badge/pnpm-11-f69220)](https://pnpm.io/)
 
-> 当前版本为 beta。计费与邮件已定义稳定的端口/适配器边界，但默认未绑定生产 Provider；人工审批、调度和循环工作流也仍处于显式受限状态。未配置能力会明确失败，不会伪造成功。
+## 当前能力
 
-## 已实现能力
+- Appwrite Email/Password 登录、邮箱验证、团队成员关系和组织隔离。
+- AI 内容生成、CRM 回复、知识库问答与用量记录；未配置模型密钥时明确报错，不伪造结果。
+- PDF、DOCX、TXT、Markdown、CSV 文件上传、解析与检索。
+- 可视化 DAG 工作流，支持有界校验、真实条件分支、运行日志和失败状态。
+- Agent、内容、CRM、市场、账单、分析和管理界面的统一响应式设计。
+- Appwrite 配置即代码、幂等资源初始化脚本、云函数测试和真实云端 smoke test。
 
-- Appwrite 生产认证与本地开发认证、组织/RBAC、Refresh Token 原子轮换。
-- AI 内容生成、流式输出、Provider fallback、用量核算、缓存和 Prompt 输入/输出校验；取消信号、瞬时错误重试和流式回退均有明确边界。
-- PostgreSQL + pgvector 知识库，支持 PDF、DOCX、TXT、Markdown 和 CSV。
-- CRM 客户、线索、会话和消息，并在服务层强制组织隔离。
-- React Flow 工作流；共享强类型 DSL 支持真实条件分支、AI、转换、可插拔邮件，以及受 DNS 固定与 SSRF 防护的 Webhook 节点。
-- BullMQ 文档/工作流任务，带重试、退避、幂等 job ID 和数据库执行租约。
-- 私有 MinIO、真实 liveness/readiness、Prometheus 指标、结构化日志与版本化 migration。
-- 响应式 Web 工作台，具备移动导航、暗/亮主题、统一加载/错误/空状态、键盘焦点与组织切换缓存隔离。
+## 架构
+
+```text
+Browser / Next.js
+  ├─ Account + Teams ───────────── Appwrite Auth
+  ├─ typed backend router ──────── Appwrite TablesDB / Storage
+  └─ protected executions ──────── MatrixFlow Core Function
+                                      ├─ GLM or OpenAI
+                                      ├─ document parsing / RAG
+                                      └─ bounded workflow runtime
+```
+
+租户边界以 Appwrite Team ID 为唯一组织标识；业务行和文件均使用团队权限，云函数还会在执行前再次校验成员关系。详细说明见 [架构文档](docs/architecture.md) 和 [安全文档](docs/security.md)。
 
 ## 仓库结构
 
 ```text
-matrixflow-ai/
-├─ apps/
-│  ├─ web/                 Next.js 前端
-│  ├─ api/                 NestJS API 与业务模块
-│  ├─ worker/              BullMQ 消费者
-│  └─ sidecar/             Python 文档解析服务
-├─ packages/
-│  ├─ shared/              常量、Zod Schema 与跨端类型
-│  ├─ db/                  Prisma Schema、migration 与 seed
-│  ├─ ai-gateway/          AI Provider、fallback 与流协议
-│  └─ workflow-engine/     框架无关的 DAG 校验/执行核心
-├─ infra/docker/           API、Worker 独立生产镜像
-├─ scripts/                容器启动与维护脚本
-├─ data/                   产品模板源数据
-└─ docs/                   架构、安全、部署与产品资料
+apps/web/                              Next.js 产品界面与 Appwrite 数据适配层
+apps/functions/matrixflow-core/        Appwrite 云函数、部署脚本与单元测试
+packages/shared/                       前端共享类型与输入 Schema
+infra/appwrite/                        数据表、索引、桶和函数声明
+data/                                  产品模板源数据
+docs/                                  架构、安全与产品资料
+appwrite.config.json                   Appwrite 项目配置入口
 ```
 
-依赖边界和扩展约定见 [架构说明](docs/architecture.md)，文档总入口见 [docs/README.md](docs/README.md)。
+## 本地运行
 
-## 快速开始
-
-要求：Node.js 22、pnpm 11、Docker Compose。
+要求 Node.js 22.14+、pnpm 11。
 
 ```bash
 pnpm install --frozen-lockfile
-cp .env.example .env
-docker compose up -d postgres redis minio minio-init sidecar
-pnpm db:generate
-pnpm db:migrate
-pnpm db:seed
+cp .env.example .env.local
 pnpm dev
 ```
 
-至少需要设置 Appwrite 项目、一个 AI Provider 密钥、对象存储和两个内部长随机密钥；受限环境可通过显式开关降级运行认证核心服务。完整说明见 [.env.example](.env.example)。本地服务默认地址：
+打开 `http://localhost:3000`。仓库已提供公开的 Appwrite endpoint 与 project ID 默认值；如果复制项目，请在 `.env.local` 中替换。
 
-- Web：`http://localhost:3000`
-- API：`http://localhost:3001/api/v1`
-- Swagger（非生产）：`http://localhost:3001/api/v1/docs`
-- Metrics：`http://localhost:3001/api/v1/metrics`（需要 `x-metrics-token`）
-- MinIO Console：`http://localhost:9001`
+AI 能力需要在 Appwrite Console 的 `matrixflow-core` 函数变量中设置 `GLM_API_KEY` 或 `OPENAI_API_KEY`。密钥只放在云函数变量中，不得使用 `NEXT_PUBLIC_*` 或提交到仓库。
 
-完整容器环境：
+## 质量检查
 
 ```bash
-docker compose up -d --build
+pnpm verify
+pnpm function:check
+pnpm function:test
+pnpm audit --prod --audit-level=high
+npm audit --omit=dev --prefix apps/functions/matrixflow-core
 ```
 
-## 工程命令
+## Appwrite 部署
 
-| 命令                                      | 用途                        |
-| ----------------------------------------- | --------------------------- |
-| `pnpm dev`                                | 启动各 workspace 的开发进程 |
-| `pnpm format:check`                       | 检查格式                    |
-| `pnpm typecheck`                          | TypeScript 类型检查         |
-| `pnpm lint`                               | ESLint 检查                 |
-| `pnpm test`                               | Node 单元测试               |
-| `pnpm test:coverage`                      | 单元测试与分包覆盖率门禁    |
-| `pnpm --filter @matrixflow/api test:e2e`  | API 集成测试                |
-| `python -m unittest -v`（`apps/sidecar`） | Sidecar 单元测试            |
-| `pnpm build`                              | 构建全部 workspace          |
-| `pnpm audit --prod --audit-level=high`    | 生产依赖审计                |
+基础设施声明位于 `infra/appwrite`。幂等初始化脚本需要临时的最小权限 API key：
 
-CI 会运行格式、类型、lint、带覆盖率门禁的测试、API 集成测试和 Sidecar 测试，并构建 API、Worker、Sidecar 和 Hugging Face 组合镜像。生产发布顺序、回滚与 smoke test 见 [生产部署手册](docs/production-readiness.md)。
+```bash
+MATRIXFLOW_DEPLOY_KEY=... pnpm appwrite:provision
+appwrite push functions
+```
 
-## 维护原则
+部署后应立即撤销临时 key，并运行 `apps/functions/matrixflow-core/scripts/smoke.mjs` 验证登录、团队权限、数据行权限和函数健康状态。发布、回滚和配置清单见 [部署手册](docs/deployment.md)。
 
-- 租户 ID 只来自已验证认证上下文；所有组织数据查询必须显式带 `organizationId`。
-- HTTP 输入先通过共享 Zod Schema；禁止直接展开客户端对象写入数据库。
-- 数据库变更只能新增 Prisma migration，生产禁止 `prisma db push`。
-- Worker 只负责队列消费；核心业务和授权仍在 API 服务层。
-- 外部支付、邮件等能力通过领域端口接入；默认禁用适配器必须 fail closed。
-- 新环境变量必须同步更新 `.env.example`、生产校验和部署文档。
-- 不提交密钥、生成 Client、构建产物、缓存、Python 虚拟环境或临时数据。
+## 能力边界
 
-贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)，安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。
+- 邮件与任意 Webhook 节点在安全连接器配置前会明确失败。
+- 市场支付仍为产品边界，不会生成虚假订单或扣款。
+- 知识库当前采用受限的关键词上下文检索，适合中小型资料集；大规模语义检索需另行接入向量服务。
 
-## License
-
-Proprietary. Source availability does not grant permission to use, copy, modify, or redistribute. See [LICENSE](LICENSE).
+贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)，漏洞请按 [SECURITY.md](SECURITY.md) 私下报告。

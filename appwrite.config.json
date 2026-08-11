@@ -1,0 +1,55 @@
+{
+  "organizationId": "organization-6a43f0258aa8d0072575",
+  "projectId": "6a43f0af000862e7b0ef",
+  "projectName": "MatrixFlow AI",
+  "endpoint": "https://sgp.cloud.appwrite.io/v1",
+  "includes": {
+    "tablesDB": "./infra/appwrite/databases.json",
+    "tables": "./infra/appwrite/tables.json",
+    "buckets": "./infra/appwrite/buckets.json",
+    "functions": "./infra/appwrite/functions.json",
+    "sites": "./infra/appwrite/sites.json"
+  },
+  "settings": {
+    "services": {
+      "account": true,
+      "avatars": true,
+      "databases": true,
+      "locale": true,
+      "health": true,
+      "storage": true,
+      "teams": true,
+      "users": true,
+      "sites": true,
+      "functions": true,
+      "graphql": true,
+      "messaging": true
+    },
+    "protocols": {
+      "rest": true,
+      "graphql": true,
+      "websocket": true
+    },
+    "auth": {
+      "methods": {
+        "jwt": true,
+        "phone": false,
+        "invites": true,
+        "anonymous": false,
+        "email-otp": true,
+        "magic-url": false,
+        "email-password": true
+      },
+      "security": {
+        "duration": 1209600,
+        "limit": 10,
+        "sessionsLimit": 10,
+        "passwordHistory": 5,
+        "passwordDictionary": true,
+        "personalDataCheck": true,
+        "sessionAlerts": true,
+        "mockNumbers": []
+      }
+    }
+  }
+}

@@ -7,10 +7,6 @@ export const WORKFLOW_NODE_TYPES = [
   'transform',
   'webhook',
   'email',
-  'content',
-  'human',
-  'schedule',
-  'loop',
 ] as const;
 
 export const workflowNodeSchema = z
@@ -33,7 +29,7 @@ export const workflowEdgeSchema = z
 export const workflowDslSchema = z
   .object({
     nodes: z.array(workflowNodeSchema).min(1).max(100),
-    edges: z.array(workflowEdgeSchema).max(500),
+    edges: z.array(workflowEdgeSchema).max(300),
   })
   .strict()
   .superRefine((value, context) => {

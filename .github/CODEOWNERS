@@ -1,5 +1,6 @@
 * @wangjiehu
 
 /.github/ @wangjiehu
-/packages/db/prisma/ @wangjiehu
-/apps/api/src/auth/ @wangjiehu
+/infra/appwrite/ @wangjiehu
+/apps/functions/ @wangjiehu
+/apps/web/src/lib/backend/ @wangjiehu

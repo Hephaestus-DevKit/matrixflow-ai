@@ -37,27 +37,22 @@ coverage/
 .DS_Store
 Thumbs.db
 
-# prisma
-packages/db/prisma/migrations/dev.db*
-packages/db/src/generated/
-
-# python
-__pycache__/
-*.py[cod]
-.venv/
-
 # local generated datasets
 data/*.jsonl
-
-# docker
-docker-data/
-.npm-cache/
 
 # misc
 .cache/
 *.local
 nul
 
+# local residue from the retired service architecture
+apps/api/
+apps/worker/
+apps/sidecar/
+packages/db/
+packages/ai-gateway/
+packages/workflow-engine/
+infra/docker/
+/scripts/
+
 .vercel
-.env*
-!.env.example
