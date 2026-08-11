@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { PublicFooter, PublicHeader } from '@/components/public-shell';
 import {
   Bot,
   Factory,
@@ -17,32 +18,7 @@ export default function LandingPage() {
       id="main-content"
       className="flex min-h-screen flex-col bg-background text-foreground antialiased selection:bg-primary/20"
     >
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-          <Link
-            href="/"
-            className="flex items-center gap-2 font-semibold tracking-tight hover:opacity-90 transition-opacity"
-          >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold shadow-glow-sm">
-              M
-            </div>
-            <span className="text-base font-bold">MatrixFlow AI</span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link href="/login">
-              <Button variant="ghost" size="sm" className="text-sm font-medium">
-                登录
-              </Button>
-            </Link>
-            <Link href="/register">
-              <Button size="sm" className="text-sm font-medium shadow-glow-sm hover:shadow-glow">
-                免费开始
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <PublicHeader />
 
       {/* Hero */}
       <section className="relative flex flex-1 flex-col items-center justify-center px-4 py-24 text-center overflow-hidden">
@@ -63,8 +39,8 @@ export default function LandingPage() {
             </span>
           </h1>
           <p className="mb-10 text-base text-muted-foreground sm:text-lg max-w-2xl mx-auto leading-relaxed">
-            导入商品资料，30 秒自动生成高转化标题、专业 Listing
-            详情页、社媒引流脚本、精准广告文案与多语言译本，一键同步上架。
+            导入商品资料，在一个工作台生成 Listing、广告文案、社媒脚本与多语言译本；
+            用团队知识库约束输出，并保留真实调用与运行记录。
           </p>
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Link href="/register">
@@ -108,12 +84,12 @@ export default function LandingPage() {
               {
                 icon: Bot,
                 title: 'AI 员工系统',
-                desc: '灵活定制文案、客服、数据分析等专属角色，自由赋予业务技能与私有知识库。',
+                desc: '配置文案、客服等专属角色，并通过受控运行入口查看每次调用结果与消耗。',
               },
               {
                 icon: Factory,
                 title: '内容工厂',
-                desc: '一键输出 15 类跨境出海高质量文案：覆盖产品 Listing、广告语、红人脚本等。',
+                desc: '生成 12 类跨境运营内容，覆盖产品 Listing、广告语、社媒脚本与品牌语气。',
               },
               {
                 icon: Library,
@@ -123,17 +99,17 @@ export default function LandingPage() {
               {
                 icon: GitFork,
                 title: '可视化工作流',
-                desc: '拖拽式流程编排，集成 AI 决策、逻辑条件与 Webhook 节点，打造全自动化流转。',
+                desc: '拖拽编排 AI、条件和数据转换节点；外部邮件与 Webhook 连接器按配置开放。',
               },
               {
                 icon: MessageSquare,
                 title: '智能客服 & CRM',
-                desc: '多渠道消息自动回复、意图识别与跟进，智能分析买家画像，辅助成交转化。',
+                desc: '集中维护客户和内部对话，生成客服回复建议；外部渠道连接仍处于产品路线图。',
               },
               {
                 icon: Store,
                 title: '模板生态市场',
-                desc: '开箱即用行业标杆级 AI 员工角色与业务流模板，助力团队敏捷落地。',
+                desc: '官方模板正在受控预览，正式发布、授权与交易能力开放前不会产生扣款。',
               },
             ].map((f, idx) => {
               const IconComponent = f.icon;
@@ -166,7 +142,7 @@ export default function LandingPage() {
             开启智能化出海新纪元
           </h2>
           <p className="mb-8 text-muted-foreground text-sm sm:text-base">
-            免费赠送 100 次 AI 调用额度，无需绑定信用卡，即刻配置您的 AI 员工。
+            免费测试版包含每月 100 次 AI 调用额度；模型服务配置完成后即可开始使用。
           </p>
           <Link href="/register">
             <Button
@@ -179,16 +155,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border/40 px-4 py-8 text-center text-xs text-muted-foreground">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span>© 2026 MatrixFlow AI · 跨境电商 AI 员工操作系统 · 版权所有</span>
-          <div className="flex gap-4" aria-label="法律信息">
-            <span>服务协议筹备中</span>
-            <span>隐私政策筹备中</span>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

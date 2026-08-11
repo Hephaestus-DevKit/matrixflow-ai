@@ -31,8 +31,8 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
           </span>
           <span className="min-w-0">
             <span className="block truncate text-sm font-bold tracking-tight">MatrixFlow AI</span>
-            <span className="block text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              Command center
+            <span className="block text-[0.6875rem] font-semibold tracking-wide text-muted-foreground">
+              AI 运营工作台
             </span>
           </span>
         </Link>
@@ -51,7 +51,7 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
       <nav aria-label="主导航" className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
         {DASHBOARD_NAVIGATION.map((group) => (
           <div key={group.label}>
-            <p className="mb-2 px-3 text-[0.625rem] font-bold uppercase tracking-[0.16em] text-muted-foreground/75">
+            <p className="mb-2 px-3 text-[0.6875rem] font-bold tracking-wide text-muted-foreground">
               {group.label}
             </p>
             <div className="space-y-1">
@@ -85,7 +85,7 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
                     </span>
                     <span className="min-w-0">
                       <span className="block truncate leading-4">{item.label}</span>
-                      <span className="mt-0.5 block truncate text-[0.625rem] font-normal text-muted-foreground">
+                      <span className="mt-0.5 block truncate text-[0.6875rem] font-normal text-muted-foreground">
                         {item.description}
                       </span>
                     </span>
@@ -104,8 +104,8 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
             <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-card" />
           </span>
           <span className="min-w-0">
-            <span className="block truncate font-semibold">Appwrite Cloud</span>
-            <span className="block text-[0.625rem] text-muted-foreground">新加坡区域 · 已连接</span>
+            <span className="block truncate font-semibold">数据服务已连接</span>
+            <span className="block text-[0.6875rem] text-muted-foreground">Appwrite Cloud</span>
           </span>
         </div>
         <Link
@@ -129,7 +129,7 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
           )}
           <span className="min-w-0 flex-1">
             <span className="block truncate text-xs font-bold">{user?.name ?? '个人用户'}</span>
-            <span className="mt-0.5 block truncate text-[0.625rem] text-muted-foreground">
+            <span className="mt-0.5 block truncate text-[0.6875rem] text-muted-foreground">
               {membership?.organizationName ?? user?.email ?? ''}
             </span>
           </span>

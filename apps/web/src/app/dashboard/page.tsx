@@ -2,7 +2,18 @@
 
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Bot, Factory, FolderOpen, GitFork, Sparkles, Zap } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowRight,
+  Bot,
+  CheckCircle2,
+  Circle,
+  Factory,
+  FolderOpen,
+  GitFork,
+  Sparkles,
+  Zap,
+} from 'lucide-react';
 import type {
   AgentSummary,
   ContentProjectSummary,
@@ -31,7 +42,7 @@ const QUICK_ACTIONS = [
     href: '/dashboard/workflows/new',
     icon: GitFork,
     title: '编排自动化',
-    description: '将 AI、判断、Webhook 与业务动作连接成流程。',
+    description: '将 AI、条件判断与数据转换连接成可追踪流程。',
   },
 ] as const;
 
@@ -53,17 +64,38 @@ export default function DashboardPage() {
     queryKey: ['usage'],
     queryFn: () => apiClient.get<UsageSummary>('/billing/usage'),
   });
-  const queries = [agents, projects, knowledge, usage];
+  const health = useQuery({
+    queryKey: ['system-health'],
+    queryFn: () =>
+      apiClient.get<{
+        status: string;
+        ai: { ready: boolean; provider?: string; model?: string };
+        limits: { monthlyAiCalls: number };
+      }>('/health'),
+    staleTime: 60_000,
+  });
+  const queries = [agents, projects, knowledge, usage, health];
   const isLoading = queries.some((query) => query.isLoading);
   const hasError = queries.some((query) => query.isError);
   const retry = () => void Promise.all(queries.map((query) => query.refetch()));
   const activeAgents = agents.data?.filter((agent) => agent.status === 'ACTIVE').length ?? 0;
   const aiCalls = usage.data?.ai_call ?? 0;
+  const onboarding = [
+    { label: '连接 AI 服务', done: Boolean(health.data?.ai.ready), href: '/dashboard/settings' },
+    {
+      label: '创建知识库',
+      done: Boolean(knowledge.data?.length),
+      href: '/dashboard/knowledge/new',
+    },
+    { label: '创建 AI 员工', done: Boolean(agents.data?.length), href: '/dashboard/agents/new' },
+    { label: '建立内容项目', done: Boolean(projects.data?.length), href: '/dashboard/content' },
+  ] as const;
+  const onboardingComplete = onboarding.every((step) => step.done);
 
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Operations overview"
+        eyebrow="团队运行概况"
         title={<>欢迎回来，{user?.name || '伙伴'}</>}
         description="集中查看 AI 团队、内容项目、知识资产与本月资源消耗。"
         actions={
@@ -75,6 +107,72 @@ export default function DashboardPage() {
           </Link>
         }
       />
+
+      {health.data && (
+        <section
+          className={`flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between ${
+            health.data.ai.ready
+              ? 'border-emerald-500/20 bg-emerald-500/[0.06]'
+              : 'border-amber-500/20 bg-amber-500/[0.07]'
+          }`}
+          role="status"
+        >
+          <div className="flex items-start gap-3">
+            {health.data.ai.ready ? (
+              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
+            ) : (
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+            )}
+            <div>
+              <p className="text-sm font-bold">
+                {health.data.ai.ready ? 'AI 服务已就绪' : '数据服务已连接，AI 服务尚未配置'}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                {health.data.ai.ready
+                  ? `${health.data.ai.provider} · ${health.data.ai.model} · 每月 ${health.data.limits.monthlyAiCalls} 次额度`
+                  : '内容生成、知识问答、Agent 与 AI 工作流会安全拒绝请求，直到管理员在 Appwrite Function 中配置模型密钥。'}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {!isLoading && !onboardingComplete && (
+        <section className="surface-card p-5 sm:p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-base font-bold">首次运行清单</h2>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                按顺序完成基础配置，形成可验证的内容与知识闭环。
+              </p>
+            </div>
+            <span className="text-xs font-semibold text-muted-foreground">
+              {onboarding.filter((step) => step.done).length} / {onboarding.length} 已完成
+            </span>
+          </div>
+          <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {onboarding.map((step, index) => (
+              <Link
+                key={step.label}
+                href={step.href}
+                className="flex items-center gap-3 rounded-xl border border-border/70 bg-background/60 p-3 text-sm transition hover:border-primary/30 hover:bg-primary/[0.04]"
+              >
+                {step.done ? (
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
+                ) : (
+                  <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />
+                )}
+                <span>
+                  <span className="block text-[0.6875rem] text-muted-foreground">
+                    步骤 {index + 1}
+                  </span>
+                  <span className="font-semibold">{step.label}</span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {hasError ? (
         <ErrorState message="部分工作台指标未能加载，请检查连接后重试。" onRetry={retry} />

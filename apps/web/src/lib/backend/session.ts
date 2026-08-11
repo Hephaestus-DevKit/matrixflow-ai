@@ -23,7 +23,27 @@ const ALL_PERMISSIONS = [
   'crm.manage',
   'marketplace.manage',
   'billing.read',
+  'billing.manage',
+  'admin.manage',
 ];
+
+const MEMBER_PERMISSIONS = ALL_PERMISSIONS.filter(
+  (permission) => !['marketplace.manage', 'billing.manage', 'admin.manage'].includes(permission),
+);
+
+function normalizeAvatarUrl(value: unknown) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  if (value.startsWith('data:image/svg+xml,') && value.length <= 4_096) return value;
+  try {
+    const url = new URL(value);
+    const allowed =
+      url.protocol === 'https:' &&
+      (url.hostname === 'sgp.cloud.appwrite.io' || url.hostname === 'cloud.appwrite.io');
+    return allowed ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
 
 function slugify(value: string, fallback: string) {
   const slug = value
@@ -65,8 +85,7 @@ export async function getCurrentIdentity(): Promise<MatrixFlowUser> {
         organizationName: team.name,
         slug: slugify(team.name, team.$id.slice(0, 8)),
         role,
-        permissions:
-          role === 'member' ? ALL_PERMISSIONS.filter((p) => p !== 'billing.read') : ALL_PERMISSIONS,
+        permissions: role === 'member' ? MEMBER_PERMISSIONS : ALL_PERMISSIONS,
       };
     }),
   );
@@ -76,7 +95,7 @@ export async function getCurrentIdentity(): Promise<MatrixFlowUser> {
     id: current.$id,
     email: current.email,
     name: current.name || current.email.split('@')[0],
-    avatarUrl: typeof prefs.avatarUrl === 'string' ? prefs.avatarUrl : null,
+    avatarUrl: normalizeAvatarUrl(prefs.avatarUrl),
     memberships,
   };
 }
@@ -85,9 +104,39 @@ export async function updateCurrentProfile(name: string, avatarUrl: string) {
   const current = await account.get();
   const nextName = name.trim();
   if (!nextName) throw new Error('姓名不能为空');
+  const normalizedAvatar = normalizeAvatarUrl(avatarUrl);
+  if (avatarUrl.trim() && !normalizedAvatar)
+    throw new Error('头像仅支持内置头像或 Appwrite 托管的 HTTPS 地址');
   if (nextName !== current.name) await account.updateName({ name: nextName });
   await account.updatePrefs({
-    prefs: { ...(current.prefs as Record<string, unknown>), avatarUrl: avatarUrl.trim() || null },
+    prefs: { ...(current.prefs as Record<string, unknown>), avatarUrl: normalizedAvatar },
   });
   return getCurrentIdentity();
+}
+
+export async function createOrganization(name: string) {
+  const normalized = name.trim();
+  if (!normalized) throw new Error('团队名称不能为空');
+  const team = await teams.create({
+    teamId: ID.unique(),
+    name: normalized,
+    roles: ['owner', 'admin'],
+  });
+  return team.$id;
+}
+
+export async function inviteOrganizationMember(
+  organizationId: string,
+  email: string,
+  role: 'member' | 'admin',
+  redirectUrl: string,
+) {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) throw new Error('请输入有效邮箱');
+  await teams.createMembership({
+    teamId: organizationId,
+    email: normalizedEmail,
+    roles: [role],
+    url: redirectUrl,
+  });
 }

@@ -53,6 +53,7 @@ export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
           variant="ghost"
           size="sm"
           onClick={() => void logout()}
+          aria-label="退出当前账号"
           className="h-9 gap-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
         >
           <LogOut className="h-4 w-4" />

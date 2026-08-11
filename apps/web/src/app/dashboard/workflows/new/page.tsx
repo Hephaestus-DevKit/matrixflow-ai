@@ -6,6 +6,8 @@ import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
+import { errorMessage } from '@/lib/errors';
 
 const DEFAULT_DSL = {
   nodes: [
@@ -17,10 +19,18 @@ const DEFAULT_DSL = {
 
 export default function NewWorkflowPage() {
   const [name, setName] = useState('');
+  const [pending, setPending] = useState(false);
   const router = useRouter();
   async function create() {
-    await apiClient.post('/workflows', { name, dsl: DEFAULT_DSL });
-    router.push('/dashboard/workflows');
+    setPending(true);
+    try {
+      await apiClient.post('/workflows', { name: name.trim(), description: '', dsl: DEFAULT_DSL });
+      router.push('/dashboard/workflows');
+    } catch (error) {
+      toast.error(errorMessage(error, '工作流创建失败'));
+    } finally {
+      setPending(false);
+    }
   }
   return (
     <form
@@ -32,11 +42,11 @@ export default function NewWorkflowPage() {
     >
       <h1 className="text-xl font-bold">新建工作流</h1>
       <div className="space-y-2">
-        <Label>名称</Label>
-        <Input value={name} onChange={(e) => setName(e.target.value)} />
+        <Label htmlFor="workflow-name">名称</Label>
+        <Input id="workflow-name" value={name} onChange={(e) => setName(e.target.value)} />
       </div>
-      <Button type="submit" disabled={!name}>
-        创建
+      <Button type="submit" disabled={!name.trim() || pending}>
+        {pending ? '创建中…' : '创建'}
       </Button>
     </form>
   );

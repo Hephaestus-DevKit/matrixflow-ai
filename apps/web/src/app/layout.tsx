@@ -2,12 +2,23 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Providers } from './providers';
 import { Toaster } from 'sonner';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://matrixflow-ai.vercel.app'),
   applicationName: 'MatrixFlow AI',
   title: { default: 'MatrixFlow AI — AI 员工操作系统', template: '%s | MatrixFlow AI' },
-  description:
-    '给中小企业雇一整支 AI 团队。跨境电商 AI 内容工厂 + AI 员工工作台 + 工作流 + 模板市场。',
+  description: '面向跨境团队的 AI 内容、知识库、AI 员工与可追踪工作流平台。',
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    locale: 'zh_CN',
+    siteName: 'MatrixFlow AI',
+    title: 'MatrixFlow AI — 团队 AI 运营工作台',
+    description: '让内容、知识与工作流在一个安全的团队空间中协作。',
+  },
+  twitter: { card: 'summary_large_image' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -23,6 +34,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           {children}
           <Toaster richColors position="top-right" />
+          <Analytics />
+          <SpeedInsights />
         </Providers>
       </body>
     </html>

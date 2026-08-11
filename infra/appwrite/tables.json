@@ -3,7 +3,7 @@
     "$id": "agents",
     "databaseId": "matrixflow",
     "name": "Agents",
-    "$permissions": ["create(\"users/verified\")"],
+    "$permissions": [],
     "rowSecurity": true,
     "enabled": true,
     "columns": [
@@ -71,7 +71,7 @@
     "$id": "agent_runs",
     "databaseId": "matrixflow",
     "name": "Agent runs",
-    "$permissions": ["create(\"users/verified\")"],
+    "$permissions": [],
     "rowSecurity": true,
     "enabled": true,
     "columns": [
@@ -155,7 +155,7 @@
     "$id": "content_projects",
     "databaseId": "matrixflow",
     "name": "Content projects",
-    "$permissions": ["create(\"users/verified\")"],
+    "$permissions": [],
     "rowSecurity": true,
     "enabled": true,
     "columns": [
@@ -198,7 +198,7 @@
     "$id": "content_items",
     "databaseId": "matrixflow",
     "name": "Content items",
-    "$permissions": ["create(\"users/verified\")"],
+    "$permissions": [],
     "rowSecurity": true,
     "enabled": true,
     "columns": [
@@ -253,7 +253,7 @@
     "$id": "knowledge_bases",
     "databaseId": "matrixflow",
     "name": "Knowledge bases",
-    "$permissions": ["create(\"users/verified\")"],
+    "$permissions": [],
     "rowSecurity": true,
     "enabled": true,
     "columns": [
@@ -295,7 +295,7 @@
     "$id": "knowledge_documents",
     "databaseId": "matrixflow",
     "name": "Knowledge documents",
-    "$permissions": ["create(\"users/verified\")"],
+    "$permissions": [],
     "rowSecurity": true,
     "enabled": true,
     "columns": [
@@ -366,7 +366,7 @@
     "$id": "workflows",
     "databaseId": "matrixflow",
     "name": "Workflows",
-    "$permissions": ["create(\"users/verified\")"],
+    "$permissions": [],
     "rowSecurity": true,
     "enabled": true,
     "columns": [
@@ -417,10 +417,63 @@
     ]
   },
   {
+    "$id": "workflow_versions",
+    "databaseId": "matrixflow",
+    "name": "Workflow versions",
+    "$permissions": [],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "workflowId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "version",
+        "type": "integer",
+        "required": true,
+        "min": 1
+      },
+      {
+        "key": "dsl",
+        "type": "longtext",
+        "required": true
+      },
+      {
+        "key": "createdBy",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      }
+    ],
+    "indexes": [
+      {
+        "key": "workflow_versions_unique",
+        "type": "unique",
+        "columns": ["workflowId", "version"],
+        "orders": ["ASC", "ASC"]
+      },
+      {
+        "key": "workflow_versions_org",
+        "type": "key",
+        "columns": ["organizationId", "workflowId"],
+        "orders": ["ASC", "ASC"]
+      }
+    ]
+  },
+  {
     "$id": "workflow_runs",
     "databaseId": "matrixflow",
     "name": "Workflow runs",
-    "$permissions": ["create(\"users/verified\")"],
+    "$permissions": [],
     "rowSecurity": true,
     "enabled": true,
     "columns": [
@@ -501,7 +554,7 @@
     "$id": "customers",
     "databaseId": "matrixflow",
     "name": "Customers",
-    "$permissions": ["create(\"users/verified\")"],
+    "$permissions": [],
     "rowSecurity": true,
     "enabled": true,
     "columns": [
@@ -569,7 +622,7 @@
     "$id": "leads",
     "databaseId": "matrixflow",
     "name": "Leads",
-    "$permissions": ["create(\"users/verified\")"],
+    "$permissions": [],
     "rowSecurity": true,
     "enabled": true,
     "columns": [
@@ -626,7 +679,7 @@
     "$id": "conversations",
     "databaseId": "matrixflow",
     "name": "Conversations",
-    "$permissions": ["create(\"users/verified\")"],
+    "$permissions": [],
     "rowSecurity": true,
     "enabled": true,
     "columns": [
@@ -675,7 +728,7 @@
     "$id": "messages",
     "databaseId": "matrixflow",
     "name": "Conversation messages",
-    "$permissions": ["create(\"users/verified\")"],
+    "$permissions": [],
     "rowSecurity": true,
     "enabled": true,
     "columns": [
@@ -716,7 +769,7 @@
     "$id": "marketplace_items",
     "databaseId": "matrixflow",
     "name": "Marketplace items",
-    "$permissions": ["create(\"users/verified\")"],
+    "$permissions": [],
     "rowSecurity": true,
     "enabled": true,
     "columns": [
@@ -789,7 +842,7 @@
     "$id": "marketplace_purchases",
     "databaseId": "matrixflow",
     "name": "Marketplace purchases",
-    "$permissions": ["create(\"users/verified\")"],
+    "$permissions": [],
     "rowSecurity": true,
     "enabled": true,
     "columns": [
@@ -832,7 +885,7 @@
     "$id": "marketplace_reviews",
     "databaseId": "matrixflow",
     "name": "Marketplace reviews",
-    "$permissions": ["create(\"users/verified\")"],
+    "$permissions": [],
     "rowSecurity": true,
     "enabled": true,
     "columns": [
@@ -874,7 +927,7 @@
     "$id": "usage_records",
     "databaseId": "matrixflow",
     "name": "Usage records",
-    "$permissions": ["create(\"users/verified\")"],
+    "$permissions": [],
     "rowSecurity": true,
     "enabled": true,
     "columns": [
@@ -914,6 +967,12 @@
         "type": "key",
         "columns": ["organizationId", "metric"],
         "orders": ["ASC", "ASC"]
+      },
+      {
+        "key": "usage_org_metric_time",
+        "type": "key",
+        "columns": ["organizationId", "metric", "recordedAt"],
+        "orders": ["ASC", "ASC", "DESC"]
       }
     ]
   },
@@ -921,7 +980,7 @@
     "$id": "audit_logs",
     "databaseId": "matrixflow",
     "name": "Audit logs",
-    "$permissions": ["create(\"users/verified\")"],
+    "$permissions": [],
     "rowSecurity": true,
     "enabled": true,
     "columns": [

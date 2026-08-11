@@ -7,11 +7,19 @@ import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { AiReply, CustomerDetail } from '@matrixflow/shared';
+import { toast } from 'sonner';
+import { errorMessage } from '@/lib/errors';
+import { ErrorState, PageLoader } from '@/components/ui/states';
 
 export default function CustomerDetailPage() {
   const { id } = useParams();
   const [reply, setReply] = useState('');
-  const { data: c } = useQuery({
+  const {
+    data: c,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['customer', id],
     queryFn: () => apiClient.get<CustomerDetail>(`/crm/customers/${id}`),
     enabled: !!id,
@@ -22,7 +30,12 @@ export default function CustomerDetailPage() {
       conv
         ? apiClient.post(`/crm/conversations/${conv.id}/messages`, { role: 'agent', content })
         : Promise.reject(new Error('Conversation not found')),
-    onSuccess: () => setReply(''),
+    onSuccess: async () => {
+      setReply('');
+      await refetch();
+      toast.success('已添加内部对话记录');
+    },
+    onError: (error: unknown) => toast.error(errorMessage(error, '无法添加对话记录')),
   });
   const aiReply = useMutation({
     mutationFn: () =>
@@ -30,9 +43,12 @@ export default function CustomerDetailPage() {
         ? apiClient.post<AiReply>(`/crm/conversations/${conv.id}/ai-reply`, {})
         : Promise.reject(new Error('Conversation not found')),
     onSuccess: (response) => setReply(response.reply ?? JSON.stringify(response)),
+    onError: (error: unknown) => toast.error(errorMessage(error, '无法生成回复建议')),
   });
 
-  if (!c) return <p className="text-muted-foreground">加载中...</p>;
+  if (isLoading) return <PageLoader label="正在加载客户详情" />;
+  if (isError) return <ErrorState onRetry={() => void refetch()} />;
+  if (!c) return <ErrorState message="未找到该客户，或当前团队无权访问。" />;
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <div className="space-y-4">
@@ -61,14 +77,17 @@ export default function CustomerDetailPage() {
       </div>
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">对话</h2>
+          <div>
+            <h2 className="text-sm font-semibold">内部对话</h2>
+            <p className="mt-1 text-xs text-muted-foreground">记录不会自动发送到外部渠道。</p>
+          </div>
           <Button
             size="sm"
             variant="outline"
             onClick={() => aiReply.mutate()}
             disabled={aiReply.isPending}
           >
-            AI 回复建议
+            生成 AI 回复建议
           </Button>
         </div>
         <div className="max-h-96 space-y-2 overflow-auto rounded-lg border border-border p-3">
@@ -80,11 +99,14 @@ export default function CustomerDetailPage() {
               <span className="rounded bg-muted px-2 py-1 inline-block">{message.content}</span>
             </div>
           ))}
+          {(!conv?.messages || conv.messages.length === 0) && (
+            <p className="py-8 text-center text-xs text-muted-foreground">暂无内部对话记录。</p>
+          )}
         </div>
         <div className="flex gap-2">
           <Input value={reply} onChange={(e) => setReply(e.target.value)} placeholder="回复..." />
-          <Button onClick={() => send.mutate(reply)} disabled={!reply}>
-            发送
+          <Button onClick={() => send.mutate(reply)} disabled={!reply.trim() || send.isPending}>
+            {send.isPending ? '添加中…' : '添加记录'}
           </Button>
         </div>
       </div>

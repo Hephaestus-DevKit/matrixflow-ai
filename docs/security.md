@@ -8,11 +8,14 @@
 - 密码至少 8 位并要求大小写字母和数字；启用 5 次密码历史、字典与个人信息检查。
 - 会话有效期 14 天、每用户最多 10 个会话，启用新会话提醒和改密后会话失效。
 - Appwrite Team 是唯一租户边界；业务行和文件使用团队权限，函数再次验证成员关系。
+- 所有业务表关闭客户端创建权限；创建、更新、删除统一经过 Function 的角色检查与 Zod 字段白名单。
+- AI 调用执行每组织月度额度和分钟级速率限制；关键写入与执行写入 `audit_logs`。
 - 浏览器只包含公开 endpoint/project ID；AI 密钥和部署 key 不进入客户端 bundle。
 - 云函数限制请求体、Prompt、文档文本、DAG 大小、执行时间和错误信息长度。
 - 文档解析仅接受 PDF、DOCX、TXT、Markdown、CSV；删除记录时同步删除对应文件。
 - AI Provider 未配置或不可用时失败关闭，不返回模拟内容。
 - CI 执行格式、类型、lint、单测、生产构建、依赖审计；CodeQL 扫描 JavaScript/TypeScript。
+- Web 设置 CSP、拒绝嵌入、内容类型保护、严格来源策略、权限策略和 HSTS；头像限制为内置资源或 Appwrite 托管地址。
 
 ## 部署要求
 
@@ -20,6 +23,7 @@
 - `GLM_API_KEY` / `OPENAI_API_KEY` 只放在 Appwrite Function secret variables。
 - Appwrite Web Platform 只登记实际域名与本地开发主机。
 - 生产变更前运行真实账户 smoke test，随后删除测试数据和测试会话。
+- smoke test 必须验证浏览器等价会话不能直接创建业务行，而 Function 可以创建并由团队成员读取。
 - GitHub、Vercel 和 Appwrite 的维护者账户应启用 MFA。
 
 ## 明确边界

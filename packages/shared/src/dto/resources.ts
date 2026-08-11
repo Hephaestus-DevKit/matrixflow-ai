@@ -131,6 +131,7 @@ export interface KnowledgeDocumentSummary {
 export interface KnowledgeBaseSummary {
   id: string;
   name: string;
+  description?: string | null;
   _count?: { documents: number };
 }
 

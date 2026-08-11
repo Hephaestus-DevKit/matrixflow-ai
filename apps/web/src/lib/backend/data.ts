@@ -49,17 +49,6 @@ function decodeRow(row: Row): Data {
   return output;
 }
 
-function encodeData(data: Data): Data {
-  return Object.fromEntries(
-    Object.entries(data)
-      .filter(([, value]) => value !== undefined)
-      .map(([key, value]) => [
-        key,
-        JSON_COLUMNS.has(key) && typeof value !== 'string' ? JSON.stringify(value) : value,
-      ]),
-  );
-}
-
 function teamPermissions(organizationId: string) {
   return [
     Permission.read(Role.team(organizationId)),
@@ -79,17 +68,24 @@ export async function listRows(
   organizationField = 'organizationId',
 ) {
   const organizationId = getOrganizationContext();
-  const result = await tablesDB.listRows<Row>({
-    databaseId: DATABASE_ID,
-    tableId,
-    queries: [
-      Query.equal(organizationField, organizationId),
-      ...queries,
-      Query.orderDesc('$createdAt'),
-      Query.limit(100),
-    ],
-  });
-  return result.rows.map(decodeRow);
+  const rows: Data[] = [];
+  const hasOrdering = queries.some((query) => query.includes('order'));
+  for (let offset = 0; offset < 2_000; offset += 100) {
+    const result = await tablesDB.listRows<Row>({
+      databaseId: DATABASE_ID,
+      tableId,
+      queries: [
+        Query.equal(organizationField, organizationId),
+        ...queries,
+        ...(hasOrdering ? [] : [Query.orderDesc('$createdAt')]),
+        Query.limit(100),
+        Query.offset(offset),
+      ],
+    });
+    rows.push(...result.rows.map(decodeRow));
+    if (result.rows.length < 100 || rows.length >= result.total) break;
+  }
+  return rows;
 }
 
 export async function getRow(tableId: string, rowId: string, organizationField = 'organizationId') {
@@ -97,45 +93,6 @@ export async function getRow(tableId: string, rowId: string, organizationField =
   const row = decodeRow(await tablesDB.getRow<Row>({ databaseId: DATABASE_ID, tableId, rowId }));
   assertOwned(row, organizationId, organizationField);
   return row;
-}
-
-export async function createRow(tableId: string, data: Data, organizationField = 'organizationId') {
-  const organizationId = getOrganizationContext();
-  return decodeRow(
-    await tablesDB.createRow<Row>({
-      databaseId: DATABASE_ID,
-      tableId,
-      rowId: ID.unique(),
-      data: encodeData({ ...data, [organizationField]: organizationId }),
-      permissions: teamPermissions(organizationId),
-    }),
-  );
-}
-
-export async function updateRow(
-  tableId: string,
-  rowId: string,
-  data: Data,
-  organizationField = 'organizationId',
-) {
-  await getRow(tableId, rowId, organizationField);
-  return decodeRow(
-    await tablesDB.updateRow<Row>({
-      databaseId: DATABASE_ID,
-      tableId,
-      rowId,
-      data: encodeData(data),
-    }),
-  );
-}
-
-export async function deleteRow(
-  tableId: string,
-  rowId: string,
-  organizationField = 'organizationId',
-) {
-  await getRow(tableId, rowId, organizationField);
-  await tablesDB.deleteRow({ databaseId: DATABASE_ID, tableId, rowId });
 }
 
 export async function uploadKnowledgeFile(knowledgeBaseId: string, form: FormData) {
@@ -152,22 +109,29 @@ export async function uploadKnowledgeFile(knowledgeBaseId: string, form: FormDat
     file,
     permissions,
   });
+  let document: Data | undefined;
   try {
-    const document = await createRow(TABLES.knowledgeDocuments, {
+    document = await executeCore<Data>('/kb/documents', {
       knowledgeBaseId,
       title: file.name.slice(0, 255),
       fileId: uploaded.$id,
       mimeType: file.type || 'application/octet-stream',
       size: file.size,
-      status: 'UPLOADED',
     });
-    await executeCore('/kb/index', { documentId: document.id }).catch(() => undefined);
-    return document;
   } catch (error) {
     await storage
       .deleteFile({ bucketId: KNOWLEDGE_BUCKET_ID, fileId: uploaded.$id })
       .catch(() => undefined);
     throw error;
+  }
+  try {
+    return await executeCore<Data>('/kb/index', { documentId: document.id });
+  } catch (error) {
+    return {
+      ...document,
+      status: 'ERROR',
+      error: error instanceof Error ? error.message : '索引失败，请稍后重试',
+    };
   }
 }
 

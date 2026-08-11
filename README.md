@@ -8,25 +8,28 @@
 ## 当前能力
 
 - Appwrite Email/Password 登录、邮箱验证、团队成员关系和组织隔离。
-- AI 内容生成、CRM 回复、知识库问答与用量记录；未配置模型密钥时明确报错，不伪造结果。
-- PDF、DOCX、TXT、Markdown、CSV 文件上传、解析与检索。
-- 可视化 DAG 工作流，支持有界校验、真实条件分支、运行日志和失败状态。
-- Agent、内容、CRM、市场、账单、分析和管理界面的统一响应式设计。
-- Appwrite 配置即代码、幂等资源初始化脚本、云函数测试和真实云端 smoke test。
+- 服务端角色校验、字段白名单、浏览器禁写数据表、月度额度、分钟级限流和审计日志。
+- AI 内容生成、Agent 运行、CRM 回复建议、知识库问答与本月用量记录；未配置模型密钥时明确显示不可用，不伪造结果。
+- PDF、DOCX、TXT、Markdown、CSV 文件上传、解析、相关片段检索、失败重试与同步删除。
+- 可视化 DAG 工作流，支持不可变版本记录、有界校验、真实条件分支、运行日志和级联删除。
+- 统一的响应式工作台、AI 就绪状态、首次运行清单、团队创建与邮件邀请。
+- Appwrite 配置即代码、幂等资源更新、独立后端部署流水线、云函数安全测试和真实 smoke test。
 
 ## 架构
 
 ```text
 Browser / Next.js
   ├─ Account + Teams ───────────── Appwrite Auth
-  ├─ typed backend router ──────── Appwrite TablesDB / Storage
-  └─ protected executions ──────── MatrixFlow Core Function
+  ├─ permission-filtered reads ─── Appwrite TablesDB / Storage
+  └─ all business writes ───────── MatrixFlow Core Function
+                                      ├─ membership + role validation
+                                      ├─ Zod field allowlists + audit
                                       ├─ GLM or OpenAI
-                                      ├─ document parsing / RAG
-                                      └─ bounded workflow runtime
+                                      ├─ document parsing / chunk retrieval
+                                      └─ quota-bounded workflow runtime
 ```
 
-租户边界以 Appwrite Team ID 为唯一组织标识；业务行和文件均使用团队权限，云函数还会在执行前再次校验成员关系。详细说明见 [架构文档](docs/architecture.md) 和 [安全文档](docs/security.md)。
+租户边界以 Appwrite Team ID 为唯一组织标识；浏览器只能读取已有团队行，业务写入全部经过云函数的成员、角色与字段校验。详细说明见 [架构文档](docs/architecture.md) 和 [安全文档](docs/security.md)。
 
 ## 仓库结构
 
@@ -73,12 +76,13 @@ MATRIXFLOW_DEPLOY_KEY=... pnpm appwrite:provision
 appwrite push functions
 ```
 
-部署后应立即撤销临时 key，并运行 `apps/functions/matrixflow-core/scripts/smoke.mjs` 验证登录、团队权限、数据行权限和函数健康状态。发布、回滚和配置清单见 [部署手册](docs/deployment.md)。
+部署后应立即撤销临时 key，并运行 `apps/functions/matrixflow-core/scripts/smoke.mjs` 验证登录、团队权限、浏览器禁写、服务端写入和函数健康状态。仓库还提供 `.github/workflows/appwrite.yml`，在配置短期部署密钥后自动同步后端。发布、回滚和配置清单见 [部署手册](docs/deployment.md)。
 
 ## 能力边界
 
 - 邮件与任意 Webhook 节点在安全连接器配置前会明确失败。
 - 市场支付仍为产品边界，不会生成虚假订单或扣款。
-- 知识库当前采用受限的关键词上下文检索，适合中小型资料集；大规模语义检索需另行接入向量服务。
+- 知识库当前采用分块关键词相关性检索与定位引用，适合中小型资料集；大规模语义检索需另行接入向量服务。
+- 模板市场、外部 CRM 渠道和付费结账均以预览状态展示，不会伪造交易或发送消息。
 
 贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)，漏洞请按 [SECURITY.md](SECURITY.md) 私下报告。

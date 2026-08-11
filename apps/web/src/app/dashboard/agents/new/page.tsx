@@ -44,7 +44,7 @@ const TEMPLATES = [
     icon: Headphones,
     color: 'text-info',
     bg: 'bg-info/5',
-    desc: '深度整合商品知识库，7x24小时全天候多语言精准解答买家疑问。',
+    desc: '基于团队知识库生成多语言客服回复建议，并保留可复核的运行记录。',
   },
   {
     id: 'tpl_seo',
@@ -53,7 +53,7 @@ const TEMPLATES = [
     icon: Search,
     color: 'text-warning',
     bg: 'bg-warning/5',
-    desc: '分析高热度长尾关键词，撰写契合 Google 搜索引擎的高权重博文。',
+    desc: '根据输入的关键词与商品资料生成可复核的 SEO 内容草稿。',
   },
   {
     id: 'tpl_sales',
@@ -62,7 +62,7 @@ const TEMPLATES = [
     icon: DollarSign,
     color: 'text-primary',
     bg: 'bg-primary/5',
-    desc: '自动挖掘潜在意向线索，生成高度定制化的开发信与二次跟进话术。',
+    desc: '根据客户资料生成个性化开发信与跟进话术，不会自动发送外部消息。',
   },
 ];
 
@@ -199,8 +199,11 @@ export default function NewAgentPage() {
             <Sparkles className="h-4 w-4" /> 自定义 AI 员工参数
           </h3>
           <div className="space-y-1.5">
-            <Label className="text-xs">岗位名称</Label>
+            <Label htmlFor="custom-agent-name" className="text-xs">
+              岗位名称
+            </Label>
             <Input
+              id="custom-agent-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. 站外引流专家"
@@ -208,8 +211,11 @@ export default function NewAgentPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">角色标识 (Role Identifier)</Label>
+            <Label htmlFor="custom-agent-role" className="text-xs">
+              角色标识
+            </Label>
             <Input
+              id="custom-agent-role"
               value={role}
               onChange={(e) => setRole(e.target.value)}
               placeholder="e.g. outreach_specialist"

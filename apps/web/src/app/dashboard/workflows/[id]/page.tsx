@@ -28,6 +28,7 @@ import type {
   WorkflowRunAccepted,
 } from '@matrixflow/shared';
 import { errorMessage } from '@/lib/errors';
+import { toast } from 'sonner';
 
 interface EditorNodeData {
   label: string;
@@ -42,9 +43,11 @@ interface EditorEdgeData {
 
 const NODE_TYPES: Array<{ type: WorkflowNode['type']; label: string; desc: string }> = [
   { type: 'trigger', label: '手动触发器 (Trigger)', desc: '作为流的起点接收初始参数输入。' },
-  { type: 'ai', label: 'AI 大模型节点 (AI)', desc: '调用 Zhipu GLM 生成文案或执行分类推理。' },
-  { type: 'email', label: '邮件通知节点 (Email)', desc: '通过可插拔邮件适配器发送通知。' },
-  { type: 'webhook', label: '网络钩子节点 (Webhook)', desc: '向外部系统发送 HTTP POST 数据请求。' },
+  {
+    type: 'ai',
+    label: 'AI 模型节点',
+    desc: '调用项目管理员配置的 AI Provider 生成内容或执行分类。',
+  },
   {
     type: 'transform',
     label: '数据转换节点 (Transform)',
@@ -181,6 +184,14 @@ export default function WorkflowEditorPage() {
       alert(`保存失败: ${errorMessage(error)}`);
     },
   });
+  const deleteMutation = useMutation({
+    mutationFn: () => apiClient.del(`/workflows/${id}`),
+    onSuccess: () => {
+      toast.success('工作流及其版本和运行记录已删除');
+      router.push('/dashboard/workflows');
+    },
+    onError: (error: unknown) => toast.error(errorMessage(error, '工作流删除失败')),
+  });
 
   // When node is clicked, show editor pane
   const onNodeClick = (_event: React.MouseEvent, node: EditorNode) => {
@@ -305,6 +316,18 @@ export default function WorkflowEditorPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-destructive"
+            onClick={() => {
+              if (window.confirm('确定删除该工作流、全部版本和运行记录吗？'))
+                deleteMutation.mutate();
+            }}
+            disabled={deleteMutation.isPending}
+          >
+            <Trash2 className="h-3.5 w-3.5" /> 删除
+          </Button>
           <Button
             variant="outline"
             size="sm"

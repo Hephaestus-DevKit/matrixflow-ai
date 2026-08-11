@@ -4,6 +4,8 @@ import { clearAppwriteCache, clearOrganizationContext } from '@/lib/api-client';
 import { setOrganizationContext } from '@/lib/backend/organization-context';
 import {
   getCurrentIdentity,
+  createOrganization,
+  inviteOrganizationMember,
   updateCurrentProfile,
   type MatrixFlowUser,
 } from '@/lib/backend/session';
@@ -25,6 +27,8 @@ interface AuthState {
   fetchMe: () => Promise<User>;
   setOrg: (orgId: string) => void;
   hasPerm: (action: string) => boolean;
+  createTeam: (name: string) => Promise<void>;
+  inviteMember: (email: string, role: 'member' | 'admin') => Promise<void>;
 }
 
 interface AppwriteErrorLike {
@@ -170,7 +174,27 @@ export const useAuth = create<AuthState>()(
         const m = user?.memberships.find((m) => m.organizationId === organizationId);
         return m?.permissions.includes(action) ?? false;
       },
+
+      createTeam: async (name) => {
+        const teamId = await createOrganization(name);
+        await get().fetchMe();
+        get().setOrg(teamId);
+      },
+
+      inviteMember: async (email, role) => {
+        const organizationId = get().organizationId;
+        if (!organizationId) throw new Error('请先选择团队');
+        await inviteOrganizationMember(
+          organizationId,
+          email,
+          role,
+          `${window.location.origin}/invite`,
+        );
+      },
     }),
-    { name: 'mfa-auth', partialize: (s) => ({ organizationId: s.organizationId }) },
+    {
+      name: 'mfa-auth',
+      partialize: (state) => ({ user: state.user, organizationId: state.organizationId }),
+    },
   ),
 );

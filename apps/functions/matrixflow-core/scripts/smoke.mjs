@@ -4,8 +4,6 @@ import {
   ExecutionMethod,
   Functions,
   ID,
-  Permission,
-  Role,
   TablesDB,
   Teams,
 } from 'node-appwrite';
@@ -50,48 +48,18 @@ try {
     teamList = await teams.list();
   }
   const teamId = teamList.teams[0].$id;
-  const permissions = [
-    Permission.read(Role.team(teamId)),
-    Permission.update(Role.team(teamId)),
-    Permission.delete(Role.team(teamId, 'owner')),
-    Permission.delete(Role.team(teamId, 'admin')),
-  ];
-
   const tables = new TablesDB(client);
-  const row = await tables.createRow({
-    databaseId: 'matrixflow',
-    tableId: 'agents',
-    rowId: ID.unique(),
-    data: {
-      organizationId: teamId,
-      name: 'MatrixFlow smoke test',
-      role: 'tester',
-      model: 'glm-4-plus',
-      status: 'DRAFT',
-      systemPrompt: '{}',
-      skills: '[]',
-      configuration: '{}',
-    },
-    permissions,
-  });
-  const listed = await tables.listRows({
-    databaseId: 'matrixflow',
-    tableId: 'agents',
-  });
-  if (!listed.rows.some((candidate) => candidate.$id === row.$id)) {
-    throw new Error('Created row was not visible through team permissions');
-  }
-  await tables.deleteRow({ databaseId: 'matrixflow', tableId: 'agents', rowId: row.$id });
-
   const functions = new Functions(client);
-  const health = await functions.createExecution({
-    functionId: 'matrixflow-core',
-    body: JSON.stringify({ organizationId: teamId }),
-    async: false,
-    xpath: '/health',
-    method: ExecutionMethod.POST,
-    headers: { 'content-type': 'application/json' },
-  });
+  const execute = (xpath, body = {}, method = ExecutionMethod.POST) =>
+    functions.createExecution({
+      functionId: 'matrixflow-core',
+      body: JSON.stringify({ ...body, organizationId: teamId }),
+      async: false,
+      xpath,
+      method,
+      headers: { 'content-type': 'application/json' },
+    });
+  const health = await execute('/health');
   if (health.responseStatusCode !== 200) {
     throw new Error(`Core health check failed with ${health.responseStatusCode}`);
   }
@@ -99,7 +67,37 @@ try {
   if (healthPayload?.data?.architecture !== 'appwrite-native') {
     throw new Error('Core health response did not identify the Appwrite-native architecture');
   }
-  process.stdout.write('smoke test passed: auth, team, row permissions, function\n');
+
+  let directCreateWasDenied = false;
+  try {
+    await tables.createRow({
+      databaseId: 'matrixflow',
+      tableId: 'agents',
+      rowId: ID.unique(),
+      data: { organizationId: teamId, name: 'must fail', role: 'tester' },
+    });
+  } catch (error) {
+    directCreateWasDenied = error?.code === 401 || error?.code === 403;
+  }
+  if (!directCreateWasDenied) throw new Error('Browser-equivalent direct row creation was not denied');
+
+  const created = await execute('/agents', {
+    name: 'MatrixFlow smoke test',
+    role: 'tester',
+    systemPrompt: {},
+    skills: [],
+    tools: [],
+  });
+  if (created.responseStatusCode !== 200)
+    throw new Error(`Secure agent creation failed with ${created.responseStatusCode}`);
+  const rowId = JSON.parse(created.responseBody)?.data?.id;
+  const listed = await tables.listRows({ databaseId: 'matrixflow', tableId: 'agents' });
+  if (!listed.rows.some((candidate) => candidate.$id === rowId))
+    throw new Error('Function-created row was not visible through team permissions');
+  const deleted = await execute(`/agents/${rowId}`, {}, ExecutionMethod.DELETE);
+  if (deleted.responseStatusCode !== 200) throw new Error('Secure agent deletion failed');
+
+  process.stdout.write('smoke test passed: auth, team, server-only writes, row reads, function\n');
 } finally {
   await account.deleteSession({ sessionId: 'current' }).catch(() => undefined);
 }

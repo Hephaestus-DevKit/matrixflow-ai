@@ -16,7 +16,7 @@ const configuration = {
   runtime: Runtime.Node22,
   execute: ['users/verified'],
   events: [],
-  timeout: 900,
+  timeout: 120,
   enabled: true,
   logging: true,
   entrypoint: 'src/main.js',
@@ -37,6 +37,8 @@ const existingVariables = await functions.listVariables({ functionId });
 for (const [variableKey, value] of [
   ['MATRIXFLOW_DATABASE_ID', 'matrixflow'],
   ['MATRIXFLOW_KNOWLEDGE_BUCKET_ID', 'knowledge-files'],
+  ['MATRIXFLOW_AI_MONTHLY_LIMIT', '100'],
+  ['MATRIXFLOW_AI_PER_MINUTE_LIMIT', '20'],
 ]) {
   const existing = existingVariables.variables.find((variable) => variable.key === variableKey);
   if (existing) {

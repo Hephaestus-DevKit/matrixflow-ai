@@ -21,6 +21,7 @@ export default function RegisterPage() {
   const [userId, setUserId] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [error, setError] = useState('');
+  const [accepted, setAccepted] = useState(false);
 
   const { registerWithOtp, verifyOtp, loading } = useAuth();
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function RegisterPage() {
 
   async function handleRegister(event?: React.FormEvent) {
     event?.preventDefault();
-    if (!email.trim() || !name.trim() || !password) return;
+    if (!email.trim() || !name.trim() || !password || !accepted) return;
     if (password.length < 8) {
       setError('密码长度至少为 8 位');
       return;
@@ -135,9 +136,37 @@ export default function RegisterPage() {
           </div>
 
           <AuthMessage tone="info">已注册但未完成验证？继续使用同一邮箱即可恢复验证。</AuthMessage>
+          <label className="flex items-start gap-2.5 text-xs leading-5 text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={accepted}
+              onChange={(event) => setAccepted(event.target.checked)}
+              required
+              className="mt-1 h-4 w-4 rounded border-input accent-primary"
+            />
+            <span>
+              我已阅读并同意{' '}
+              <Link
+                href="/terms"
+                target="_blank"
+                className="font-semibold text-primary hover:underline"
+              >
+                服务条款
+              </Link>{' '}
+              与{' '}
+              <Link
+                href="/privacy"
+                target="_blank"
+                className="font-semibold text-primary hover:underline"
+              >
+                隐私政策
+              </Link>
+              。
+            </span>
+          </label>
           {error && <AuthMessage>{error}</AuthMessage>}
 
-          <Button type="submit" className="h-11 w-full rounded-xl" disabled={loading}>
+          <Button type="submit" className="h-11 w-full rounded-xl" disabled={loading || !accepted}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {loading ? '正在创建账号...' : '发送邮箱验证码'}
           </Button>

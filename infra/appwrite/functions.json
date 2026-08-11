@@ -9,7 +9,7 @@
     "execute": ["users/verified"],
     "enabled": true,
     "logging": true,
-    "timeout": 900,
+    "timeout": 120,
     "scopes": [
       "teams.read",
       "rows.read",
@@ -20,7 +20,9 @@
     ],
     "vars": {
       "MATRIXFLOW_DATABASE_ID": "matrixflow",
-      "MATRIXFLOW_KNOWLEDGE_BUCKET_ID": "knowledge-files"
+      "MATRIXFLOW_KNOWLEDGE_BUCKET_ID": "knowledge-files",
+      "MATRIXFLOW_AI_MONTHLY_LIMIT": "100",
+      "MATRIXFLOW_AI_PER_MINUTE_LIMIT": "20"
     },
     "ignore": "node_modules,.git,*.log"
   }

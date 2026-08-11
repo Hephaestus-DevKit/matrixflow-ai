@@ -1,18 +1,14 @@
 'use client';
 
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, CreditCard, Sparkles } from 'lucide-react';
-import { toast } from 'sonner';
 import type { BillingPlan, SubscriptionSummary, UsageSummary } from '@matrixflow/shared';
 import { apiClient } from '@/lib/api-client';
-import { errorMessage } from '@/lib/errors';
 import { Button } from '@/components/ui/button';
 import { ErrorState, LoadingCards } from '@/components/ui/states';
 import { PageHeader, SectionHeading } from '@/components/ui/page';
 
 export default function BillingPage() {
-  const [subscribing, setSubscribing] = useState<string | null>(null);
   const plans = useQuery({
     queryKey: ['plans'],
     queryFn: () => apiClient.get<BillingPlan[]>('/billing/plans'),
@@ -29,30 +25,12 @@ export default function BillingPage() {
   const isLoading = queries.some((query) => query.isLoading);
   const isError = queries.some((query) => query.isError);
 
-  async function subscribe(plan: BillingPlan) {
-    setSubscribing(plan.id);
-    try {
-      const result = await apiClient.post<{ checkoutUrl?: string }>('/billing/subscribe', {
-        planId: plan.id,
-      });
-      if (result.checkoutUrl) window.location.assign(result.checkoutUrl);
-      else {
-        toast.success(`已切换到 ${plan.name}`);
-        await current.refetch();
-      }
-    } catch (error: unknown) {
-      toast.error(errorMessage(error, '暂时无法更新套餐'));
-    } finally {
-      setSubscribing(null);
-    }
-  }
-
   return (
     <div className="space-y-8">
       <PageHeader
         eyebrow="Plans & usage"
         title="计费与套餐"
-        description="查看当前订阅、本月用量，并选择适合团队规模的套餐。"
+        description="查看免费测试额度与候补套餐；付费结账当前不会产生任何扣款。"
       />
       {isLoading ? (
         <LoadingCards count={3} />
@@ -70,9 +48,7 @@ export default function BillingPage() {
                 <p className="mt-0.5 text-sm font-bold">
                   {current.data?.plan?.name ?? '尚未订阅'}
                   {current.data && (
-                    <span className="ml-2 text-xs font-medium text-success">
-                      {current.data.status}
-                    </span>
+                    <span className="ml-2 text-xs font-medium text-success">测试中</span>
                   )}
                 </p>
               </div>
@@ -91,8 +67,8 @@ export default function BillingPage() {
           </section>
           <section className="space-y-4">
             <SectionHeading
-              title="选择套餐"
-              description="价格以美元计费；付费套餐将在支付服务配置后进入结账。"
+              title="套餐规划"
+              description="Free 已开放；Pro 与 Team 为候补方案，支付服务接入后再开放。"
             />
             <div className="grid gap-4 lg:grid-cols-3">
               {plans.data?.map((plan) => {
@@ -128,14 +104,9 @@ export default function BillingPage() {
                     <Button
                       className="mt-6 w-full"
                       variant={selected ? 'outline' : 'default'}
-                      disabled={selected || subscribing !== null}
-                      onClick={() => void subscribe(plan)}
+                      disabled
                     >
-                      {selected
-                        ? '正在使用'
-                        : subscribing === plan.id
-                          ? '正在处理…'
-                          : `选择 ${plan.name}`}
+                      {selected ? '正在使用' : '候补未开放'}
                     </Button>
                   </article>
                 );

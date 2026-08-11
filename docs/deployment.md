@@ -30,7 +30,9 @@ MATRIXFLOW_DEPLOY_KEY=... pnpm appwrite:provision
 appwrite push functions
 ```
 
-初始化脚本是幂等的，会创建或复用数据库、表、索引和文件桶。函数发布后，在 Appwrite Console 设置 `GLM_API_KEY` 或 `OPENAI_API_KEY`，再部署一个新版本使变量生效。
+初始化脚本是幂等的，会创建或更新数据库、表权限、列、索引和文件桶。函数发布后，在 Appwrite Console 设置 `GLM_API_KEY` 或 `OPENAI_API_KEY`，再部署一个新版本使变量生效。
+
+自动部署由 `.github/workflows/appwrite.yml` 提供。仓库 Secret `MATRIXFLOW_DEPLOY_KEY` 存在时，主分支的后端或基础设施变更会依次执行测试、Schema 更新、Function 部署和可选 smoke test；没有 Secret 时任务安全跳过。
 
 ## Web 发布
 
@@ -49,7 +51,7 @@ Appwrite Web Platform 同时登记生产域名和 `localhost`。向 `main` 推�
 
 1. 登录和邮箱验证状态；
 2. Appwrite Team 成员关系；
-3. 团队数据行读写和跨团队不可见；
+3. 客户端业务表创建被拒绝，Function 写入可被本团队读取；
 4. `matrixflow-core` 的 `/health`；
 5. 测试数据删除。
 

@@ -1,0 +1,52 @@
+name: Appwrite deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/functions/matrixflow-core/**'
+      - 'infra/appwrite/**'
+      - 'appwrite.config.json'
+      - '.github/workflows/appwrite.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: appwrite-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ secrets.MATRIXFLOW_DEPLOY_KEY != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MATRIXFLOW_DEPLOY_KEY: ${{ secrets.MATRIXFLOW_DEPLOY_KEY }}
+      MATRIXFLOW_APPWRITE_ENDPOINT: https://sgp.cloud.appwrite.io/v1
+      MATRIXFLOW_APPWRITE_PROJECT_ID: 6a43f0af000862e7b0ef
+      MATRIXFLOW_FUNCTION_ARCHIVE: ${{ github.workspace }}/matrixflow-core.tar.gz
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.14.0
+          cache: npm
+          cache-dependency-path: apps/functions/matrixflow-core/package-lock.json
+      - name: Install and verify function
+        working-directory: apps/functions/matrixflow-core
+        run: npm ci && npm run check && npm test
+      - name: Apply Appwrite schema
+        run: node apps/functions/matrixflow-core/scripts/provision.mjs
+      - name: Package function source
+        working-directory: apps/functions/matrixflow-core
+        run: tar --exclude=node_modules --exclude='*.log' -czf "$MATRIXFLOW_FUNCTION_ARCHIVE" .
+      - name: Deploy function
+        run: node apps/functions/matrixflow-core/scripts/deploy.mjs
+      - name: Smoke test
+        if: ${{ secrets.MATRIXFLOW_TEST_EMAIL != '' && secrets.MATRIXFLOW_TEST_PASSWORD != '' }}
+        env:
+          MATRIXFLOW_TEST_EMAIL: ${{ secrets.MATRIXFLOW_TEST_EMAIL }}
+          MATRIXFLOW_TEST_PASSWORD: ${{ secrets.MATRIXFLOW_TEST_PASSWORD }}
+        run: node apps/functions/matrixflow-core/scripts/smoke.mjs

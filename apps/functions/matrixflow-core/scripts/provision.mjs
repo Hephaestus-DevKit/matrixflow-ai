@@ -55,6 +55,14 @@ async function ensureTable(table) {
       enabled: table.enabled,
     });
   }
+  await tables.updateTable({
+    databaseId,
+    tableId: table.$id,
+    name: table.name,
+    permissions: table.$permissions,
+    rowSecurity: table.rowSecurity,
+    enabled: table.enabled,
+  });
 }
 
 function defaultArguments(column) {
@@ -140,6 +148,19 @@ async function ensureBucket(bucket) {
       transformations: false,
     });
   }
+  await storage.updateBucket({
+    bucketId: bucket.$id,
+    name: bucket.name,
+    permissions: bucket.$permissions,
+    fileSecurity: bucket.fileSecurity,
+    enabled: bucket.enabled,
+    maximumFileSize: bucket.maximumFileSize,
+    allowedFileExtensions: bucket.allowedFileExtensions,
+    compression: bucket.compression === 'gzip' ? Compression.Gzip : Compression.None,
+    encryption: bucket.encryption,
+    antivirus: bucket.antivirus,
+    transformations: false,
+  });
 }
 
 await ensureDatabase();

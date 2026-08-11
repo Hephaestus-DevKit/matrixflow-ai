@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/auth-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Key, LogOut, Check, Save, Sparkles, ShieldCheck } from 'lucide-react';
+import { Key, LogOut, Check, Save, Sparkles, ShieldCheck, Users, Plus, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { errorMessage } from '@/lib/errors';
@@ -26,13 +26,19 @@ function makeSvgAvatar(color: string): string {
 }
 
 export default function SettingsPage() {
-  const { user, organizationId, setOrg, updateProfile, logout } = useAuth();
+  const { user, organizationId, setOrg, updateProfile, logout, createTeam, inviteMember } =
+    useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'enterprise'>('profile');
   const [name, setName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [customAvatar, setCustomAvatar] = useState('');
   const [saving, setSaving] = useState(false);
+  const [teamName, setTeamName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<'member' | 'admin'>('member');
+  const [teamPending, setTeamPending] = useState(false);
   const membership = user?.memberships.find((item) => item.organizationId === organizationId);
+  const canInvite = membership?.role === 'owner' || membership?.role === 'admin';
 
   useEffect(() => {
     if (user) {
@@ -75,6 +81,34 @@ export default function SettingsPage() {
       setSaving(false);
     }
   };
+
+  async function handleCreateTeam(event: React.FormEvent) {
+    event.preventDefault();
+    setTeamPending(true);
+    try {
+      await createTeam(teamName);
+      setTeamName('');
+      toast.success('团队已创建并切换');
+    } catch (error) {
+      toast.error(errorMessage(error, '团队创建失败'));
+    } finally {
+      setTeamPending(false);
+    }
+  }
+
+  async function handleInvite(event: React.FormEvent) {
+    event.preventDefault();
+    setTeamPending(true);
+    try {
+      await inviteMember(inviteEmail, inviteRole);
+      setInviteEmail('');
+      toast.success('团队邀请已发送');
+    } catch (error) {
+      toast.error(errorMessage(error, '团队邀请发送失败'));
+    } finally {
+      setTeamPending(false);
+    }
+  }
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -201,13 +235,13 @@ export default function SettingsPage() {
               {/* Custom Input */}
               <div className="space-y-1.5">
                 <Label htmlFor="customAvatar" className="text-xs font-semibold text-foreground">
-                  或者使用自定义头像链接 (URL)
+                  或者使用 Appwrite 托管头像链接
                 </Label>
                 <Input
                   id="customAvatar"
                   value={customAvatar}
                   onChange={(e) => handleCustomAvatarChange(e.target.value)}
-                  placeholder="输入 https:// 格式的头像图片直链"
+                  placeholder="https://sgp.cloud.appwrite.io/..."
                   className="bg-muted/20 border-border/60 focus-visible:ring-primary/30 text-xs font-mono"
                 />
               </div>
@@ -283,6 +317,81 @@ export default function SettingsPage() {
             )}
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <form
+              onSubmit={handleCreateTeam}
+              className="rounded-xl border border-border/60 bg-card p-5 shadow-sm"
+            >
+              <div className="flex items-center gap-2">
+                <Plus className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-bold">创建新团队</h3>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                创建独立的数据与权限空间，完成后自动切换。
+              </p>
+              <Label htmlFor="new-team-name" className="mt-4 block text-xs">
+                团队名称
+              </Label>
+              <Input
+                id="new-team-name"
+                className="mt-2"
+                value={teamName}
+                onChange={(event) => setTeamName(event.target.value)}
+                placeholder="例如：北美运营团队"
+              />
+              <Button
+                type="submit"
+                variant="outline"
+                className="mt-3 w-full"
+                disabled={!teamName.trim() || teamPending}
+              >
+                {teamPending ? '处理中…' : '创建团队'}
+              </Button>
+            </form>
+
+            <form
+              onSubmit={handleInvite}
+              className="rounded-xl border border-border/60 bg-card p-5 shadow-sm"
+            >
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-bold">邀请团队成员</h3>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                {canInvite
+                  ? 'Appwrite 将发送带有安全验证链接的邀请邮件。'
+                  : '只有团队所有者或管理员可以邀请成员。'}
+              </p>
+              <Label htmlFor="invite-email" className="mt-4 block text-xs">
+                成员邮箱
+              </Label>
+              <Input
+                id="invite-email"
+                type="email"
+                className="mt-2"
+                value={inviteEmail}
+                onChange={(event) => setInviteEmail(event.target.value)}
+                placeholder="member@example.com"
+                disabled={!canInvite}
+              />
+              <div className="mt-2 flex gap-2">
+                <select
+                  aria-label="成员角色"
+                  value={inviteRole}
+                  onChange={(event) => setInviteRole(event.target.value as 'member' | 'admin')}
+                  disabled={!canInvite}
+                  className="h-10 flex-1 rounded-lg border border-input bg-background px-3 text-sm"
+                >
+                  <option value="member">成员</option>
+                  <option value="admin">管理员</option>
+                </select>
+                <Button type="submit" disabled={!canInvite || !inviteEmail.trim() || teamPending}>
+                  <Mail className="h-4 w-4" /> 邀请
+                </Button>
+              </div>
+            </form>
+          </div>
+
           {/* API Key */}
           <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm flex items-center justify-between">
             <div className="flex items-center gap-3.5">
@@ -292,7 +401,7 @@ export default function SettingsPage() {
               <div>
                 <p className="text-xs font-bold text-foreground">API 接入密钥</p>
                 <p className="text-2xs text-muted-foreground mt-0.5">
-                  支持对接店小秘、马帮等外部 ERP 平台进行商品同步
+                  外部 ERP 接入将在密钥轮换、权限范围和审计能力完成后开放
                 </p>
               </div>
             </div>

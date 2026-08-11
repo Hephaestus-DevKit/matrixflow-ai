@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "check": "node --check src/main.js && node --check src/dag.js && node --check src/provider.js && node --check scripts/provision.mjs && node --check scripts/deploy.mjs && node --check scripts/smoke.mjs"
+    "check": "node --check src/main.js && node --check src/runtime.js && node --check src/schemas.js && node --check src/features.js && node --check src/dag.js && node --check src/provider.js && node --check scripts/provision.mjs && node --check scripts/deploy.mjs && node --check scripts/smoke.mjs"
   },
   "dependencies": {
     "mammoth": "1.12.1",
     "node-appwrite": "27.1.0",
-    "pdf-parse": "2.4.5"
+    "pdf-parse": "2.4.5",
+    "zod": "3.25.76"
   }
 }

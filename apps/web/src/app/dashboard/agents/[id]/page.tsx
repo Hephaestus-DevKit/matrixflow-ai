@@ -1,19 +1,38 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Bot, ArrowLeft, Loader2, Sparkles, Cpu, Clock, DollarSign, Zap } from 'lucide-react';
 import type { AgentSummary } from '@matrixflow/shared';
+import { toast } from 'sonner';
+import { errorMessage } from '@/lib/errors';
 
 export default function AgentDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const [prompt, setPrompt] = useState('');
+  const [latestOutput, setLatestOutput] = useState('');
   const { data: agent, isLoading } = useQuery({
     queryKey: ['agent', id],
     queryFn: () => apiClient.get<AgentSummary>(`/agents/${id}`),
     enabled: !!id,
+  });
+  const runMutation = useMutation({
+    mutationFn: () =>
+      apiClient.post<{ output?: { text?: string } }>(`/agents/${id}/run`, {
+        input: { prompt: prompt.trim() },
+      }),
+    onSuccess: async (result) => {
+      setLatestOutput(result.output?.text || '运行已完成');
+      setPrompt('');
+      await queryClient.invalidateQueries({ queryKey: ['agent', id] });
+      toast.success('AI 员工运行完成');
+    },
+    onError: (error: unknown) => toast.error(errorMessage(error, 'AI 员工运行失败')),
   });
 
   if (isLoading) {
@@ -76,9 +95,7 @@ export default function AgentDetailPage() {
                     : '已归档'}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide font-medium">
-              {agent.role}
-            </p>
+            <p className="mt-0.5 text-xs font-medium text-muted-foreground">{agent.role}</p>
           </div>
         </div>
       </div>
@@ -89,12 +106,12 @@ export default function AgentDetailPage() {
         <div className="md:col-span-1 space-y-4">
           <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm space-y-4">
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 border-b border-border/40 pb-2">
-              <Cpu className="h-3.5 w-3.5 text-primary" /> 硬件属性
+              <Cpu className="h-3.5 w-3.5 text-primary" /> 运行配置
             </h3>
 
             <div className="space-y-3">
               <div>
-                <p className="text-[10px] font-semibold text-muted-foreground">推理模型 (Model)</p>
+                <p className="text-[0.6875rem] font-semibold text-muted-foreground">推理模型</p>
                 <p className="text-xs font-mono font-bold mt-0.5 text-foreground">
                   {agent.model ?? 'glm-4-flash'}
                 </p>
@@ -137,6 +154,39 @@ export default function AgentDetailPage() {
 
         {/* Prompt & Run History panel */}
         <div className="md:col-span-2 space-y-6">
+          <section className="rounded-xl border border-primary/20 bg-primary/[0.04] p-5 shadow-sm">
+            <h2 className="text-sm font-bold">运行 AI 员工</h2>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              输入一项明确任务；运行会消耗团队 AI 额度并写入审计记录。
+            </p>
+            <label htmlFor="agent-run-prompt" className="sr-only">
+              运行任务
+            </label>
+            <textarea
+              id="agent-run-prompt"
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              placeholder="例如：根据产品资料写一段面向美国市场的广告文案。"
+              className="mt-4 min-h-28 w-full resize-y rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            <div className="mt-3 flex justify-end">
+              <Button
+                onClick={() => runMutation.mutate()}
+                disabled={runMutation.isPending || !prompt.trim() || agent.status !== 'ACTIVE'}
+              >
+                {runMutation.isPending
+                  ? '运行中…'
+                  : agent.status === 'ACTIVE'
+                    ? '开始运行'
+                    : 'AI 服务未就绪'}
+              </Button>
+            </div>
+            {latestOutput && (
+              <div className="mt-4 rounded-xl border border-border bg-background/70 p-4 text-sm leading-6 whitespace-pre-wrap">
+                {latestOutput}
+              </div>
+            )}
+          </section>
           {/* Prompt Section */}
           <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm space-y-3">
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 border-b border-border/40 pb-2">
@@ -194,14 +244,14 @@ export default function AgentDetailPage() {
                       </div>
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          r.status === 'SUCCESS'
+                          r.status === 'COMPLETED'
                             ? 'bg-success/5 border-success/15 text-success'
                             : r.status === 'FAILED'
                               ? 'bg-destructive/5 border-destructive/15 text-destructive'
                               : 'bg-muted border-border text-muted-foreground'
                         }`}
                       >
-                        {r.status === 'SUCCESS'
+                        {r.status === 'COMPLETED'
                           ? '成功'
                           : r.status === 'FAILED'
                             ? '失败'

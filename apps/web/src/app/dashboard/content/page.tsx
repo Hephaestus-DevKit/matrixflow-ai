@@ -6,13 +6,14 @@ import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Factory, Sparkles, Plus, Loader2, AlertCircle } from 'lucide-react';
+import { Factory, Sparkles, Plus, Loader2, AlertCircle, Trash2 } from 'lucide-react';
 import type {
   ContentGenerationView,
   ContentItemSummary,
   ContentProjectSummary,
 } from '@matrixflow/shared';
 import { errorMessage } from '@/lib/errors';
+import { toast } from 'sonner';
 
 const CONTENT_TYPES = [
   {
@@ -130,7 +131,7 @@ export default function ContentFactoryPage() {
       });
       await refetchItems();
     } catch (error: unknown) {
-      alert(errorMessage(error));
+      toast.error(errorMessage(error));
     } finally {
       setGenerating(null);
     }
@@ -140,10 +141,16 @@ export default function ContentFactoryPage() {
     if (!projectId) return;
     setGenerating('all');
     try {
-      await apiClient.post(`/content/projects/${projectId}/generate-all`, { language: 'en' });
+      const result = await apiClient.post<{ completed: number; failed: number }>(
+        `/content/projects/${projectId}/generate-all`,
+        { language: 'en' },
+      );
       await refetchItems();
+      if (result.failed)
+        toast.warning(`已完成 ${result.completed} 项，${result.failed} 项生成失败`);
+      else toast.success(`12 类内容已全部生成`);
     } catch (error: unknown) {
-      alert(errorMessage(error));
+      toast.error(errorMessage(error));
     } finally {
       setGenerating(null);
     }
@@ -164,9 +171,21 @@ export default function ContentFactoryPage() {
       setProductDesc('');
       setIsCreating(false);
     } catch (error: unknown) {
-      alert(errorMessage(error));
+      toast.error(errorMessage(error));
     } finally {
       setGenerating(null);
+    }
+  }
+
+  async function deleteProject(id: string) {
+    if (!window.confirm('确定删除该内容项目及其全部生成结果吗？')) return;
+    try {
+      await apiClient.del(`/content/projects/${id}`);
+      if (projectId === id) setProjectId(null);
+      await refetchProjects();
+      toast.success('内容项目已删除');
+    } catch (error) {
+      toast.error(errorMessage(error, '内容项目删除失败'));
     }
   }
 
@@ -240,17 +259,29 @@ export default function ContentFactoryPage() {
         </span>
         <div className="flex flex-wrap gap-2">
           {projects?.map((project) => (
-            <button
+            <span
               key={project.id}
-              onClick={() => setProjectId(project.id)}
-              className={`rounded-lg border px-3.5 py-1.5 text-xs font-medium transition-all ${
+              className={`inline-flex overflow-hidden rounded-lg border transition-all ${
                 projectId === project.id
                   ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                  : 'border-border/60 text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                  : 'border-border/60 text-muted-foreground'
               }`}
             >
-              {project.name}
-            </button>
+              <button
+                onClick={() => setProjectId(project.id)}
+                className="px-3.5 py-1.5 text-xs font-medium hover:bg-muted/80 hover:text-foreground"
+              >
+                {project.name}
+              </button>
+              <button
+                type="button"
+                aria-label={`删除内容项目 ${project.name}`}
+                onClick={() => void deleteProject(project.id)}
+                className="border-l border-current/10 px-2 hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </span>
           ))}
           {(!projects || projects.length === 0) && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">

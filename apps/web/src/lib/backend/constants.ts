@@ -10,6 +10,7 @@ export const TABLES = {
   knowledgeBases: 'knowledge_bases',
   knowledgeDocuments: 'knowledge_documents',
   workflows: 'workflows',
+  workflowVersions: 'workflow_versions',
   workflowRuns: 'workflow_runs',
   customers: 'customers',
   leads: 'leads',
