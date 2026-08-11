@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM node:26.5.1-alpine AS base
+FROM node:26.7.0-alpine AS base
 RUN apk add --no-cache libc6-compat openssl
 RUN npm install --global corepack@0.35.0 \
     && corepack prepare pnpm@11.9.0 --activate
@@ -24,7 +24,7 @@ RUN pnpm --filter @matrixflow/api... build
 RUN pnpm --filter @matrixflow/api deploy --prod --legacy /prod/api \
     && rm -rf /prod/api/src /prod/api/test /prod/api/.turbo
 
-FROM node:26.5.1-alpine AS runner
+FROM node:26.7.0-alpine AS runner
 RUN apk add --no-cache dumb-init libc6-compat openssl
 ENV NODE_ENV=production
 WORKDIR /app

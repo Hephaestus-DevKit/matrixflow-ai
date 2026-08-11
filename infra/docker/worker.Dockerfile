@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM node:26.5.1-alpine AS base
+FROM node:26.7.0-alpine AS base
 RUN npm install --global corepack@0.35.0 \
     && corepack prepare pnpm@11.9.0 --activate
 ENV PNPM_HOME=/pnpm
@@ -15,7 +15,7 @@ RUN pnpm --filter @matrixflow/worker build
 RUN pnpm --filter @matrixflow/worker deploy --prod --legacy /prod/worker \
     && rm -rf /prod/worker/src /prod/worker/test /prod/worker/.turbo
 
-FROM node:26.5.1-alpine AS runner
+FROM node:26.7.0-alpine AS runner
 RUN apk add --no-cache dumb-init
 ENV NODE_ENV=production
 WORKDIR /app
