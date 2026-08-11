@@ -5,7 +5,7 @@
   "description": "MatrixFlow AI · Next.js 前端",
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "next build",
+    "build": "corepack pnpm --filter @matrixflow/shared run build && next build",
     "start": "next start -p 3000",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
