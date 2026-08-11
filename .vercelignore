@@ -1,0 +1,49 @@
+# Local dependencies and package-manager caches
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+# Local build and task-runner outputs
+.next/
+**/.next/
+dist/
+**/dist/
+build/
+**/build/
+out/
+**/out/
+.turbo/
+**/.turbo/
+.tmp/
+**/.tmp/
+*.tsbuildinfo
+
+# Tests, coverage, and local datasets
+coverage/
+**/coverage/
+.nyc_output/
+data/
+**/*.test.*
+**/*.spec.*
+
+# Local configuration and tooling residue
+.env
+.env.*
+.vercel/
+.git/
+.github/
+.vscode/
+.idea/
+*.log
+*.local
+
+# Documentation and retired local-only infrastructure
+docs/
+infra/
+apps/api/
+apps/worker/
+apps/sidecar/
+packages/db/
+packages/ai-gateway/
+packages/workflow-engine/
+scripts/
