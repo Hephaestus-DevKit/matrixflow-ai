@@ -23,7 +23,7 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
       <div className="flex h-16 items-center gap-3 border-b border-border/70 px-4">
         <Link
           href="/dashboard"
-          className="flex min-w-0 flex-1 items-center gap-3"
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
           onClick={onClose}
         >
           <span className="brand-mark" aria-hidden="true">
@@ -40,7 +40,7 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="关闭导航"
           >
             <X className="h-4 w-4" />
@@ -98,13 +98,12 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
       </nav>
 
       <div className="border-t border-border/70 p-3">
-        <div className="mb-2 flex items-center gap-2 rounded-xl border border-emerald-500/15 bg-emerald-500/[0.06] px-3 py-2 text-[0.6875rem] text-emerald-700 dark:text-emerald-300">
-          <span className="relative flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10">
+        <div className="mb-2 flex items-center gap-2 rounded-xl border border-border/70 bg-muted/35 px-3 py-2 text-[0.6875rem] text-muted-foreground">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Cloud className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-card" />
           </span>
           <span className="min-w-0">
-            <span className="block truncate font-semibold">数据服务已连接</span>
+            <span className="block truncate font-semibold text-foreground">托管数据服务</span>
             <span className="block text-[0.6875rem] text-muted-foreground">Appwrite Cloud</span>
           </span>
         </div>

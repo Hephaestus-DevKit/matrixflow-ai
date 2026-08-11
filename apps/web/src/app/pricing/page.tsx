@@ -83,11 +83,13 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/register" className="mt-8">
-                <Button className="w-full" variant={plan.available ? 'default' : 'outline'}>
-                  {plan.available ? '免费开始' : '进入测试版并等待开放'}
-                </Button>
-              </Link>
+              <Button
+                asChild
+                className="mt-8 w-full"
+                variant={plan.available ? 'default' : 'outline'}
+              >
+                <Link href="/register">{plan.available ? '免费开始' : '进入测试版并等待开放'}</Link>
+              </Button>
             </section>
           ))}
         </div>

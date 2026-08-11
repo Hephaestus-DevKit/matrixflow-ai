@@ -27,11 +27,11 @@ export default function KbListPage() {
         title="知识库"
         description="上传并管理产品说明、问答和历史业务资料。"
         actions={
-          <Link href="/dashboard/knowledge/new">
-            <Button className="gap-1.5 text-xs font-semibold">
+          <Button asChild className="gap-1.5 text-xs font-semibold">
+            <Link href="/dashboard/knowledge/new">
               <Plus className="h-3.5 w-3.5" /> 新建知识库
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         }
       />
 
@@ -44,11 +44,9 @@ export default function KbListPage() {
           title="暂无关联知识库"
           description="新建专属知识库并上传企业文档，为 AI 员工提供可信的业务上下文。"
           action={
-            <Link href="/dashboard/knowledge/new">
-              <Button size="sm" variant="outline" className="text-xs">
-                创建第一个知识库
-              </Button>
-            </Link>
+            <Button asChild size="sm" variant="outline" className="text-xs">
+              <Link href="/dashboard/knowledge/new">创建第一个知识库</Link>
+            </Button>
           }
         />
       )}

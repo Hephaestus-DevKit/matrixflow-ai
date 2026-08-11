@@ -27,11 +27,11 @@ export default function AgentListPage() {
         title="AI 员工"
         description="创建、分配并协同具备专业领域认知的 AI 员工。"
         actions={
-          <Link href="/dashboard/agents/new">
-            <Button className="gap-1.5 text-xs font-semibold">
+          <Button asChild className="gap-1.5 text-xs font-semibold">
+            <Link href="/dashboard/agents/new">
               <Plus className="h-3.5 w-3.5" /> 创建员工
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         }
       />
 
@@ -44,11 +44,9 @@ export default function AgentListPage() {
           title="暂无 AI 员工"
           description="从岗位模板创建第一个 AI 员工，并为其配置模型、技能和知识库。"
           action={
-            <Link href="/dashboard/agents/new">
-              <Button size="sm" variant="outline" className="text-xs">
-                从模板部署
-              </Button>
-            </Link>
+            <Button asChild size="sm" variant="outline" className="text-xs">
+              <Link href="/dashboard/agents/new">从模板部署</Link>
+            </Button>
           }
         />
       )}
@@ -67,7 +65,7 @@ export default function AgentListPage() {
                     <Bot className="h-4.5 w-4.5" />
                   </div>
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    className={`rounded-full border px-2 py-0.5 text-[0.6875rem] font-bold ${
                       a.status === 'ACTIVE'
                         ? 'bg-success/5 border-success/15 text-success'
                         : 'bg-muted border-border text-muted-foreground'
@@ -79,9 +77,7 @@ export default function AgentListPage() {
                 <h3 className="mt-4 font-bold text-foreground text-sm group-hover:text-primary transition-colors">
                   {a.name}
                 </h3>
-                <p className="text-2xs text-muted-foreground mt-0.5 uppercase tracking-wide">
-                  {a.role}
-                </p>
+                <p className="mt-1 text-xs text-muted-foreground">{a.role}</p>
               </div>
 
               <div className="mt-5 border-t border-border/40 pt-3 flex flex-wrap gap-1">
@@ -89,13 +85,13 @@ export default function AgentListPage() {
                   a.skills.slice(0, 3).map((s) => (
                     <span
                       key={s.skillKey}
-                      className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground border border-border/50"
+                      className="rounded-md border border-border/50 bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-muted-foreground"
                     >
                       {s.skillKey}
                     </span>
                   ))
                 ) : (
-                  <span className="text-[10px] text-muted-foreground">暂无绑定技能</span>
+                  <span className="text-[0.6875rem] text-muted-foreground">暂无绑定技能</span>
                 )}
               </div>
             </Link>

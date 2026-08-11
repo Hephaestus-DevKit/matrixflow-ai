@@ -24,7 +24,7 @@ export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
           variant="ghost"
           size="icon"
           onClick={onOpenNavigation}
-          className="h-9 w-9 lg:hidden"
+          className="h-10 w-10 lg:hidden"
           aria-label="打开导航"
         >
           <Menu className="h-5 w-5" />
@@ -42,7 +42,7 @@ export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
             variant="ghost"
             size="icon"
             onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-            className="h-9 w-9 text-muted-foreground"
+            className="h-10 w-10 text-muted-foreground"
             aria-label={resolvedTheme === 'dark' ? '切换为亮色模式' : '切换为暗色模式'}
           >
             {resolvedTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -54,7 +54,7 @@ export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
           size="sm"
           onClick={() => void logout()}
           aria-label="退出当前账号"
-          className="h-9 gap-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          className="h-10 gap-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
         >
           <LogOut className="h-4 w-4" />
           <span className="hidden sm:inline">退出</span>

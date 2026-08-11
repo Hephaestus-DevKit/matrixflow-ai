@@ -112,8 +112,8 @@ export default function DashboardPage() {
         <section
           className={`flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between ${
             health.data.ai.ready
-              ? 'border-emerald-500/20 bg-emerald-500/[0.06]'
-              : 'border-amber-500/20 bg-amber-500/[0.07]'
+              ? 'border-success/20 bg-success/[0.06]'
+              : 'border-warning/20 bg-warning/[0.07]'
           }`}
           role="status"
         >

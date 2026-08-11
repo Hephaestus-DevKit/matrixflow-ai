@@ -27,11 +27,11 @@ export default function WorkflowListPage() {
         title="工作流"
         description="通过可视化画布编排和运行自动化 AI 流水线。"
         actions={
-          <Link href="/dashboard/workflows/new">
-            <Button className="gap-1.5 text-xs font-semibold">
+          <Button asChild className="gap-1.5 text-xs font-semibold">
+            <Link href="/dashboard/workflows/new">
               <Plus className="h-3.5 w-3.5" /> 新建工作流
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         }
       />
 
@@ -44,11 +44,9 @@ export default function WorkflowListPage() {
           title="暂无工作流自动化"
           description="使用流程画布将 AI、逻辑判断与第三方 API 连接为自动化生产线。"
           action={
-            <Link href="/dashboard/workflows/new">
-              <Button size="sm" variant="outline" className="text-xs">
-                创建第一个工作流
-              </Button>
-            </Link>
+            <Button asChild size="sm" variant="outline" className="text-xs">
+              <Link href="/dashboard/workflows/new">创建第一个工作流</Link>
+            </Button>
           }
         />
       )}
@@ -74,7 +72,7 @@ export default function WorkflowListPage() {
                   </p>
                 </div>
               </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+              <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-[opacity,transform] group-hover:translate-x-1 group-hover:opacity-100 group-focus-visible:opacity-100" />
             </Link>
           ))}
         </div>

@@ -54,12 +54,11 @@ export function InviteClient() {
           <h1 className="mt-5 text-xl font-bold">团队邀请</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">{message}</p>
           {status !== 'loading' && (
-            <Link
-              href={status === 'success' ? '/dashboard' : '/login'}
-              className="mt-6 inline-block"
-            >
-              <Button>{status === 'success' ? '进入工作台' : '返回登录'}</Button>
-            </Link>
+            <Button asChild className="mt-6">
+              <Link href={status === 'success' ? '/dashboard' : '/login'}>
+                {status === 'success' ? '进入工作台' : '返回登录'}
+              </Link>
+            </Button>
           )}
         </section>
       </main>
