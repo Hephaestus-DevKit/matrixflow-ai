@@ -1093,6 +1093,12 @@
         "type": "key",
         "columns": ["organizationId", "requestedPlan"],
         "orders": ["ASC", "ASC"]
+      },
+      {
+        "key": "billing_org_plan_status_unique",
+        "type": "unique",
+        "columns": ["organizationId", "requestedPlan", "status"],
+        "orders": ["ASC", "ASC", "ASC"]
       }
     ]
   }

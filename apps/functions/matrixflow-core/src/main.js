@@ -265,13 +265,25 @@ async function handleRoute({ services, context, membership, path, method, body }
       Query.equal('status', 'PENDING'),
     ]);
     if (pending[0]) return { request: pending[0], created: false };
-    const request = await createRow(services, TABLES.billingRequests, context.teamId, {
-      requestedPlan: input.requestedPlan,
-      requestedSeats: input.requestedSeats,
-      status: 'PENDING',
-      note: input.note,
-      requestedBy: context.userId,
-    });
+    let request;
+    try {
+      request = await createRow(services, TABLES.billingRequests, context.teamId, {
+        requestedPlan: input.requestedPlan,
+        requestedSeats: input.requestedSeats,
+        status: 'PENDING',
+        note: input.note,
+        requestedBy: context.userId,
+      });
+    } catch (error) {
+      const status = Number(error?.status || error?.code);
+      if (status !== 409) throw error;
+      const concurrent = await listRows(services, TABLES.billingRequests, context.teamId, [
+        Query.equal('requestedPlan', input.requestedPlan),
+        Query.equal('status', 'PENDING'),
+      ]);
+      if (!concurrent[0]) throw error;
+      return { request: concurrent[0], created: false };
+    }
     await recordAudit(
       services,
       context,
