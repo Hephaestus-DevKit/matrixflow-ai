@@ -69,7 +69,7 @@ export default function MarketplacePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Template ecosystem" title={copy.title} description={copy.description} />
+      <PageHeader eyebrow={copy.eyebrow} title={copy.title} description={copy.description} />
 
       {isLoading && <LoadingCards />}
       {isError && <ErrorState onRetry={() => void refetch()} />}

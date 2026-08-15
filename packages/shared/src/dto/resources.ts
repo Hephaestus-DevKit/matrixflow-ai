@@ -137,6 +137,7 @@ export interface KnowledgeDocumentSummary {
   id: string;
   title: string;
   status: string;
+  chunkCount?: number;
 }
 
 export interface KnowledgeBaseSummary {

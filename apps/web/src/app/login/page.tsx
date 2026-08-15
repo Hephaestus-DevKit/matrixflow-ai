@@ -142,7 +142,9 @@ export default function LoginPage() {
               <Label htmlFor="login-password">{t('auth.password')}</Label>
               <button
                 type="button"
-                onClick={() => changeMode('otp')}
+                onClick={() => {
+                  window.location.href = '/recover';
+                }}
                 className="text-2xs font-semibold text-primary hover:underline"
               >
                 {t('auth.passwordHelp')}

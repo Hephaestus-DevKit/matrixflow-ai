@@ -13,6 +13,7 @@ export const TABLES = {
   contentItems: 'content_items',
   knowledgeBases: 'knowledge_bases',
   knowledgeDocuments: 'knowledge_documents',
+  knowledgeChunks: 'knowledge_chunks',
   workflows: 'workflows',
   workflowVersions: 'workflow_versions',
   workflowRuns: 'workflow_runs',
@@ -98,9 +99,17 @@ export function serverClient(req) {
   return { tables: new TablesDB(client), teams: new Teams(client), storage: new Storage(client) };
 }
 
-export function rowPermissions(teamId) {
-  // Browser clients can read team rows directly, but every write must pass
-  // through the Function's capability and schema checks.
+const FUNCTION_ONLY_TABLES = new Set([
+  TABLES.auditLogs,
+  TABLES.usageRecords,
+  TABLES.billingRequests,
+  'idempotency_keys',
+]);
+
+export function rowPermissions(teamId, tableId) {
+  // Keep ordinary workspace rows readable by team members for fast, cached
+  // dashboards. Sensitive operational and billing data is Function-only.
+  if (FUNCTION_ONLY_TABLES.has(tableId)) return [];
   return [Permission.read(Role.team(teamId))];
 }
 
@@ -183,7 +192,7 @@ export async function createRow(services, tableId, teamId, data, field = 'organi
       tableId,
       rowId: ID.unique(),
       data: encodeData({ ...data, [field]: teamId }),
-      permissions: rowPermissions(teamId),
+      permissions: rowPermissions(teamId, tableId),
     }),
   );
 }
@@ -236,6 +245,24 @@ export async function listRows(services, tableId, teamId, queries = [], field = 
   if (rows.length >= MAX_LIST_ROWS && total > MAX_LIST_ROWS)
     throw new HttpError('资源数量超过单次可处理上限，请缩小查询范围', 413, 'LIST_TOO_LARGE');
   return rows;
+}
+
+export async function countRows(services, tableId, teamId, queries = [], field = 'organizationId') {
+  const result = await services.tables.listRows({
+    databaseId: DATABASE_ID,
+    tableId,
+    queries: [Query.equal(field, teamId), ...queries, Query.limit(1)],
+  });
+  return Number(result.total || 0);
+}
+
+export async function findIdempotency(services, teamId, key) {
+  const rows = await listRows(services, 'idempotency_keys', teamId, [Query.equal('key', key)]);
+  return rows[0] || null;
+}
+
+export async function saveIdempotency(services, teamId, data) {
+  return createRow(services, 'idempotency_keys', teamId, data);
 }
 
 export async function recordAudit(services, context, action, resource, resourceId, metadata = {}) {

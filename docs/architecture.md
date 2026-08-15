@@ -53,9 +53,9 @@ Page → apiClient → Appwrite Function execution
 
 ## 数据与索引
 
-数据库 `matrixflow` 包含 18 张表，定义位于 `infra/appwrite/tables.json`；`workflow_versions` 保存不可变的流程版本。常用组织、状态、关联与月度用量字段均建立索引。文件桶 `knowledge-files` 限制允许的文档扩展名和大小。
+数据库 `matrixflow` 当前包含 21 张表，定义位于 `infra/appwrite/tables.json`；`workflow_versions` 保存不可变的流程版本，`knowledge_chunks` 保存受字节上限约束的知识分块，`idempotency_keys` 防止网络重试造成重复写入。常用组织、状态、关联与月度用量字段均建立索引。文件桶 `knowledge-files` 限制允许的文档扩展名和大小。
 
-Appwrite 声明是资源基线；运行时写入的数据不进入 Git。当前数据库包含 19 张表，新增的 `billing_requests` 用于保存套餐升级意向；表结构变更必须同时更新声明、初始化脚本、共享契约和回归测试。
+Appwrite 声明是资源基线；运行时写入的数据不进入 Git。当前数据库包含 21 张表，新增的 `billing_requests` 用于保存套餐升级意向，`knowledge_chunks` 用于知识分块，`idempotency_keys` 用于写入幂等；表结构变更必须同时更新声明、初始化脚本、共享契约和回归测试。
 
 ## 扩展规则
 

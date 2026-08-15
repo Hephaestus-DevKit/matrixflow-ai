@@ -153,6 +153,8 @@ export default function ContentFactoryPage() {
       quick: '快速新建项目',
       projectName: '项目名称',
       productDescription: '产品核心卖点/描述',
+      projectPlaceholder: '例如：智能便携吸尘器推广',
+      productPlaceholder: '例如：200W 大吸力、无线轻量、续航 45 分钟，适合宠物家庭。',
       cancel: '取消',
       creating: '正在创建…',
       createNow: '立即创建',
@@ -173,6 +175,8 @@ export default function ContentFactoryPage() {
       quick: '快速建立專案',
       projectName: '專案名稱',
       productDescription: '產品核心賣點／描述',
+      projectPlaceholder: '例如：智慧便攜吸塵器推廣',
+      productPlaceholder: '例如：200W 大吸力、無線輕量、續航 45 分鐘，適合寵物家庭。',
       cancel: '取消',
       creating: '正在建立…',
       createNow: '立即建立',
@@ -193,6 +197,8 @@ export default function ContentFactoryPage() {
       quick: 'Quickly create a project',
       projectName: 'Project name',
       productDescription: 'Product benefits / description',
+      projectPlaceholder: 'e.g. Smart cordless vacuum campaign',
+      productPlaceholder: 'e.g. 200W suction, lightweight cordless design, 45-minute battery life.',
       cancel: 'Cancel',
       creating: 'Creating…',
       createNow: 'Create now',
@@ -364,7 +370,7 @@ export default function ContentFactoryPage() {
               id="projName"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              placeholder="e.g. 智能便携吸尘器推广"
+              placeholder={copy.projectPlaceholder}
               required
               className="bg-background border-border/80 text-sm focus-visible:ring-primary/30"
             />
@@ -377,7 +383,7 @@ export default function ContentFactoryPage() {
               id="projDesc"
               value={productDesc}
               onChange={(e) => setProductDesc(e.target.value)}
-              placeholder="e.g. 200W大吸力，无线超轻量化，续航45分钟，配备多功能刷头，专为宠物家庭设计..."
+              placeholder={copy.productPlaceholder}
               rows={3}
               className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 border-border/85 focus-visible:ring-primary/30"
             />

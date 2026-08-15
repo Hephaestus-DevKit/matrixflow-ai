@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import Image from 'next/image';
 import { errorMessage } from '@/lib/errors';
 import { apiClient } from '@/lib/api-client';
+import { account } from '@/lib/appwrite';
 import { useLocale, type Locale } from '@/lib/i18n';
 
 const COPY: Record<
@@ -33,6 +34,7 @@ const COPY: Record<
     preview: string;
     previewDescription: string;
     workName: string;
+    workNamePlaceholder: string;
     avatarStyle: string;
     avatarHosted: string;
     saving: string;
@@ -51,6 +53,7 @@ const COPY: Record<
     createTeam: string;
     createTeamDescription: string;
     teamName: string;
+    teamNamePlaceholder: string;
     creating: string;
     create: string;
     inviteTeam: string;
@@ -76,6 +79,15 @@ const COPY: Record<
     configurePrefix: string;
     configureSuffix: string;
     logout: string;
+    sessionsTitle: string;
+    sessionsDescription: string;
+    sessionsLoading: string;
+    sessionsEmpty: string;
+    currentSession: string;
+    revokeSession: string;
+    revokeOthers: string;
+    sessionsRevoked: string;
+    sessionsFailed: string;
   }
 > = {
   'zh-CN': {
@@ -85,6 +97,7 @@ const COPY: Record<
     preview: '头像与工作身份预览',
     previewDescription: '即时同步在左下角及工作台的系统级状态中',
     workName: '工作姓名',
+    workNamePlaceholder: '例如：运营负责人',
     avatarStyle: '选择莫兰迪风格头像',
     avatarHosted: '或者使用 Appwrite 托管头像链接',
     saving: '正在保存…',
@@ -103,6 +116,7 @@ const COPY: Record<
     createTeam: '创建新团队',
     createTeamDescription: '创建独立的数据与权限空间，完成后自动切换。',
     teamName: '团队名称',
+    teamNamePlaceholder: '例如：北美运营团队',
     creating: '处理中…',
     create: '创建团队',
     inviteTeam: '邀请团队成员',
@@ -128,6 +142,15 @@ const COPY: Record<
     configurePrefix: '管理员配置 ',
     configureSuffix: ' 后，重新部署函数即可启用。',
     logout: '退出当前登录',
+    sessionsTitle: '登录设备管理',
+    sessionsDescription: '查看并撤销当前账号的其他登录会话。',
+    sessionsLoading: '正在加载登录会话…',
+    sessionsEmpty: '暂无其他登录会话',
+    currentSession: '当前设备',
+    revokeSession: '撤销',
+    revokeOthers: '撤销其他设备',
+    sessionsRevoked: '其他登录会话已撤销',
+    sessionsFailed: '无法管理登录会话，请稍后重试',
   },
   'zh-TW': {
     title: '設定中心',
@@ -136,6 +159,7 @@ const COPY: Record<
     preview: '頭像與工作身分預覽',
     previewDescription: '即時同步在左下角及工作台的系統狀態中',
     workName: '工作姓名',
+    workNamePlaceholder: '例如：營運負責人',
     avatarStyle: '選擇莫蘭迪風格頭像',
     avatarHosted: '或使用 Appwrite 託管頭像連結',
     saving: '正在儲存…',
@@ -154,6 +178,7 @@ const COPY: Record<
     createTeam: '建立新團隊',
     createTeamDescription: '建立獨立的資料與權限空間，完成後自動切換。',
     teamName: '團隊名稱',
+    teamNamePlaceholder: '例如：北美營運團隊',
     creating: '處理中…',
     create: '建立團隊',
     inviteTeam: '邀請團隊成員',
@@ -179,6 +204,15 @@ const COPY: Record<
     configurePrefix: '管理員設定 ',
     configureSuffix: ' 後，重新部署函數即可啟用。',
     logout: '登出目前帳號',
+    sessionsTitle: '登入裝置管理',
+    sessionsDescription: '查看並撤銷目前帳號的其他登入工作階段。',
+    sessionsLoading: '正在載入登入工作階段…',
+    sessionsEmpty: '暫無其他登入工作階段',
+    currentSession: '目前裝置',
+    revokeSession: '撤銷',
+    revokeOthers: '撤銷其他裝置',
+    sessionsRevoked: '其他登入工作階段已撤銷',
+    sessionsFailed: '無法管理登入工作階段，請稍後重試',
   },
   en: {
     title: 'Settings',
@@ -187,6 +221,7 @@ const COPY: Record<
     preview: 'Avatar and work identity',
     previewDescription: 'Synced to the sidebar and workspace status',
     workName: 'Work name',
+    workNamePlaceholder: 'e.g. Operations lead',
     avatarStyle: 'Choose a Morandi-style avatar',
     avatarHosted: 'Or use an Appwrite-hosted avatar URL',
     saving: 'Saving…',
@@ -205,6 +240,7 @@ const COPY: Record<
     createTeam: 'Create a team',
     createTeamDescription: 'Create an isolated data and permission space, then switch to it.',
     teamName: 'Team name',
+    teamNamePlaceholder: 'e.g. North America operations',
     creating: 'Working…',
     create: 'Create team',
     inviteTeam: 'Invite a team member',
@@ -231,6 +267,15 @@ const COPY: Record<
     configurePrefix: 'An administrator must configure ',
     configureSuffix: ' then redeploy the function to enable it.',
     logout: 'Log out',
+    sessionsTitle: 'Signed-in devices',
+    sessionsDescription: 'Review and revoke other active sessions for this account.',
+    sessionsLoading: 'Loading signed-in sessions…',
+    sessionsEmpty: 'No other active sessions',
+    currentSession: 'This device',
+    revokeSession: 'Revoke',
+    revokeOthers: 'Revoke other devices',
+    sessionsRevoked: 'Other sessions revoked',
+    sessionsFailed: 'Could not manage sessions. Try again later.',
   },
 };
 
@@ -275,6 +320,17 @@ export default function SettingsPage() {
   } | null>(null);
   const [aiStatusLoading, setAiStatusLoading] = useState(true);
   const [aiStatusError, setAiStatusError] = useState(false);
+  const [sessions, setSessions] = useState<
+    Array<{
+      $id: string;
+      current?: boolean;
+      clientName?: string;
+      deviceName?: string;
+      osName?: string;
+      expire?: string;
+    }>
+  >([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
   const membership = user?.memberships.find((item) => item.organizationId === organizationId);
   const canInvite = membership?.role === 'owner' || membership?.role === 'admin';
 
@@ -315,6 +371,26 @@ export default function SettingsPage() {
       active = false;
     };
   }, [organizationId]);
+
+  useEffect(() => {
+    if (activeTab !== 'enterprise') return;
+    let active = true;
+    setSessionsLoading(true);
+    void account
+      .listSessions()
+      .then((result) => {
+        if (active) setSessions(result.sessions);
+      })
+      .catch(() => {
+        if (active) setSessions([]);
+      })
+      .finally(() => {
+        if (active) setSessionsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [activeTab]);
 
   const selectPreset = (color: string) => {
     const presetUrl = makeSvgAvatar(color);
@@ -384,6 +460,25 @@ export default function SettingsPage() {
       toast.error(errorMessage(error, copy.inviteFailed));
     } finally {
       setTeamPending(false);
+    }
+  }
+
+  async function handleRevokeSession(sessionId: string) {
+    try {
+      await account.deleteSession({ sessionId });
+      setSessions((current) => current.filter((session) => session.$id !== sessionId));
+    } catch (error) {
+      toast.error(errorMessage(error, copy.sessionsFailed));
+    }
+  }
+
+  async function handleRevokeOthers() {
+    try {
+      await account.deleteSessions();
+      toast.success(copy.sessionsRevoked);
+      await logout();
+    } catch (error) {
+      toast.error(errorMessage(error, copy.sessionsFailed));
     }
   }
 
@@ -472,7 +567,7 @@ export default function SettingsPage() {
                   id="profileName"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="例如: Jiehu Wang"
+                  placeholder={copy.workNamePlaceholder}
                   required
                   className="bg-muted/20 border-border/60 focus-visible:ring-primary/30"
                 />
@@ -596,6 +691,62 @@ export default function SettingsPage() {
             )}
           </div>
 
+          <div className="rounded-xl border border-border/60 bg-card p-6 shadow-sm space-y-4">
+            <div className="flex items-start justify-between gap-4 border-b border-border/40 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-foreground">{copy.sessionsTitle}</h3>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  {copy.sessionsDescription}
+                </p>
+              </div>
+              {sessions.length > 1 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void handleRevokeOthers()}
+                >
+                  {copy.revokeOthers}
+                </Button>
+              )}
+            </div>
+            {sessionsLoading ? (
+              <p className="text-xs text-muted-foreground">{copy.sessionsLoading}</p>
+            ) : sessions.length === 0 ? (
+              <p className="text-xs text-muted-foreground">{copy.sessionsEmpty}</p>
+            ) : (
+              <div className="space-y-2">
+                {sessions.map((session) => (
+                  <div
+                    key={session.$id}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-muted/20 px-3 py-2.5"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-foreground">
+                        {session.current
+                          ? copy.currentSession
+                          : session.deviceName || session.clientName || 'Appwrite'}
+                      </p>
+                      <p className="truncate text-2xs text-muted-foreground">
+                        {[session.clientName, session.osName].filter(Boolean).join(' · ')}
+                      </p>
+                    </div>
+                    {!session.current && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => void handleRevokeSession(session.$id)}
+                      >
+                        {copy.revokeSession}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <form
               onSubmit={handleCreateTeam}
@@ -616,7 +767,7 @@ export default function SettingsPage() {
                 className="mt-2"
                 value={teamName}
                 onChange={(event) => setTeamName(event.target.value)}
-                placeholder="例如：北美运营团队"
+                placeholder={copy.teamNamePlaceholder}
               />
               <Button
                 type="submit"

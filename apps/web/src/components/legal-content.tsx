@@ -27,8 +27,9 @@ const COPY: Record<Locale, { privacy: ReactNode; terms: ReactNode }> = {
           <h2>3. 使用目的与处理方式</h2>
           <p>
             上述信息仅用于提供身份验证、组织隔离、内容生成、知识检索、工作流执行、安全防护和故障排查。AI
-            请求会在 Appwrite Function
-            中处理；模型密钥不会发送至浏览器。启用第三方模型前，项目维护方应评估对应供应商的数据政策。
+            请求会在 Appwrite Function 中处理；模型密钥不会发送至浏览器。我们还会使用 Vercel
+            Analytics 与 Speed Insights
+            记录匿名的页面使用和性能指标。启用第三方模型前，项目维护方应评估对应供应商的数据政策。
           </p>
         </section>
         <section>
@@ -136,8 +137,9 @@ const COPY: Record<Locale, { privacy: ReactNode; terms: ReactNode }> = {
           <h2>3. 使用目的與處理方式</h2>
           <p>
             上述資訊僅用於提供身分驗證、組織隔離、內容生成、知識檢索、工作流執行、安全防護與故障排查。AI
-            請求會在 Appwrite Function
-            中處理；模型金鑰不會傳送至瀏覽器。啟用第三方模型前，專案維護方應評估供應商的資料政策。
+            請求會在 Appwrite Function 中處理；模型金鑰不會傳送至瀏覽器。我們也會使用 Vercel
+            Analytics 與 Speed Insights
+            記錄匿名的頁面使用與效能指標。啟用第三方模型前，專案維護方應評估供應商的資料政策。
           </p>
         </section>
         <section>
@@ -252,9 +254,10 @@ const COPY: Record<Locale, { privacy: ReactNode; terms: ReactNode }> = {
           <p>
             We use this information to provide authentication, organization isolation, content
             generation, retrieval, workflow execution, security, and troubleshooting. AI requests
-            are processed in the Appwrite Function; model keys never reach the browser. Before
-            enabling a third-party model, the project operator should review that provider&apos;s
-            data policy.
+            are processed in the Appwrite Function; model keys never reach the browser. We also use
+            Vercel Analytics and Speed Insights for aggregated, anonymous page usage and performance
+            metrics. Before enabling a third-party model, the project operator should review that
+            provider&apos;s data policy.
           </p>
         </section>
         <section>
@@ -372,7 +375,7 @@ export function PrivacyContent() {
   return (
     <LegalPage
       title={locale === 'en' ? 'Privacy policy' : locale === 'zh-TW' ? '隱私政策' : '隐私政策'}
-      updated="2026-08-11"
+      updated="2026-08-16"
     >
       {COPY[locale].privacy}
     </LegalPage>
@@ -384,7 +387,7 @@ export function TermsContent() {
   return (
     <LegalPage
       title={locale === 'en' ? 'Terms of service' : locale === 'zh-TW' ? '服務條款' : '服务条款'}
-      updated="2026-08-11"
+      updated="2026-08-16"
     >
       {COPY[locale].terms}
     </LegalPage>

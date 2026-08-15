@@ -1,5 +1,6 @@
 import { configuredProvider, providerCapabilities } from './provider.js';
 import { Query } from 'node-appwrite';
+import { createHash } from 'node:crypto';
 import {
   askKnowledgeBase,
   crmReply,
@@ -18,6 +19,8 @@ import {
   getOwned,
   listRows,
   recordAudit,
+  findIdempotency,
+  saveIdempotency,
   requestBody,
   requireAdmin,
   requireCapability,
@@ -82,6 +85,18 @@ async function handleRoute({ services, context, membership, path, method, body }
   const segments = routeParts(path);
   const ai = providerReadiness();
 
+  async function deleteKnowledgeChunks(documentId) {
+    const chunks = await listRows(services, TABLES.knowledgeChunks, context.teamId, [
+      Query.equal('documentId', documentId),
+    ]);
+    await Promise.all(
+      chunks.map((chunk) =>
+        deleteOwned(services, TABLES.knowledgeChunks, chunk.id, context.teamId),
+      ),
+    );
+    return chunks.length;
+  }
+
   if (path === '/health') {
     return {
       status: 'ok',
@@ -93,6 +108,25 @@ async function handleRoute({ services, context, membership, path, method, body }
         aiCallsPerMinute: Number(process.env.MATRIXFLOW_AI_PER_MINUTE_LIMIT || 20),
       },
     };
+  }
+
+  if (method === 'GET' && path === '/billing/requests') {
+    requireCapability(membership, 'billing.read');
+    return listRows(services, TABLES.billingRequests, context.teamId);
+  }
+
+  if (method === 'GET' && path === '/billing/usage') {
+    requireCapability(membership, 'billing.read');
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const records = await listRows(services, TABLES.usageRecords, context.teamId, [
+      Query.greaterThanEqual('recordedAt', monthStart.toISOString()),
+    ]);
+    return records.reduce((total, row) => {
+      const metric = String(row.metric);
+      total[metric] = (total[metric] || 0) + Number(row.value || 0);
+      return total;
+    }, {});
   }
 
   if (method === 'POST' && path === '/agents') {
@@ -337,6 +371,7 @@ async function handleRoute({ services, context, membership, path, method, body }
     if (document.knowledgeBaseId !== segments[1])
       throw new HttpError('文档不属于该知识库', 403, 'FORBIDDEN');
     await services.storage.deleteFile({ bucketId: BUCKET_ID, fileId: document.fileId });
+    await deleteKnowledgeChunks(document.id);
     await deleteOwned(services, TABLES.knowledgeDocuments, document.id, context.teamId);
     await recordAudit(
       services,
@@ -357,6 +392,7 @@ async function handleRoute({ services, context, membership, path, method, body }
       await services.storage
         .deleteFile({ bucketId: BUCKET_ID, fileId: document.fileId })
         .catch(() => undefined);
+      await deleteKnowledgeChunks(document.id);
       await deleteOwned(services, TABLES.knowledgeDocuments, document.id, context.teamId);
     }
     await deleteOwned(services, TABLES.knowledgeBases, segments[1], context.teamId);
@@ -511,9 +547,38 @@ export default async ({ req, res, log, error: logError }) => {
     const teamId = body.organizationId;
     const payload = { ...body };
     delete payload.organizationId;
+    const idempotencyKey = payload.__idempotencyKey;
+    delete payload.__idempotencyKey;
+    const supportsIdempotency = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+    if (
+      supportsIdempotency &&
+      idempotencyKey !== undefined &&
+      (typeof idempotencyKey !== 'string' || !/^[A-Za-z0-9._:-]{8,128}$/.test(idempotencyKey))
+    ) {
+      throw new HttpError('幂等键格式无效', 400, 'INVALID_IDEMPOTENCY_KEY');
+    }
     const services = serverClient(req);
     const membership = await requireTeamMember(services, teamId, userId);
     const context = { teamId, userId, requestId };
+    const fingerprint = idempotencyKey
+      ? createHash('sha256').update(JSON.stringify({ method, path, payload })).digest('hex')
+      : null;
+    if (idempotencyKey && fingerprint) {
+      const previous = await findIdempotency(services, teamId, idempotencyKey);
+      if (previous) {
+        if (previous.fingerprint !== fingerprint)
+          throw new HttpError('幂等键已用于其他请求', 409, 'IDEMPOTENCY_CONFLICT');
+        if (new Date(previous.expiresAt).getTime() > Date.now()) {
+          let replay;
+          try {
+            replay = JSON.parse(previous.response);
+          } catch {
+            replay = null;
+          }
+          if (replay) return res.json(replay, previous.status || 200);
+        }
+      }
+    }
     const data = await handleRoute({
       services,
       context,
@@ -530,7 +595,26 @@ export default async ({ req, res, log, error: logError }) => {
         durationMs: Date.now() - startedAt,
       }),
     );
-    return res.json({ data, meta: { requestId } }, 200);
+    const response = { data, meta: { requestId } };
+    if (idempotencyKey && fingerprint) {
+      const serialized = JSON.stringify(response);
+      if (Buffer.byteLength(serialized, 'utf8') <= 50_000) {
+        await saveIdempotency(services, teamId, {
+          key: idempotencyKey,
+          fingerprint,
+          method,
+          path,
+          status: 200,
+          response: serialized,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1_000).toISOString(),
+        }).catch((error) => {
+          // A concurrent request may have won the unique key race. The
+          // current successful response remains valid and is safe to return.
+          if (Number(error?.status || error?.code) !== 409) throw error;
+        });
+      }
+    }
+    return res.json(response, 200);
   } catch (caught) {
     const numericCode = Number(caught?.code);
     const status = Number(

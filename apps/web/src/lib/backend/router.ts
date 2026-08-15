@@ -1,5 +1,12 @@
 import { ExecutionMethod, Query } from 'appwrite';
-import { executeCore, getRow, listRows, uploadKnowledgeFile, BackendError } from './data';
+import {
+  countRows,
+  executeCore,
+  getRow,
+  listRows,
+  uploadKnowledgeFile,
+  BackendError,
+} from './data';
 import { TABLES } from './constants';
 
 type Body = Record<string, unknown>;
@@ -97,11 +104,16 @@ async function routeGet(path: string) {
       return { ...workflow, versions };
     }
     const workflows = await listRows(TABLES.workflows);
-    const runs = await listRows(TABLES.workflowRuns);
-    return workflows.map((workflow) => ({
-      ...workflow,
-      _count: { runs: runs.filter((run) => run.workflowId === workflow.id).length },
-    }));
+    return Promise.all(
+      workflows.map(async (workflow) => ({
+        ...workflow,
+        _count: {
+          runs: await countRows(TABLES.workflowRuns, [
+            Query.equal('workflowId', String(workflow.id)),
+          ]),
+        },
+      })),
+    );
   }
   if (segments[0] === 'crm' && segments[1] === 'customers') {
     if (!segments[2]) return listRows(TABLES.customers);
@@ -154,26 +166,21 @@ async function routeGet(path: string) {
   }
   if (path === '/billing/plans') return PLANS;
   if (path === '/billing/current') return { id: 'free-preview', status: 'preview', plan: PLANS[0] };
-  if (path === '/billing/requests') return listRows(TABLES.billingRequests);
-  if (path === '/billing/usage') {
-    const now = new Date();
-    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-    const records = await listRows(TABLES.usageRecords, [
-      Query.greaterThanEqual('recordedAt', monthStart.toISOString()),
-    ]);
-    return records.reduce<Record<string, number>>((total, row) => {
-      const metric = String(row.metric);
-      total[metric] = (total[metric] ?? 0) + Number(row.value ?? 0);
-      return total;
-    }, {});
-  }
+  if (path === '/billing/requests')
+    return executeCore('/billing/requests', {}, ExecutionMethod.GET);
+  if (path === '/billing/usage') return executeCore('/billing/usage', {}, ExecutionMethod.GET);
   if (path === '/health') return executeCore('/health', {}, ExecutionMethod.GET);
   if (path.startsWith('/admin/'))
     throw new BackendError('管理模块正在安全重构中', 503, 'ADMIN_FEATURE_DISABLED');
   throw new BackendError('未找到请求的资源', 404, 'ROUTE_NOT_FOUND');
 }
 
-async function routeWrite(method: Method, path: string, rawBody: unknown) {
+async function routeWrite(
+  method: Method,
+  path: string,
+  rawBody: unknown,
+  options: { idempotencyKey?: string } = {},
+) {
   const body = asBody(rawBody);
   if (method === 'POST' && path === '/billing/subscribe') {
     throw new BackendError(
@@ -191,11 +198,16 @@ async function routeWrite(method: Method, path: string, rawBody: unknown) {
   else if (method === 'PATCH') executionMethod = ExecutionMethod.PATCH;
   else if (method === 'DELETE') executionMethod = ExecutionMethod.DELETE;
   else throw new BackendError('不支持的请求方法', 405, 'METHOD_NOT_ALLOWED');
-  return executeCore(path, body, executionMethod);
+  return executeCore(path, body, executionMethod, options);
 }
 
-export async function routeBackend(method: Method, path: string, body?: unknown) {
-  return method === 'GET' ? routeGet(path) : routeWrite(method, path, body);
+export async function routeBackend(
+  method: Method,
+  path: string,
+  body?: unknown,
+  options: { idempotencyKey?: string } = {},
+) {
+  return method === 'GET' ? routeGet(path) : routeWrite(method, path, body, options);
 }
 
 export async function routeUpload(path: string, body: FormData) {

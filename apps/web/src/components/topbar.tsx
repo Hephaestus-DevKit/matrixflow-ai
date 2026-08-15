@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth-store';
 import { Button } from '@/components/ui/button';
 import { navigationItemForPath } from '@/components/dashboard-navigation';
 import { useLocale } from '@/lib/i18n';
+import { LocaleSwitcher } from '@/components/locale-switcher';
 
 export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
   const pathname = usePathname();
@@ -39,6 +40,7 @@ export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
         </div>
       </div>
       <div className="flex items-center gap-1.5">
+        <LocaleSwitcher compact />
         {mounted && (
           <Button
             variant="ghost"

@@ -9,6 +9,7 @@ import {
   requireTeamMember,
   rowPermissions,
 } from '../src/runtime.js';
+import { splitTextIntoChunks } from '../src/features.js';
 
 test('agent updates reject mass-assignment fields', () => {
   assert.throws(
@@ -59,7 +60,16 @@ test('owners can access admin routes', () => {
 });
 
 test('tenant rows expose read-only permissions to browser clients', () => {
-  assert.deepEqual(rowPermissions('team-1'), ['read("team:team-1")']);
+  assert.deepEqual(rowPermissions('team-1', 'agents'), ['read("team:team-1")']);
+  assert.deepEqual(rowPermissions('team-1', 'audit_logs'), []);
+});
+
+test('knowledge chunks stay below the Appwrite row byte limit', () => {
+  const text = '跨境产品资料 '.repeat(10_000);
+  const chunks = splitTextIntoChunks(text, 24_000);
+  assert.ok(chunks.length > 1);
+  assert.ok(chunks.every((chunk) => Buffer.byteLength(chunk.content, 'utf8') <= 24_000));
+  assert.ok(chunks.every((chunk) => chunk.content.length > 0));
 });
 
 test('pre-parsed request bodies keep the same size guard', () => {

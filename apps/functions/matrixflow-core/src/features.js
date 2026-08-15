@@ -13,10 +13,13 @@ import {
   listRows,
   recordAudit,
   recordUsage,
+  deleteOwned,
   updateOwned,
 } from './runtime.js';
 
 const MAX_KB_CONTEXT = 12_000;
+const MAX_CHUNK_BYTES = 24_000;
+const CHUNK_OVERLAP_CHARS = 240;
 const CONTENT_TYPES = [
   'product_title',
   'listing',
@@ -179,15 +182,45 @@ export async function indexDocument(services, context, body) {
       .trim()
       .slice(0, 90_000);
     if (!text) throw new HttpError('文档中没有可索引的文字', 422, 'EMPTY_DOCUMENT');
+    const chunks = splitTextIntoChunks(text);
+    const oldChunks = await listRows(services, TABLES.knowledgeChunks, context.teamId, [
+      Query.equal('documentId', document.id),
+    ]);
+    await Promise.all(
+      oldChunks.map((chunk) =>
+        deleteOwned(services, TABLES.knowledgeChunks, chunk.id, context.teamId),
+      ),
+    );
+    await Promise.all(
+      chunks.map((chunk, chunkIndex) =>
+        createRow(services, TABLES.knowledgeChunks, context.teamId, {
+          knowledgeBaseId: document.knowledgeBaseId,
+          documentId: document.id,
+          chunkIndex,
+          content: chunk.content,
+          charStart: chunk.charStart,
+          charEnd: chunk.charEnd,
+          status: 'READY',
+        }),
+      ),
+    );
     const updated = await updateOwned(
       services,
       TABLES.knowledgeDocuments,
       document.id,
       context.teamId,
-      { extractedText: text, status: 'READY', error: '' },
+      {
+        // Keep only a small preview on the parent row. Full text lives in
+        // bounded chunk rows so Appwrite's byte-size row limit is respected.
+        extractedText: text.slice(0, 2_000),
+        chunkCount: chunks.length,
+        status: 'READY',
+        error: '',
+      },
     );
     await recordAudit(services, context, 'knowledge.indexed', 'knowledge_document', document.id, {
       characters: text.length,
+      chunks: chunks.length,
     });
     return updated;
   } catch (error) {
@@ -197,6 +230,29 @@ export async function indexDocument(services, context, body) {
     });
     throw error;
   }
+}
+
+export function splitTextIntoChunks(text, maxBytes = MAX_CHUNK_BYTES) {
+  const chunks = [];
+  let start = 0;
+  while (start < text.length) {
+    let low = start + 1;
+    let high = text.length;
+    while (low < high) {
+      const middle = Math.ceil((low + high) / 2);
+      if (Buffer.byteLength(text.slice(start, middle), 'utf8') <= maxBytes) low = middle;
+      else high = middle - 1;
+    }
+    let end = low;
+    if (end <= start) end = start + 1;
+    const boundary = text.lastIndexOf('\n', Math.min(end, start + 2_000));
+    if (boundary > start + 200) end = boundary;
+    const content = text.slice(start, end).trim();
+    if (content) chunks.push({ content, charStart: start, charEnd: end });
+    if (end >= text.length) break;
+    start = Math.max(start + 1, end - CHUNK_OVERLAP_CHARS);
+  }
+  return chunks;
 }
 
 function searchTerms(question) {
@@ -232,9 +288,30 @@ export async function askKnowledgeBase(services, context, body) {
     Query.equal('knowledgeBaseId', body.knowledgeBaseId),
     Query.equal('status', 'READY'),
   ]);
+  const chunks = await listRows(services, TABLES.knowledgeChunks, context.teamId, [
+    Query.equal('knowledgeBaseId', body.knowledgeBaseId),
+    Query.equal('status', 'READY'),
+  ]);
   const terms = searchTerms(body.question);
-  const ranked = documents
-    .flatMap((document) => relevantChunks(document, terms))
+  const storedChunks = chunks.map((chunk) => ({
+    document: documents.find((document) => document.id === chunk.documentId) || {
+      id: chunk.documentId,
+      title: 'Knowledge document',
+    },
+    value: String(chunk.content || ''),
+    start: Number(chunk.charStart || 0),
+    chunkId: chunk.id,
+  }));
+  const legacyChunks = documents.flatMap((document) => relevantChunks(document, terms));
+  const candidates = storedChunks.length ? storedChunks : legacyChunks;
+  const ranked = candidates
+    .map((chunk) => ({
+      ...chunk,
+      score: terms.reduce((total, term) => {
+        const lower = chunk.value.toLowerCase();
+        return total + Math.min(lower.split(term).length - 1, 5);
+      }, 0),
+    }))
     .sort((a, b) => b.score - a.score || a.start - b.start)
     .slice(0, 8);
   const selected = ranked.some((chunk) => chunk.score > 0)
@@ -259,7 +336,7 @@ export async function askKnowledgeBase(services, context, body) {
     answer: generated.content,
     citations: selected.map((chunk, index) => ({
       docId: chunk.document.id,
-      chunkId: `${chunk.document.id}-${chunk.start}`,
+      chunkId: chunk.chunkId || `${chunk.document.id}-${chunk.start}`,
       snippet: chunk.value.slice(0, 220),
       title: chunk.document.title,
       score: chunk.score,

@@ -110,6 +110,24 @@ export async function listRows(
   return rows;
 }
 
+export async function countRows(
+  tableId: string,
+  queries: string[] = [],
+  organizationField = 'organizationId',
+) {
+  const organizationId = getOrganizationContext();
+  try {
+    const result = await tablesDB.listRows<Row>({
+      databaseId: DATABASE_ID,
+      tableId,
+      queries: [Query.equal(organizationField, organizationId), ...queries, Query.limit(1)],
+    });
+    return Number(result.total || 0);
+  } catch (error) {
+    throw normalizeAppwriteError(error);
+  }
+}
+
 export async function getRow(tableId: string, rowId: string, organizationField = 'organizationId') {
   const organizationId = getOrganizationContext();
   let rawRow: Row;
@@ -168,12 +186,21 @@ export async function uploadKnowledgeFile(knowledgeBaseId: string, form: FormDat
   }
 }
 
-export async function executeCore<T>(path: string, body: Data, method = ExecutionMethod.POST) {
+export async function executeCore<T>(
+  path: string,
+  body: Data,
+  method = ExecutionMethod.POST,
+  options: { idempotencyKey?: string } = {},
+) {
   let execution: Models.Execution;
   try {
     execution = await appwriteFunctions.createExecution({
       functionId: CORE_FUNCTION_ID,
-      body: JSON.stringify({ ...body, organizationId: getOrganizationContext() }),
+      body: JSON.stringify({
+        ...body,
+        organizationId: getOrganizationContext(),
+        ...(options.idempotencyKey ? { __idempotencyKey: options.idempotencyKey } : {}),
+      }),
       async: false,
       xpath: path,
       method,

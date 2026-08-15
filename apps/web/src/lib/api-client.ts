@@ -38,7 +38,11 @@ async function call<T>(
   body?: unknown,
 ) {
   try {
-    return (await routeBackend(method, path, body)) as T;
+    const idempotencyKey =
+      method === 'GET'
+        ? undefined
+        : `mf-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`}`;
+    return (await routeBackend(method, path, body, { idempotencyKey })) as T;
   } catch (error) {
     normalizeError(error);
   }

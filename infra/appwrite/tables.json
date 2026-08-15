@@ -348,6 +348,13 @@
         "required": false
       },
       {
+        "key": "chunkCount",
+        "type": "integer",
+        "required": false,
+        "default": 0,
+        "min": 0
+      },
+      {
         "key": "error",
         "type": "text",
         "required": false
@@ -362,6 +369,78 @@
       },
       {
         "key": "docs_kb_status",
+        "type": "key",
+        "columns": ["knowledgeBaseId", "status"],
+        "orders": ["ASC", "ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "knowledge_chunks",
+    "databaseId": "matrixflow",
+    "name": "Knowledge chunks",
+    "$permissions": [],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "knowledgeBaseId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "documentId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "chunkIndex",
+        "type": "integer",
+        "required": true,
+        "min": 0
+      },
+      {
+        "key": "content",
+        "type": "longtext",
+        "required": true
+      },
+      {
+        "key": "charStart",
+        "type": "integer",
+        "required": true,
+        "min": 0
+      },
+      {
+        "key": "charEnd",
+        "type": "integer",
+        "required": true,
+        "min": 0
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 24,
+        "required": false,
+        "default": "READY"
+      }
+    ],
+    "indexes": [
+      {
+        "key": "chunks_document_order",
+        "type": "key",
+        "columns": ["documentId", "chunkIndex"],
+        "orders": ["ASC", "ASC"]
+      },
+      {
+        "key": "chunks_kb_status",
         "type": "key",
         "columns": ["knowledgeBaseId", "status"],
         "orders": ["ASC", "ASC"]
@@ -1099,6 +1178,75 @@
         "type": "unique",
         "columns": ["organizationId", "requestedPlan", "status"],
         "orders": ["ASC", "ASC", "ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "idempotency_keys",
+    "databaseId": "matrixflow",
+    "name": "Idempotency keys",
+    "$permissions": [],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "key",
+        "type": "varchar",
+        "size": 128,
+        "required": true
+      },
+      {
+        "key": "fingerprint",
+        "type": "varchar",
+        "size": 64,
+        "required": true
+      },
+      {
+        "key": "method",
+        "type": "varchar",
+        "size": 8,
+        "required": true
+      },
+      {
+        "key": "path",
+        "type": "varchar",
+        "size": 255,
+        "required": true
+      },
+      {
+        "key": "status",
+        "type": "integer",
+        "required": true
+      },
+      {
+        "key": "response",
+        "type": "longtext",
+        "required": true
+      },
+      {
+        "key": "expiresAt",
+        "type": "datetime",
+        "required": true
+      }
+    ],
+    "indexes": [
+      {
+        "key": "idempotency_org_key",
+        "type": "unique",
+        "columns": ["organizationId", "key"],
+        "orders": ["ASC", "ASC"]
+      },
+      {
+        "key": "idempotency_expiry",
+        "type": "key",
+        "columns": ["organizationId", "expiresAt"],
+        "orders": ["ASC", "ASC"]
       }
     ]
   }

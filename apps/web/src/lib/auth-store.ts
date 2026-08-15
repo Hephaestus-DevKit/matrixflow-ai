@@ -21,6 +21,8 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   registerWithOtp: (email: string, password: string, name: string) => Promise<string>;
   sendOtp: (email: string) => Promise<string>;
+  requestPasswordRecovery: (email: string) => Promise<void>;
+  resetPassword: (userId: string, secret: string, password: string) => Promise<void>;
   verifyOtp: (userId: string, code: string, name?: string) => Promise<void>;
   updateProfile: (name: string, avatarUrl: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -113,6 +115,14 @@ export const useAuth = create<AuthState>()(
         }
       },
 
+      requestPasswordRecovery: async (email) => {
+        await account.createRecovery(email, `${window.location.origin}/recover`);
+      },
+
+      resetPassword: async (userId, secret, password) => {
+        await account.updateRecovery(userId, secret, password);
+      },
+
       verifyOtp: async (userId, code, name) => {
         set({ loading: true });
         try {
@@ -196,7 +206,7 @@ export const useAuth = create<AuthState>()(
       },
     }),
     {
-      name: 'mfa-auth',
+      name: 'matrixflow-auth',
       partialize: (state) => ({ user: state.user, organizationId: state.organizationId }),
     },
   ),

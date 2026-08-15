@@ -25,6 +25,7 @@ const COPY: Record<
     createCustomer: string;
     customerName: string;
     customerEmail: string;
+    customerNamePlaceholder: string;
     creating: string;
     loading: string;
     buyerDb: string;
@@ -46,6 +47,7 @@ const COPY: Record<
     createCustomer: '新建客户',
     customerName: '客户姓名',
     customerEmail: '客户邮箱',
+    customerNamePlaceholder: '例如：Alex',
     creating: '创建中…',
     loading: '正在加载客户数据',
     buyerDb: '买家客户库',
@@ -66,6 +68,7 @@ const COPY: Record<
     createCustomer: '建立客戶',
     customerName: '客戶姓名',
     customerEmail: '客戶電子郵件',
+    customerNamePlaceholder: '例如：Alex',
     creating: '建立中…',
     loading: '正在載入客戶資料',
     buyerDb: '買家客戶庫',
@@ -87,6 +90,7 @@ const COPY: Record<
     createCustomer: 'New customer',
     customerName: 'Customer name',
     customerEmail: 'Customer email',
+    customerNamePlaceholder: 'e.g. Alex',
     creating: 'Creating…',
     loading: 'Loading customer data',
     buyerDb: 'Buyer customer base',
@@ -166,7 +170,7 @@ export default function CrmPage() {
               id="customer-name"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="例如 Alex"
+              placeholder={copy.customerNamePlaceholder}
             />
           </div>
           <div className="space-y-2">
