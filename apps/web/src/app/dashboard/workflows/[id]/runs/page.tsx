@@ -4,8 +4,17 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import type { WorkflowDetail, WorkflowRunSummary } from '@matrixflow/shared';
+import { useLocale, type Locale } from '@/lib/i18n';
+
+const COPY: Record<Locale, { title: string; empty: string }> = {
+  'zh-CN': { title: '运行日志', empty: '暂无运行记录' },
+  'zh-TW': { title: '執行日誌', empty: '暫無執行記錄' },
+  en: { title: 'Run log', empty: 'No runs yet' },
+};
 
 export default function WorkflowRunsPage() {
+  const { locale } = useLocale();
+  const copy = COPY[locale];
   const { id } = useParams();
   const { data: logs } = useQuery({
     queryKey: ['wf-logs', id],
@@ -19,11 +28,13 @@ export default function WorkflowRunsPage() {
   });
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold">运行日志 — {wf?.name ?? ''}</h1>
+      <h1 className="text-xl font-bold">
+        {copy.title} — {wf?.name ?? ''}
+      </h1>
       {logs?.length === 0 && (
         <div className="rounded-xl border border-dashed p-12 text-center text-muted-foreground">
           <p className="text-lg">🔗</p>
-          <p className="mt-2">暂无运行记录</p>
+          <p className="mt-2">{copy.empty}</p>
         </div>
       )}
       <div className="space-y-2">
