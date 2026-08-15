@@ -11,6 +11,8 @@ import {
   enforceResourceLimit,
 } from '../src/runtime.js';
 import { splitTextIntoChunks } from '../src/features.js';
+import { billingSignature, isValidBillingSignature } from '../src/billing.js';
+import { estimateCostUsd } from '../src/provider.js';
 
 test('agent updates reject mass-assignment fields', () => {
   assert.throws(
@@ -146,5 +148,59 @@ test('plan limits fail before creating another resource', async () => {
         '工作流',
       ),
     (error) => error.code === 'PLAN_LIMIT_EXCEEDED' && error.status === 403,
+  );
+});
+
+test('billing webhook signatures are exact and timing-safe', () => {
+  const body = '{"eventId":"evt_1"}';
+  const signature = billingSignature(body, 'test-secret');
+  assert.equal(isValidBillingSignature(body, signature, 'test-secret'), true);
+  assert.equal(isValidBillingSignature(body, `sha256=${signature}`, 'test-secret'), true);
+  assert.equal(isValidBillingSignature(`${body} `, signature, 'test-secret'), false);
+  assert.equal(isValidBillingSignature(body, signature, 'wrong-secret'), false);
+});
+
+test('billing webhook payloads are bounded to known subscription states', () => {
+  const parsed = parse(schemas.billingWebhook, {
+    eventId: 'evt_1',
+    organizationId: 'team_1',
+    provider: 'stripe',
+    type: 'subscription.updated',
+    subscriptionId: 'sub_1',
+    planId: 'pro',
+    status: 'active',
+  });
+  assert.equal(parsed.seats, 1);
+  assert.throws(
+    () => parse(schemas.billingWebhook, { ...parsed, status: 'past_due' }),
+    (error) => error.code === 'VALIDATION_ERROR',
+  );
+  assert.throws(
+    () => parse(schemas.billingWebhook, { ...parsed, organizationId: 'other', secret: 'leak' }),
+    (error) => error.code === 'VALIDATION_ERROR',
+  );
+});
+
+test('provider cost estimation remains zero until prices are configured', () => {
+  assert.equal(
+    estimateCostUsd(
+      'openai',
+      'gpt-test',
+      { inputTokens: 1_000, outputTokens: 2_000 },
+      { MATRIXFLOW_AI_PRICING_JSON: '{"openai:gpt-test":{"inputPer1k":0.01,"outputPer1k":0.02}}' },
+    ),
+    0.05,
+  );
+  assert.equal(estimateCostUsd('openai', 'gpt-test', { inputTokens: 1 }, {}), 0);
+});
+
+test('run retry metadata is bounded and strict', () => {
+  assert.deepEqual(parse(schemas.agentRun, { input: {}, retryCount: 2 }), {
+    input: {},
+    retryCount: 2,
+  });
+  assert.throws(
+    () => parse(schemas.workflowRun, { input: {}, retryCount: 11 }),
+    (error) => error.code === 'VALIDATION_ERROR',
   );
 });

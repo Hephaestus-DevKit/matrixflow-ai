@@ -58,6 +58,21 @@ OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_MAX_TOKENS_FIELD=max_completion_tokens
 ```
 
+可选的运营变量：
+
+```text
+# 仅用于内部用量统计，不会把价格展示为供应商承诺
+MATRIXFLOW_AI_PRICING_JSON={"openai:gpt-4o-mini":{"inputPer1k":0.00015,"outputPer1k":0.0006}}
+
+# 计费适配器的 HMAC secret；支付供应商事件先由你的适配层规范化为
+# MatrixFlow billing webhook schema，再请求 /billing/webhook。
+MATRIXFLOW_BILLING_WEBHOOK_SECRET=<secret>
+```
+
+计费事件必须使用原始请求体计算 `HMAC-SHA256`，通过
+`X-MatrixFlow-Billing-Signature: sha256=<hex>` 发送；事件 ID 在
+`billing_events` 中唯一去重。订阅权益只由 Function 根据 `subscriptions` 表判定，浏览器不能传入或覆盖套餐。
+
 `OPENAI_BASE_URL` 支持任意遵循 Chat Completions 请求/响应结构的网关；官方 OpenAI 新模型默认使用 `max_completion_tokens`，旧版兼容网关可切换为 `max_tokens`。GLM 保留独立变量以兼容既有环境。`ANTHROPIC_API_KEY`、`OPENAI_API_KEY` 和 `GLM_API_KEY` 必须标记为 Secret，其他模型、端点和限流变量可以是普通变量。密钥永远不要放到 Web 环境变量或仓库。
 
 自动部署由 `.github/workflows/appwrite.yml` 提供。仓库 Secret `MATRIXFLOW_DEPLOY_KEY` 存在时，主分支的后端或基础设施变更会依次执行测试、Schema 更新、Function 部署和可选 smoke test；没有 Secret 时任务安全跳过。

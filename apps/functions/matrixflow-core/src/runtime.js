@@ -1,4 +1,5 @@
 import { Client, ID, Permission, Query, Role, Storage, TablesDB, Teams } from 'node-appwrite';
+import { DEFAULT_PLAN_ID, planById } from './plans.js';
 
 export const DATABASE_ID = process.env.MATRIXFLOW_DATABASE_ID || 'matrixflow';
 export const BUCKET_ID = process.env.MATRIXFLOW_KNOWLEDGE_BUCKET_ID || 'knowledge-files';
@@ -24,6 +25,8 @@ export const TABLES = {
   usageRecords: 'usage_records',
   auditLogs: 'audit_logs',
   billingRequests: 'billing_requests',
+  subscriptions: 'subscriptions',
+  billingEvents: 'billing_events',
 };
 
 const JSON_FIELDS = new Set([
@@ -37,6 +40,7 @@ const JSON_FIELDS = new Set([
   'metadata',
   'dsl',
   'logs',
+  'payload',
   'tags',
   'notes',
 ]);
@@ -104,6 +108,8 @@ const FUNCTION_ONLY_TABLES = new Set([
   TABLES.usageRecords,
   TABLES.billingRequests,
   'idempotency_keys',
+  TABLES.subscriptions,
+  TABLES.billingEvents,
 ]);
 
 export function rowPermissions(teamId, tableId) {
@@ -289,6 +295,67 @@ export async function enforceResourceLimit(
   return { limit: safeLimit, used: current, remaining: safeLimit - current };
 }
 
+function isMissingTable(error) {
+  return Number(error?.status || error?.code) === 404;
+}
+
+/**
+ * Resolve the active subscription without trusting browser-provided plan data.
+ * A missing table is treated as the safe Free preview fallback during a
+ * rolling deployment; all other storage errors are surfaced so entitlement
+ * checks cannot silently fail open.
+ */
+export async function getTeamPlan(services, teamId) {
+  const freeWithOperatorLimits = () => ({
+    ...planById(DEFAULT_PLAN_ID),
+    aiCallsPerMonth: Number(process.env.MATRIXFLOW_AI_MONTHLY_LIMIT || 100),
+    aiCallsPerMinute: Number(process.env.MATRIXFLOW_AI_PER_MINUTE_LIMIT || 20),
+    agentLimit: Number(process.env.MATRIXFLOW_AGENT_LIMIT || 10),
+    contentProjectLimit: Number(process.env.MATRIXFLOW_CONTENT_PROJECT_LIMIT || 10),
+    knowledgeBaseLimit: Number(process.env.MATRIXFLOW_KNOWLEDGE_BASE_LIMIT || 5),
+    workflowLimit: Number(process.env.MATRIXFLOW_WORKFLOW_LIMIT || 3),
+  });
+  let subscriptions;
+  try {
+    subscriptions = await listRows(services, TABLES.subscriptions, teamId, [
+      Query.equal('status', 'active'),
+    ]);
+  } catch (error) {
+    if (!isMissingTable(error)) throw error;
+    return freeWithOperatorLimits();
+  }
+  const current = subscriptions
+    .filter((row) => {
+      const end = row.currentPeriodEnd ? new Date(row.currentPeriodEnd).getTime() : 0;
+      return !end || end > Date.now();
+    })
+    .sort((a, b) =>
+      String(b.currentPeriodEnd || '').localeCompare(String(a.currentPeriodEnd || '')),
+    )[0];
+  return current ? planById(current.planId) : freeWithOperatorLimits();
+}
+
+export async function enforcePlanResourceLimit(
+  services,
+  teamId,
+  resource,
+  fallbackLimit,
+  label,
+  queries = [],
+) {
+  const plan = await getTeamPlan(services, teamId);
+  const limit = Number.isFinite(Number(plan[resource])) ? plan[resource] : fallbackLimit;
+  const tableByResource = {
+    agentLimit: TABLES.agents,
+    contentProjectLimit: TABLES.contentProjects,
+    knowledgeBaseLimit: TABLES.knowledgeBases,
+    workflowLimit: TABLES.workflows,
+  };
+  const tableId = tableByResource[resource];
+  if (!tableId) throw new HttpError('套餐资源限制配置无效', 500, 'PLAN_LIMIT_CONFIG_INVALID');
+  return enforceResourceLimit(services, tableId, teamId, limit, queries, label);
+}
+
 export async function recordAudit(services, context, action, resource, resourceId, metadata = {}) {
   return createRow(services, TABLES.auditLogs, context.teamId, {
     userId: context.userId,
@@ -306,10 +373,14 @@ export async function recordUsage(services, teamId, generated) {
   const safeOutputTokens = Number.isFinite(Number(generated?.usage?.outputTokens))
     ? Math.max(0, Math.round(Number(generated.usage.outputTokens)))
     : 0;
+  const safeCostCents = Number.isFinite(Number(generated?.costUsd))
+    ? Math.max(0, Math.round(Number(generated.costUsd) * 100))
+    : 0;
   const records = [
     ['ai_call', 1],
     ['token_input', safeInputTokens],
     ['token_output', safeOutputTokens],
+    ['ai_cost_cents', safeCostCents],
   ];
   const results = await Promise.allSettled(
     records.map(([metric, value]) =>
@@ -322,6 +393,8 @@ export async function recordUsage(services, teamId, generated) {
           model: generated.model,
           durationMs: generated.durationMs,
           upstreamRequestId: generated.upstreamRequestId,
+          requestId: generated.requestId,
+          costUsd: Number.isFinite(Number(generated?.costUsd)) ? Number(generated.costUsd) : 0,
         },
         recordedAt: new Date().toISOString(),
       }),
@@ -346,8 +419,15 @@ async function usageCountSince(services, teamId, since) {
 }
 
 export async function enforceAiBudget(services, teamId, requestedCalls = 1) {
-  const monthlyLimit = Math.max(1, Number(process.env.MATRIXFLOW_AI_MONTHLY_LIMIT || 100));
-  const perMinuteLimit = Math.max(1, Number(process.env.MATRIXFLOW_AI_PER_MINUTE_LIMIT || 20));
+  const plan = await getTeamPlan(services, teamId);
+  const monthlyLimit = Math.max(
+    1,
+    Number(plan.aiCallsPerMonth || process.env.MATRIXFLOW_AI_MONTHLY_LIMIT || 100),
+  );
+  const perMinuteLimit = Math.max(
+    1,
+    Number(plan.aiCallsPerMinute || process.env.MATRIXFLOW_AI_PER_MINUTE_LIMIT || 20),
+  );
   const now = new Date();
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
   const minuteStart = new Date(now.getTime() - 60_000).toISOString();

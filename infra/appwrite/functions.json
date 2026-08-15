@@ -30,7 +30,8 @@
       "MATRIXFLOW_AGENT_LIMIT": "10",
       "MATRIXFLOW_CONTENT_PROJECT_LIMIT": "10",
       "MATRIXFLOW_KNOWLEDGE_BASE_LIMIT": "5",
-      "MATRIXFLOW_WORKFLOW_LIMIT": "3"
+      "MATRIXFLOW_WORKFLOW_LIMIT": "3",
+      "MATRIXFLOW_RELEASE": "production"
     },
     "ignore": "node_modules,.git,*.log"
   }

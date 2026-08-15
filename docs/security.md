@@ -12,6 +12,7 @@
 - 所有业务表关闭客户端创建权限；创建、更新、删除统一经过 Function 的角色检查与 Zod 字段白名单。
 - AI 调用执行每组织月度额度和分钟级速率限制；关键写入与执行写入 `audit_logs`。
 - 套餐升级申请只允许已验证团队成员提交，服务端限定套餐、席位和备注范围，同一组织同一套餐的待处理申请会去重，并写入 `audit_logs`。
+- 套餐权益只由 Function 服务端读取 `subscriptions` 判定；计费适配器的 `/billing/webhook` 使用原始请求体 HMAC-SHA256 校验，并通过唯一 `billing_events.eventId` 幂等处理。
 - 浏览器只包含公开 endpoint/project ID；AI 密钥和部署 key 不进入客户端 bundle。
 - 云函数限制请求体、Prompt、文档文本、DAG 大小、执行时间和错误信息长度。
 - 文档解析仅接受 PDF、DOCX、TXT、Markdown、CSV；删除记录时同步删除对应文件。
@@ -20,6 +21,7 @@
 - 知识文档索引拆分为受字节上限约束的 `knowledge_chunks` 行，文档父行只保留预览文本。
 - CI 执行格式、类型、lint、单测、生产构建、依赖审计；CodeQL 扫描 JavaScript/TypeScript。
 - Web 设置 CSP、拒绝嵌入、内容类型保护、严格来源策略、权限策略和 HSTS；头像限制为内置资源或 Appwrite 托管地址。
+- 公开 `healthz` 只返回服务存活状态，不泄露组织、Provider 或计费信息；带组织上下文的 `/health` 才返回受保护的运行就绪与套餐额度。
 
 ## 部署要求
 
@@ -38,6 +40,7 @@
 - 邮件和任意 Webhook 连接器尚未配置，相关节点会返回 `CONNECTOR_NOT_CONFIGURED`。
 - 关键词检索不是高敏感知识库的完整防泄漏方案；高敏场景需要文档级 ACL、审计导出和保留策略。
 - 市场支付与公共发布尚未启用，不能把界面占位视为真实交易能力。
+- `/billing/webhook` 是支付供应商适配边界，不等于已接入某一家支付平台；只有配置签名 Secret、规范化事件和供应商回调后才会改变订阅权益。
 - Appwrite 托管层的备份、地域、DDoS、邮件投递和告警需在控制台/供应商侧单独治理。
 
 漏洞请按根目录 [SECURITY.md](../SECURITY.md) 私下报告。

@@ -108,6 +108,8 @@ export async function runAgent(services, context, body) {
     input: body.input,
     output: {},
     startedAt: new Date().toISOString(),
+    retryOf: body.retryOf,
+    retryCount: body.retryCount || 0,
   });
   const started = Date.now();
   try {
@@ -133,6 +135,7 @@ export async function runAgent(services, context, body) {
         status: 'COMPLETED',
         output,
         tokensUsed: generated.usage.inputTokens + generated.usage.outputTokens,
+        costUsd: generated.costUsd || 0,
         durationMs: Date.now() - started,
         completedAt: new Date().toISOString(),
       }),
@@ -257,15 +260,38 @@ export function splitTextIntoChunks(text, maxBytes = MAX_CHUNK_BYTES) {
   return chunks;
 }
 
-function searchTerms(question) {
-  return [
-    ...new Set(
-      question
-        .toLowerCase()
-        .split(/[^\p{L}\p{N}]+/u)
-        .filter((term) => term.length > 1),
-    ),
-  ];
+export function searchTerms(question) {
+  const normalized = String(question || '')
+    .normalize('NFKC')
+    .toLowerCase();
+  const terms = normalized.split(/[^\p{L}\p{N}]+/u).filter((term) => term.length > 1);
+  // CJK text has no whitespace boundaries. Add bounded character bigrams so
+  // Chinese queries can match useful chunks without pretending this is a
+  // vector index. Full short runs retain an exact-phrase signal as well.
+  for (const run of normalized.matchAll(/[\u3400-\u9fff\u3040-\u30ff\uac00-\ud7af]{2,}/gu)) {
+    const value = run[0];
+    if (value.length <= 16) terms.push(value);
+    for (let index = 0; index < value.length - 1; index += 1)
+      terms.push(value.slice(index, index + 2));
+  }
+  return [...new Set(terms)].filter((term) => term.length > 1).slice(0, 96);
+}
+
+function occurrenceScore(text, terms) {
+  const normalized = String(text || '')
+    .normalize('NFKC')
+    .toLowerCase();
+  return terms.reduce((total, term) => {
+    let offset = 0;
+    let count = 0;
+    while (count < 5) {
+      const found = normalized.indexOf(term, offset);
+      if (found < 0) break;
+      count += 1;
+      offset = found + Math.max(1, term.length);
+    }
+    return total + count;
+  }, 0);
 }
 
 function relevantChunks(document, terms) {
@@ -273,11 +299,7 @@ function relevantChunks(document, terms) {
   const chunks = [];
   for (let start = 0; start < text.length; start += 1_000) {
     const value = text.slice(start, start + 1_300);
-    const lower = value.toLowerCase();
-    const score = terms.reduce((total, term) => {
-      const matches = lower.split(term).length - 1;
-      return total + Math.min(matches, 5);
-    }, 0);
+    const score = occurrenceScore(value, terms);
     chunks.push({ document, value, start, score });
   }
   return chunks;
@@ -309,12 +331,23 @@ export async function askKnowledgeBase(services, context, body) {
   const ranked = candidates
     .map((chunk) => ({
       ...chunk,
-      score: terms.reduce((total, term) => {
-        const lower = chunk.value.toLowerCase();
-        return total + Math.min(lower.split(term).length - 1, 5);
-      }, 0),
+      score:
+        occurrenceScore(chunk.value, terms) +
+        occurrenceScore(chunk.document?.title, terms) * 2 +
+        (String(body.question).toLowerCase().includes(String(chunk.value).trim().toLowerCase())
+          ? 8
+          : 0),
     }))
     .sort((a, b) => b.score - a.score || a.start - b.start)
+    .filter((chunk, index, all) => {
+      const key = chunk.chunkId || `${chunk.document.id}:${chunk.start}`;
+      return (
+        all.findIndex(
+          (candidate) =>
+            (candidate.chunkId || `${candidate.document.id}:${candidate.start}`) === key,
+        ) === index
+      );
+    })
     .slice(0, 8);
   const selected = ranked.some((chunk) => chunk.score > 0)
     ? ranked.filter((chunk) => chunk.score > 0)
@@ -336,6 +369,11 @@ export async function askKnowledgeBase(services, context, body) {
   ]);
   return {
     answer: generated.content,
+    retrieval: {
+      mode: 'lexical-hybrid',
+      candidates: candidates.length,
+      selected: selected.length,
+    },
     citations: selected.map((chunk, index) => ({
       docId: chunk.document.id,
       chunkId: chunk.chunkId || `${chunk.document.id}-${chunk.start}`,
@@ -359,10 +397,17 @@ export async function runWorkflow(services, context, body) {
     triggerType: 'manual',
     output: {},
     logs: [],
+    startedAt: new Date().toISOString(),
+    retryOf: body.retryOf,
+    retryCount: body.retryCount || 0,
+    tokensUsed: 0,
+    costUsd: 0,
   });
   const started = Date.now();
   const values = { input: body.input || {}, nodes: {} };
   const logs = [];
+  let tokensUsed = 0;
+  let costUsd = 0;
   try {
     for (const node of dag.order) {
       const config = node.config || {};
@@ -387,6 +432,8 @@ export async function runWorkflow(services, context, body) {
           requestId: context.requestId,
         });
         output = generated.content;
+        tokensUsed += generated.usage.inputTokens + generated.usage.outputTokens;
+        costUsd += Number(generated.costUsd || 0);
         await recordUsage(services, context.teamId, generated);
       } else if (node.type === 'transform')
         output = interpolate(config.template || '{{input}}', values);
@@ -399,6 +446,9 @@ export async function runWorkflow(services, context, body) {
       output: values,
       logs,
       durationMs: Date.now() - started,
+      tokensUsed,
+      costUsd,
+      completedAt: new Date().toISOString(),
     });
     await recordAudit(services, context, 'workflow.executed', 'workflow', workflow.id, {
       runId: run.id,
@@ -411,6 +461,9 @@ export async function runWorkflow(services, context, body) {
       logs,
       error: String(error?.message || '执行失败').slice(0, 1000),
       durationMs: Date.now() - started,
+      tokensUsed,
+      costUsd,
+      completedAt: new Date().toISOString(),
     });
     throw error;
   }

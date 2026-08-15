@@ -17,7 +17,8 @@ import {
   createRow,
   deleteIdempotency,
   deleteOwned,
-  enforceResourceLimit,
+  enforcePlanResourceLimit,
+  getTeamPlan,
   getOwned,
   listRows,
   recordAudit,
@@ -31,6 +32,8 @@ import {
   updateOwned,
 } from './runtime.js';
 import { parse, schemas } from './schemas.js';
+import { isValidBillingSignature } from './billing.js';
+import { planById, publicPlanCatalog } from './plans.js';
 
 const TEMPLATES = {
   tpl_copywriter: {
@@ -83,6 +86,85 @@ function providerReadiness() {
   }
 }
 
+async function handleBillingWebhook({ req, res }) {
+  const secret = process.env.MATRIXFLOW_BILLING_WEBHOOK_SECRET;
+  const rawBody =
+    typeof req.bodyText === 'string'
+      ? req.bodyText
+      : JSON.stringify(req.bodyJson && typeof req.bodyJson === 'object' ? req.bodyJson : {});
+  const signature =
+    req.headers['x-matrixflow-billing-signature'] || req.headers['x-billing-signature'] || '';
+  if (!isValidBillingSignature(rawBody, signature, secret))
+    throw new HttpError('计费事件签名无效', 401, 'BILLING_SIGNATURE_INVALID');
+  let body;
+  try {
+    body = JSON.parse(rawBody || '{}');
+  } catch {
+    throw new HttpError('计费事件不是有效 JSON', 400, 'INVALID_JSON');
+  }
+  const input = parse(schemas.billingWebhook, body);
+  const services = serverClient(req);
+  try {
+    await services.teams.get({ teamId: input.organizationId });
+  } catch (error) {
+    if (Number(error?.status || error?.code) === 404)
+      throw new HttpError('计费事件的团队空间不存在', 404, 'ORGANIZATION_NOT_FOUND');
+    throw error;
+  }
+  const existingEvents = await listRows(services, TABLES.billingEvents, input.organizationId, [
+    Query.equal('eventId', input.eventId),
+  ]);
+  if (existingEvents[0])
+    return res.json({ accepted: true, duplicate: true, eventId: input.eventId }, 200);
+
+  const subscriptionsByProviderId = await listRows(
+    services,
+    TABLES.subscriptions,
+    input.organizationId,
+    [Query.equal('externalSubscriptionId', input.subscriptionId)],
+  );
+  const subscriptions =
+    subscriptionsByProviderId.length > 0
+      ? subscriptionsByProviderId
+      : await listRows(services, TABLES.subscriptions, input.organizationId, [Query.limit(1)]);
+  const subscriptionData = {
+    planId: input.planId,
+    status: input.status,
+    provider: input.provider,
+    externalSubscriptionId: input.subscriptionId,
+    seats: input.seats,
+    currentPeriodStart: input.currentPeriodStart,
+    currentPeriodEnd: input.currentPeriodEnd,
+    metadata: input.metadata,
+  };
+  const subscription = subscriptions[0]
+    ? await updateOwned(
+        services,
+        TABLES.subscriptions,
+        subscriptions[0].id,
+        input.organizationId,
+        subscriptionData,
+      )
+    : await createRow(services, TABLES.subscriptions, input.organizationId, subscriptionData);
+  try {
+    await createRow(services, TABLES.billingEvents, input.organizationId, {
+      eventId: input.eventId,
+      provider: input.provider,
+      type: input.type,
+      subscriptionId: input.subscriptionId,
+      payload: input.metadata,
+      processedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    if (Number(error?.status || error?.code) !== 409) throw error;
+    return res.json({ accepted: true, duplicate: true, eventId: input.eventId }, 200);
+  }
+  return res.json(
+    { accepted: true, duplicate: false, eventId: input.eventId, subscriptionId: subscription.id },
+    200,
+  );
+}
+
 async function handleRoute({ services, context, membership, path, method, body }) {
   const segments = routeParts(path);
   const ai = providerReadiness();
@@ -100,19 +182,53 @@ async function handleRoute({ services, context, membership, path, method, body }
   }
 
   if (path === '/health') {
+    const plan = await getTeamPlan(services, context.teamId);
     return {
       status: 'ok',
       architecture: 'appwrite-native',
       database: { ready: true },
       ai,
+      requestId: context.requestId,
+      version: process.env.MATRIXFLOW_RELEASE || 'production',
+      timestamp: new Date().toISOString(),
       limits: {
-        monthlyAiCalls: Number(process.env.MATRIXFLOW_AI_MONTHLY_LIMIT || 100),
-        aiCallsPerMinute: Number(process.env.MATRIXFLOW_AI_PER_MINUTE_LIMIT || 20),
-        agents: Number(process.env.MATRIXFLOW_AGENT_LIMIT || 10),
-        contentProjects: Number(process.env.MATRIXFLOW_CONTENT_PROJECT_LIMIT || 10),
-        knowledgeBases: Number(process.env.MATRIXFLOW_KNOWLEDGE_BASE_LIMIT || 5),
-        workflows: Number(process.env.MATRIXFLOW_WORKFLOW_LIMIT || 3),
+        plan: plan.id,
+        monthlyAiCalls: plan.aiCallsPerMonth,
+        aiCallsPerMinute: plan.aiCallsPerMinute,
+        agents: plan.agentLimit,
+        contentProjects: plan.contentProjectLimit,
+        knowledgeBases: plan.knowledgeBaseLimit,
+        workflows: plan.workflowLimit,
       },
+    };
+  }
+
+  if (method === 'GET' && path === '/billing/plans') return publicPlanCatalog();
+
+  if (method === 'GET' && path === '/billing/current') {
+    requireCapability(membership, 'billing.read');
+    const subscriptions = await listRows(services, TABLES.subscriptions, context.teamId, [
+      Query.equal('status', 'active'),
+    ]).catch((error) => {
+      if (Number(error?.status || error?.code) === 404) return [];
+      throw error;
+    });
+    const current = subscriptions
+      .filter((row) => {
+        const end = row.currentPeriodEnd ? new Date(row.currentPeriodEnd).getTime() : 0;
+        return !end || end > Date.now();
+      })
+      .sort((a, b) =>
+        String(b.currentPeriodEnd || '').localeCompare(String(a.currentPeriodEnd || '')),
+      )[0];
+    const plan = planById(current?.planId || 'free');
+    return {
+      id: current?.id || 'free-preview',
+      status: current?.status || 'preview',
+      provider: current?.provider || null,
+      seats: current?.seats || plan.seats,
+      currentPeriodEnd: current?.currentPeriodEnd || null,
+      plan: publicPlanCatalog().find((item) => item.id === plan.id),
     };
   }
 
@@ -128,23 +244,43 @@ async function handleRoute({ services, context, membership, path, method, body }
     const records = await listRows(services, TABLES.usageRecords, context.teamId, [
       Query.greaterThanEqual('recordedAt', monthStart.toISOString()),
     ]);
-    return records.reduce((total, row) => {
+    const summary = records.reduce((total, row) => {
       const metric = String(row.metric);
       total[metric] = (total[metric] || 0) + Number(row.value || 0);
       return total;
     }, {});
+    const byProvider = {};
+    const byModel = {};
+    for (const row of records) {
+      const metadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+      const provider = String(metadata.provider || 'unknown');
+      const model = String(metadata.model || 'unknown');
+      byProvider[provider] =
+        (byProvider[provider] || 0) + (row.metric === 'ai_call' ? Number(row.value || 0) : 0);
+      byModel[model] =
+        (byModel[model] || 0) + (row.metric === 'ai_call' ? Number(row.value || 0) : 0);
+    }
+    const plan = await getTeamPlan(services, context.teamId);
+    return {
+      ...summary,
+      meta: {
+        periodStart: monthStart.toISOString(),
+        periodEnd: now.toISOString(),
+        plan: plan.id,
+        limits: {
+          aiCallsPerMonth: plan.aiCallsPerMonth,
+          aiCallsPerMinute: plan.aiCallsPerMinute,
+        },
+        byProvider,
+        byModel,
+        estimatedCostUsd: Number(summary.ai_cost_cents || 0) / 100,
+      },
+    };
   }
 
   if (method === 'POST' && path === '/agents') {
     requireCapability(membership, 'agents.manage');
-    await enforceResourceLimit(
-      services,
-      TABLES.agents,
-      context.teamId,
-      process.env.MATRIXFLOW_AGENT_LIMIT || 10,
-      [],
-      'AI 员工',
-    );
+    await enforcePlanResourceLimit(services, context.teamId, 'agentLimit', 10, 'AI 员工');
     const input = parse(schemas.agentCreate, body);
     const agent = await createRow(services, TABLES.agents, context.teamId, {
       name: input.name,
@@ -230,16 +366,29 @@ async function handleRoute({ services, context, membership, path, method, body }
     });
   }
 
+  if (
+    method === 'POST' &&
+    segments[0] === 'agents' &&
+    segments[2] === 'runs' &&
+    segments[4] === 'retry'
+  ) {
+    requireCapability(membership, 'agents.manage');
+    const previous = await getOwned(services, TABLES.agentRuns, segments[3], context.teamId);
+    if (previous.agentId !== segments[1])
+      throw new HttpError('运行记录不属于该 AI 员工', 403, 'FORBIDDEN');
+    if (!['FAILED', 'COMPLETED'].includes(previous.status))
+      throw new HttpError('当前运行状态不可重试', 409, 'RUN_NOT_RETRYABLE');
+    return runAgent(services, context, {
+      agentId: segments[1],
+      input: previous.input || {},
+      retryOf: previous.id,
+      retryCount: Math.min(10, Number(previous.retryCount || 0) + 1),
+    });
+  }
+
   if (method === 'POST' && path === '/content/projects') {
     requireCapability(membership, 'content.manage');
-    await enforceResourceLimit(
-      services,
-      TABLES.contentProjects,
-      context.teamId,
-      process.env.MATRIXFLOW_CONTENT_PROJECT_LIMIT || 10,
-      [],
-      '内容项目',
-    );
+    await enforcePlanResourceLimit(services, context.teamId, 'contentProjectLimit', 10, '内容项目');
     const input = parse(schemas.contentProject, body);
     const project = await createRow(services, TABLES.contentProjects, context.teamId, {
       ...input,
@@ -304,14 +453,7 @@ async function handleRoute({ services, context, membership, path, method, body }
 
   if (method === 'POST' && path === '/kb') {
     requireCapability(membership, 'knowledge.manage');
-    await enforceResourceLimit(
-      services,
-      TABLES.knowledgeBases,
-      context.teamId,
-      process.env.MATRIXFLOW_KNOWLEDGE_BASE_LIMIT || 5,
-      [],
-      '知识库',
-    );
+    await enforcePlanResourceLimit(services, context.teamId, 'knowledgeBaseLimit', 5, '知识库');
     const input = parse(schemas.knowledgeBase, body);
     const base = await createRow(services, TABLES.knowledgeBases, context.teamId, {
       ...input,
@@ -434,14 +576,7 @@ async function handleRoute({ services, context, membership, path, method, body }
 
   if (method === 'POST' && path === '/workflows') {
     requireCapability(membership, 'workflows.manage');
-    await enforceResourceLimit(
-      services,
-      TABLES.workflows,
-      context.teamId,
-      process.env.MATRIXFLOW_WORKFLOW_LIMIT || 3,
-      [],
-      '工作流',
-    );
+    await enforcePlanResourceLimit(services, context.teamId, 'workflowLimit', 3, '工作流');
     const input = parse(schemas.workflowCreate, body);
     const workflow = await createRow(services, TABLES.workflows, context.teamId, {
       ...input,
@@ -486,6 +621,26 @@ async function handleRoute({ services, context, membership, path, method, body }
     return runWorkflow(services, context, {
       workflowId: segments[1],
       ...parse(schemas.workflowRun, body),
+    });
+  }
+
+  if (
+    method === 'POST' &&
+    segments[0] === 'workflows' &&
+    segments[2] === 'runs' &&
+    segments[4] === 'retry'
+  ) {
+    requireCapability(membership, 'workflows.manage');
+    const previous = await getOwned(services, TABLES.workflowRuns, segments[3], context.teamId);
+    if (previous.workflowId !== segments[1])
+      throw new HttpError('运行记录不属于该工作流', 403, 'FORBIDDEN');
+    if (!['FAILED', 'COMPLETED'].includes(previous.status))
+      throw new HttpError('当前运行状态不可重试', 409, 'RUN_NOT_RETRYABLE');
+    return runWorkflow(services, context, {
+      workflowId: segments[1],
+      input: previous.output?.input || {},
+      retryOf: previous.id,
+      retryCount: Math.min(10, Number(previous.retryCount || 0) + 1),
     });
   }
 
@@ -575,6 +730,17 @@ export default async ({ req, res, log, error: logError }) => {
       : randomUUID();
   const startedAt = Date.now();
   try {
+    if (req.path === '/healthz' && String(req.method || 'GET').toUpperCase() === 'GET')
+      return res.json(
+        {
+          status: 'ok',
+          service: 'matrixflow-core',
+          timestamp: new Date().toISOString(),
+        },
+        200,
+      );
+    if (req.path === '/billing/webhook' && String(req.method || 'POST').toUpperCase() === 'POST')
+      return await handleBillingWebhook({ req, res });
     const userId = req.headers['x-appwrite-user-id'];
     if (!userId) throw new HttpError('请先登录', 401, 'UNAUTHENTICATED');
     const path = typeof req.path === 'string' && req.path.length <= 512 ? req.path : '/';

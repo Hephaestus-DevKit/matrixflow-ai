@@ -12,36 +12,6 @@ import { TABLES } from './constants';
 type Body = Record<string, unknown>;
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-const PLANS = [
-  {
-    id: 'free',
-    name: 'Free',
-    priceMonthlyUsd: 0,
-    priceYearlyUsd: 0,
-    seats: 1,
-    aiCallsPerMonth: 100,
-    workflowLimit: 3,
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    priceMonthlyUsd: 29,
-    priceYearlyUsd: 290,
-    seats: 5,
-    aiCallsPerMonth: 5000,
-    workflowLimit: 100,
-  },
-  {
-    id: 'team',
-    name: 'Team',
-    priceMonthlyUsd: 99,
-    priceYearlyUsd: 990,
-    seats: 20,
-    aiCallsPerMonth: 25000,
-    workflowLimit: 500,
-  },
-];
-
 function parts(path: string) {
   const url = new URL(path, 'https://matrixflow.local');
   return { segments: url.pathname.split('/').filter(Boolean), search: url.searchParams };
@@ -164,8 +134,8 @@ async function routeGet(path: string) {
       item: items.find((item) => item.id === purchase.itemId),
     }));
   }
-  if (path === '/billing/plans') return PLANS;
-  if (path === '/billing/current') return { id: 'free-preview', status: 'preview', plan: PLANS[0] };
+  if (path === '/billing/plans') return executeCore('/billing/plans', {}, ExecutionMethod.GET);
+  if (path === '/billing/current') return executeCore('/billing/current', {}, ExecutionMethod.GET);
   if (path === '/billing/requests')
     return executeCore('/billing/requests', {}, ExecutionMethod.GET);
   if (path === '/billing/usage') return executeCore('/billing/usage', {}, ExecutionMethod.GET);

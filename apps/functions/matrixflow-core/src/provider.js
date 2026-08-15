@@ -170,6 +170,31 @@ function safeUsageValue(value) {
   return Number.isFinite(number) ? Math.max(0, Math.round(number)) : 0;
 }
 
+/**
+ * Estimate provider cost from an operator-supplied price table. Pricing is
+ * intentionally configuration-driven because provider prices change; missing
+ * prices produce 0 rather than inventing a charge. Example:
+ * {"openai:gpt-4o-mini":{"inputPer1k":0.00015,"outputPer1k":0.0006}}
+ */
+export function estimateCostUsd(providerName, model, usage, env = process.env) {
+  const raw = text(env?.MATRIXFLOW_AI_PRICING_JSON);
+  if (!raw) return 0;
+  let pricing;
+  try {
+    pricing = JSON.parse(raw);
+  } catch {
+    return 0;
+  }
+  const entry =
+    pricing?.[`${providerName}:${model}`] || pricing?.[model] || pricing?.[providerName] || {};
+  const inputRate = Number(entry.inputPer1k);
+  const outputRate = Number(entry.outputPer1k);
+  if (!Number.isFinite(inputRate) || !Number.isFinite(outputRate)) return 0;
+  const inputTokens = safeUsageValue(usage?.inputTokens);
+  const outputTokens = safeUsageValue(usage?.outputTokens);
+  return Math.max(0, (inputTokens / 1_000) * inputRate + (outputTokens / 1_000) * outputRate);
+}
+
 function openAiContent(payload) {
   const value = payload?.choices?.[0]?.message?.content;
   if (typeof value === 'string') return value;
@@ -364,10 +389,12 @@ export async function generateText(
         protocol: provider.protocol,
         model: requestedModel,
         usage,
+        costUsd: estimateCostUsd(provider.name, requestedModel, usage),
         stopReason: payload?.stop_reason || payload?.choices?.[0]?.finish_reason || null,
         durationMs: Date.now() - startedAt,
         upstreamRequestId:
           response.headers?.get?.('x-request-id') || response.headers?.get?.('request-id') || null,
+        requestId: safeRequestId || null,
       };
     } catch (error) {
       if (error instanceof ProviderError) throw error;

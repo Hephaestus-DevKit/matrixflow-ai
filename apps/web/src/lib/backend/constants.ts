@@ -22,4 +22,6 @@ export const TABLES = {
   usageRecords: 'usage_records',
   auditLogs: 'audit_logs',
   billingRequests: 'billing_requests',
+  subscriptions: 'subscriptions',
+  billingEvents: 'billing_events',
 } as const;

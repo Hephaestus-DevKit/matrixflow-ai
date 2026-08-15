@@ -47,19 +47,21 @@ Page → apiClient → Appwrite Function execution
 - 拓扑排序拒绝循环依赖、自连接和悬空引用。
 - 条件值经过显式类型转换，`false`、`0` 不会被当作非空字符串处理。
 - true/false 出边会真实控制后续节点；未激活节点记为 `SKIPPED`。
+- Agent/工作流运行写入开始与完成时间、Token、成本和重试关系；只有 `FAILED`/`COMPLETED` 运行允许通过团队隔离的 retry 路由重放，最多保留 10 层重试链。
 - AI 调用有输入长度、512 KB 响应上限、5–60 秒可配置 Provider 超时、最多两次有界重试、月度额度和分钟级速率限制。协议适配层分别处理 Anthropic Messages 与 OpenAI Chat Completions，并统一返回文本、停止原因、token 用量、耗时和上游请求 ID。
 - 函数入口只接受 JSON 对象并限制 128 KB 请求体；列表读取最多扫描 10,000 行；资源的组织归属在更新时不可变。未知 Appwrite 异常统一转换为安全错误，避免把供应商内部细节回传到客户端。
 - 邮件与 Webhook 在安全连接器配置前明确失败。
 
 ## 数据与索引
 
-数据库 `matrixflow` 当前包含 21 张表，定义位于 `infra/appwrite/tables.json`；`workflow_versions` 保存不可变的流程版本，`knowledge_chunks` 保存受字节上限约束的知识分块，`idempotency_keys` 防止网络重试造成重复写入。常用组织、状态、关联与月度用量字段均建立索引。文件桶 `knowledge-files` 限制允许的文档扩展名和大小。
+数据库 `matrixflow` 当前包含 23 张表，定义位于 `infra/appwrite/tables.json`；`workflow_versions` 保存不可变的流程版本，`knowledge_chunks` 保存受字节上限约束的知识分块，`idempotency_keys` 防止网络重试造成重复写入，`subscriptions` 与 `billing_events` 保存服务端权益状态和可审计的幂等计费事件。常用组织、状态、关联与月度用量字段均建立索引。文件桶 `knowledge-files` 限制允许的文档扩展名和大小。
 
-Appwrite 声明是资源基线；运行时写入的数据不进入 Git。当前数据库包含 21 张表，新增的 `billing_requests` 用于保存套餐升级意向，`knowledge_chunks` 用于知识分块，`idempotency_keys` 用于写入幂等；表结构变更必须同时更新声明、初始化脚本、共享契约和回归测试。
+Appwrite 声明是资源基线；运行时写入的数据不进入 Git。当前数据库包含 23 张表，新增的 `billing_requests` 用于保存套餐升级意向，`subscriptions` 用于保存已验证的订阅权益，`billing_events` 用于 HMAC webhook 事件去重，`knowledge_chunks` 用于知识分块，`idempotency_keys` 用于写入幂等；表结构变更必须同时更新声明、初始化脚本、共享契约和回归测试。
 
 ## 扩展规则
 
 - 新增普通业务实体：先定义服务端创建权限、行权限和索引，再扩展 Function 路由与前端只读映射。
 - 新增特权能力：放入云函数，先校验成员，再解析输入。
 - 新增外部 Provider：服务端变量注入、协议适配、明确超时、有限重试、响应上限、错误映射和失败关闭；必须补充请求头、响应结构、用量和凭证错误的回归测试。
+- 新增支付供应商：先在适配层将供应商事件规范化为 billing webhook schema，再以原始请求体 HMAC 签名调用 `/billing/webhook`；事件 ID 必须幂等，订阅权益只能由 Function 读取和更新。
 - 公开市场内容需要独立审核和 public-read 发布流程；当前默认是组织私有数据。

@@ -140,6 +140,20 @@
         "key": "completedAt",
         "type": "datetime",
         "required": false
+      },
+      {
+        "key": "retryOf",
+        "type": "varchar",
+        "size": 36,
+        "required": false
+      },
+      {
+        "key": "retryCount",
+        "type": "integer",
+        "required": false,
+        "default": 0,
+        "min": 0,
+        "max": 10
       }
     ],
     "indexes": [
@@ -624,6 +638,44 @@
         "required": false,
         "default": 0,
         "min": 0
+      },
+      {
+        "key": "startedAt",
+        "type": "datetime",
+        "required": false
+      },
+      {
+        "key": "completedAt",
+        "type": "datetime",
+        "required": false
+      },
+      {
+        "key": "tokensUsed",
+        "type": "integer",
+        "required": false,
+        "default": 0,
+        "min": 0
+      },
+      {
+        "key": "costUsd",
+        "type": "double",
+        "required": false,
+        "default": 0,
+        "min": 0
+      },
+      {
+        "key": "retryOf",
+        "type": "varchar",
+        "size": 36,
+        "required": false
+      },
+      {
+        "key": "retryCount",
+        "type": "integer",
+        "required": false,
+        "default": 0,
+        "min": 0,
+        "max": 10
       }
     ],
     "indexes": [
@@ -1247,6 +1299,81 @@
         "type": "key",
         "columns": ["organizationId", "expiresAt"],
         "orders": ["ASC", "ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "subscriptions",
+    "databaseId": "matrixflow",
+    "name": "Subscriptions",
+    "$permissions": [],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      { "key": "organizationId", "type": "varchar", "size": 36, "required": true },
+      { "key": "planId", "type": "varchar", "size": 24, "required": true },
+      { "key": "status", "type": "varchar", "size": 24, "required": true },
+      { "key": "provider", "type": "varchar", "size": 40, "required": true },
+      {
+        "key": "externalSubscriptionId",
+        "type": "varchar",
+        "size": 180,
+        "required": true
+      },
+      { "key": "seats", "type": "integer", "required": true, "min": 1, "max": 500 },
+      { "key": "currentPeriodStart", "type": "datetime", "required": false },
+      { "key": "currentPeriodEnd", "type": "datetime", "required": false },
+      { "key": "metadata", "type": "longtext", "required": false, "default": "{}" }
+    ],
+    "indexes": [
+      {
+        "key": "subscriptions_org_unique",
+        "type": "unique",
+        "columns": ["organizationId"],
+        "orders": ["ASC"]
+      },
+      {
+        "key": "subscriptions_external",
+        "type": "key",
+        "columns": ["externalSubscriptionId"],
+        "orders": ["ASC"]
+      },
+      {
+        "key": "subscriptions_org_status",
+        "type": "key",
+        "columns": ["organizationId", "status"],
+        "orders": ["ASC", "ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "billing_events",
+    "databaseId": "matrixflow",
+    "name": "Billing events",
+    "$permissions": [],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      { "key": "organizationId", "type": "varchar", "size": 36, "required": true },
+      { "key": "eventId", "type": "varchar", "size": 180, "required": true },
+      { "key": "provider", "type": "varchar", "size": 40, "required": true },
+      { "key": "type", "type": "varchar", "size": 64, "required": true },
+      { "key": "subscriptionId", "type": "varchar", "size": 180, "required": true },
+      { "key": "payload", "type": "longtext", "required": false, "default": "{}" },
+      { "key": "processedAt", "type": "datetime", "required": true }
+    ],
+    "indexes": [
+      {
+        "key": "billing_events_event_unique",
+        "type": "unique",
+        "columns": ["eventId"],
+        "orders": ["ASC"]
+      },
+      {
+        "key": "billing_events_org_time",
+        "type": "key",
+        "columns": ["organizationId", "processedAt"],
+        "orders": ["ASC", "DESC"]
       }
     ]
   }

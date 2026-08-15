@@ -42,7 +42,21 @@ export interface BillingRequest {
   createdAt: string;
 }
 
-export type UsageSummary = Record<string, number>;
+export interface UsageSummary {
+  ai_call?: number;
+  token_input?: number;
+  token_output?: number;
+  ai_cost_cents?: number;
+  meta?: {
+    periodStart: string;
+    periodEnd: string;
+    plan: string;
+    limits: { aiCallsPerMonth: number; aiCallsPerMinute: number };
+    byProvider: Record<string, number>;
+    byModel: Record<string, number>;
+    estimatedCostUsd: number;
+  };
+}
 
 export interface AgentSkillSummary {
   skillKey: string;
@@ -54,6 +68,10 @@ export interface AgentRunSummary {
   status: string;
   tokensUsed: number;
   costUsd: number;
+  retryOf?: string | null;
+  retryCount?: number;
+  startedAt?: string | null;
+  completedAt?: string | null;
 }
 
 export interface AgentSummary {
@@ -210,6 +228,12 @@ export interface WorkflowRunSummary {
   durationMs?: number | null;
   error?: string | null;
   output?: unknown;
+  tokensUsed?: number;
+  costUsd?: number;
+  retryOf?: string | null;
+  retryCount?: number;
+  startedAt?: string | null;
+  completedAt?: string | null;
 }
 
 export interface WorkflowRunAccepted {

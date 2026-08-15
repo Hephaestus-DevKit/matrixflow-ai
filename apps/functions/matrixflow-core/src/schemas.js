@@ -44,7 +44,13 @@ export const schemas = {
       status: z.enum(['DRAFT', 'ACTIVE', 'PAUSED']).optional(),
     })
     .strict(),
-  agentRun: z.object({ input: jsonRecord.default({}) }).strict(),
+  agentRun: z
+    .object({
+      input: jsonRecord.default({}),
+      retryOf: z.string().trim().max(36).optional(),
+      retryCount: z.number().int().min(0).max(10).optional(),
+    })
+    .strict(),
   contentProject: z.object({ name: trimmed(180), productData: jsonRecord.default({}) }).strict(),
   contentGenerate: z
     .object({
@@ -80,7 +86,13 @@ export const schemas = {
   workflowVersion: z
     .object({ dsl: jsonRecord, changeNote: z.string().trim().max(500).optional() })
     .strict(),
-  workflowRun: z.object({ input: jsonRecord.default({}) }).strict(),
+  workflowRun: z
+    .object({
+      input: jsonRecord.default({}),
+      retryOf: z.string().trim().max(36).optional(),
+      retryCount: z.number().int().min(0).max(10).optional(),
+    })
+    .strict(),
   message: z
     .object({
       role: z.enum(['user', 'assistant', 'system', 'customer', 'agent']),
@@ -101,6 +113,21 @@ export const schemas = {
       requestedPlan: z.enum(['pro', 'team']),
       requestedSeats: z.number().int().min(1).max(500).default(1),
       note: z.string().trim().max(1_000).default(''),
+    })
+    .strict(),
+  billingWebhook: z
+    .object({
+      eventId: trimmed(180),
+      organizationId: trimmed(36),
+      provider: z.enum(['stripe', 'lemonsqueezy', 'manual', 'other']),
+      type: z.enum(['subscription.created', 'subscription.updated', 'subscription.canceled']),
+      subscriptionId: trimmed(180),
+      planId: z.enum(['free', 'pro', 'team']),
+      status: z.enum(['active', 'canceled']),
+      seats: z.number().int().min(1).max(500).default(1),
+      currentPeriodStart: z.string().datetime().optional(),
+      currentPeriodEnd: z.string().datetime().optional(),
+      metadata: jsonRecord.default({}),
     })
     .strict(),
 };
