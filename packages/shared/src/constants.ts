@@ -53,8 +53,14 @@ export const RunStatus = {
 } as const;
 
 // AI Provider
-export const Provider = { GLM: 'glm', OPENAI: 'openai' } as const;
+export const Provider = { GLM: 'glm', OPENAI: 'openai', ANTHROPIC: 'anthropic' } as const;
 export type Provider = (typeof Provider)[keyof typeof Provider];
+
+export const AiProtocol = {
+  OPENAI_CHAT_COMPLETIONS: 'openai-chat-completions',
+  ANTHROPIC_MESSAGES: 'anthropic-messages',
+} as const;
+export type AiProtocol = (typeof AiProtocol)[keyof typeof AiProtocol];
 
 // 权限 action
 export const Action = {

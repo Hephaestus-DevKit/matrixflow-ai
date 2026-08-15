@@ -46,7 +46,12 @@ export async function generateContent(services, context, body, options = {}) {
     type,
     status: 'READY',
     body: { raw: generated.content },
-    metadata: { usage: generated.usage, provider: generated.provider, model: generated.model },
+    metadata: {
+      usage: generated.usage,
+      provider: generated.provider,
+      protocol: generated.protocol,
+      model: generated.model,
+    },
   });
   await Promise.all([
     recordUsage(services, context.teamId, generated),
@@ -106,11 +111,15 @@ export async function runAgent(services, context, body) {
     const generated = await generateText({
       system: String(agent.systemPrompt?.raw || `你是负责${agent.role}工作的专业 AI 助手。`),
       prompt,
+      model: agent.model,
       temperature: Number(agent.configuration?.temperature ?? 0.4),
+      maxTokens: Number(agent.configuration?.maxTokens ?? 2_048),
+      topP: agent.configuration?.topP,
     });
     const output = {
       text: generated.content,
       provider: generated.provider,
+      protocol: generated.protocol,
       model: generated.model,
     };
     await Promise.all([

@@ -68,7 +68,7 @@
 
 1. **MatrixFlow AI 是什么？** — AI 员工操作系统，让中小企业创建、管理、出售 AI 员工
 2. **和 Jasper/Copy.ai 有什么区别？** — 我们不只是内容工具，还有 AI 员工、工作流、知识库、CRM、模板市场
-3. **支持哪些 AI 模型？** — GLM（主力）、OpenAI、Claude、Gemini，自动 fallback
+3. **支持哪些 AI 模型？** — 原生支持 Anthropic Messages、OpenAI Chat Completions，并兼容 GLM、vLLM、LiteLLM 等 OpenAI-compatible 网关；由管理员按环境变量选择，不会对未配置的模型伪造 fallback。
 4. **数据安全吗？** — 应用层多租户隔离、私有对象存储和审计记录；正式合规状态以安全文档为准
 5. **支持哪些平台？** — Amazon、Shopify、TikTok Shop、独立站
 6. **免费版有什么限制？** — 1 席位、100 次 AI 调用/月、1 个工作流

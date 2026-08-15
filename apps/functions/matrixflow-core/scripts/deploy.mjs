@@ -35,6 +35,9 @@ try {
 
 const existingVariables = await functions.listVariables({ functionId });
 for (const [variableKey, value] of [
+  ['MATRIXFLOW_AI_PROVIDER', 'auto'],
+  ['MATRIXFLOW_AI_TIMEOUT_MS', '25000'],
+  ['MATRIXFLOW_AI_MAX_RETRIES', '2'],
   ['MATRIXFLOW_DATABASE_ID', 'matrixflow'],
   ['MATRIXFLOW_KNOWLEDGE_BUCKET_ID', 'knowledge-files'],
   ['MATRIXFLOW_AI_MONTHLY_LIMIT', '100'],

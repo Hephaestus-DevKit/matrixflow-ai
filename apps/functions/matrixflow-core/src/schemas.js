@@ -19,6 +19,9 @@ export const schemas = {
         .max(50)
         .default([]),
       model: z.string().trim().max(100).optional(),
+      temperature: z.number().min(0).max(2).optional(),
+      maxTokens: z.number().int().min(1).max(32_000).optional(),
+      topP: z.number().min(0).max(1).optional(),
     })
     .strict(),
   agentUpdate: z
@@ -34,6 +37,10 @@ export const schemas = {
         .array(z.union([z.string(), jsonRecord]))
         .max(50)
         .optional(),
+      model: z.string().trim().max(100).optional(),
+      temperature: z.number().min(0).max(2).optional(),
+      maxTokens: z.number().int().min(1).max(32_000).optional(),
+      topP: z.number().min(0).max(1).optional(),
       status: z.enum(['DRAFT', 'ACTIVE', 'PAUSED']).optional(),
     })
     .strict(),

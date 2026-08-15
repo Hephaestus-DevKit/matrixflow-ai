@@ -5,10 +5,23 @@ import { useAuth } from '@/lib/auth-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Key, LogOut, Check, Save, Sparkles, ShieldCheck, Users, Plus, Mail } from 'lucide-react';
+import {
+  LogOut,
+  Check,
+  Save,
+  Sparkles,
+  ShieldCheck,
+  Users,
+  Plus,
+  Mail,
+  CircleCheck,
+  CircleAlert,
+  Network,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { errorMessage } from '@/lib/errors';
+import { apiClient } from '@/lib/api-client';
 
 const PRESET_AVATARS = [
   { id: 'slate', color: '#607987', label: '柔蓝' },
@@ -37,6 +50,12 @@ export default function SettingsPage() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'member' | 'admin'>('member');
   const [teamPending, setTeamPending] = useState(false);
+  const [aiStatus, setAiStatus] = useState<{
+    ready: boolean;
+    provider?: string;
+    protocol?: string;
+    model?: string;
+  } | null>(null);
   const membership = user?.memberships.find((item) => item.organizationId === organizationId);
   const canInvite = membership?.role === 'owner' || membership?.role === 'admin';
 
@@ -53,6 +72,23 @@ export default function SettingsPage() {
       }
     }
   }, [user]);
+
+  useEffect(() => {
+    let active = true;
+    void apiClient
+      .get<{ ai: { ready: boolean; provider?: string; protocol?: string; model?: string } }>(
+        '/health',
+      )
+      .then((health) => {
+        if (active) setAiStatus(health.ai);
+      })
+      .catch(() => {
+        if (active) setAiStatus(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [organizationId]);
 
   const selectPreset = (color: string) => {
     const presetUrl = makeSvgAvatar(color);
@@ -392,22 +428,60 @@ export default function SettingsPage() {
             </form>
           </div>
 
-          {/* API Key */}
-          <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm flex items-center justify-between">
-            <div className="flex items-center gap-3.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/5 text-primary">
-                <Key className="h-4.5 w-4.5" />
+          <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/5 text-primary">
+                  <Network className="h-4.5 w-4.5" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-foreground">AI 协议连接</p>
+                  <p className="text-2xs text-muted-foreground mt-0.5">
+                    由 Appwrite Function 安全托管模型密钥，浏览器不会接触任何凭证
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-bold text-foreground">API 接入密钥</p>
-                <p className="text-2xs text-muted-foreground mt-0.5">
-                  外部 ERP 接入将在密钥轮换、权限范围和审计能力完成后开放
-                </p>
-              </div>
+              {aiStatus?.ready ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-[10px] font-bold text-success">
+                  <CircleCheck className="h-3 w-3" /> 已连接
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-1 text-[10px] font-bold text-warning">
+                  <CircleAlert className="h-3 w-3" /> 待配置
+                </span>
+              )}
             </div>
-            <span className="rounded-full bg-primary/5 px-2.5 py-0.5 text-primary text-[10px] font-bold border border-primary/10">
-              即将上线
-            </span>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {[
+                ['Anthropic', 'Messages API'],
+                ['OpenAI', 'Chat Completions'],
+                ['兼容网关', 'GLM / vLLM / LiteLLM'],
+              ].map(([name, protocol]) => (
+                <div
+                  key={name}
+                  className="rounded-lg border border-border/50 bg-muted/10 px-3 py-2.5"
+                >
+                  <p className="text-[11px] font-semibold text-foreground">{name}</p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">{protocol}</p>
+                </div>
+              ))}
+            </div>
+            {aiStatus?.ready ? (
+              <p className="text-[11px] leading-5 text-muted-foreground">
+                当前使用 <span className="font-semibold text-foreground">{aiStatus.provider}</span>
+                {aiStatus.protocol ? ` · ${aiStatus.protocol}` : ''}
+                {aiStatus.model ? ` · ${aiStatus.model}` : ''}。如需切换，请在 Appwrite Console 的
+                <span className="font-semibold text-foreground"> matrixflow-core</span>{' '}
+                函数变量中修改协议和密钥。
+              </p>
+            ) : (
+              <p className="text-[11px] leading-5 text-muted-foreground">
+                管理员配置 <span className="font-semibold text-foreground">ANTHROPIC_API_KEY</span>
+                、<span className="font-semibold text-foreground">OPENAI_API_KEY</span> 或
+                <span className="font-semibold text-foreground">GLM_API_KEY</span>{' '}
+                后，重新部署函数即可启用。
+              </p>
+            )}
           </div>
 
           {/* Actions */}

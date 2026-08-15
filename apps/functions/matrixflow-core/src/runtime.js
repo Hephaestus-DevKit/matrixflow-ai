@@ -226,7 +226,11 @@ export async function recordUsage(services, teamId, generated) {
       createRow(services, TABLES.usageRecords, teamId, {
         metric,
         value,
-        metadata: { provider: generated.provider, model: generated.model },
+        metadata: {
+          provider: generated.provider,
+          protocol: generated.protocol,
+          model: generated.model,
+        },
         recordedAt: new Date().toISOString(),
       }),
     ),

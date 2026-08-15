@@ -20,7 +20,9 @@
 ## 部署要求
 
 - 部署用 API key 必须短期、最小权限并在部署后撤销。
-- `GLM_API_KEY` / `OPENAI_API_KEY` 只放在 Appwrite Function secret variables。
+- `ANTHROPIC_API_KEY` / `GLM_API_KEY` / `OPENAI_API_KEY` 只放在 Appwrite Function secret variables；端点、模型与协议选择也只由服务端变量控制。
+- Anthropic 使用 `x-api-key` 与固定版本头，OpenAI-compatible 使用 Bearer 头；浏览器永远不会接触模型凭证。
+- Provider 错误响应只返回稳定错误码，不回传原始响应体、请求头或密钥；429/5xx 仅做有界重试。
 - Appwrite Web Platform 只登记实际域名与本地开发主机。
 - 生产变更前运行真实账户 smoke test，随后删除测试数据和测试会话。
 - smoke test 必须验证浏览器等价会话不能直接创建业务行，而 Function 可以创建并由团队成员读取。

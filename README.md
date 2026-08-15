@@ -24,7 +24,7 @@ Browser / Next.js
   └─ all business writes ───────── MatrixFlow Core Function
                                       ├─ membership + role validation
                                       ├─ Zod field allowlists + audit
-                                      ├─ GLM or OpenAI
+                                      ├─ Anthropic Messages / OpenAI Chat Completions
                                       ├─ document parsing / chunk retrieval
                                       └─ quota-bounded workflow runtime
 ```
@@ -55,7 +55,16 @@ pnpm dev
 
 打开 `http://localhost:3000`。仓库已提供公开的 Appwrite endpoint 与 project ID 默认值；如果复制项目，请在 `.env.local` 中替换。
 
-AI 能力需要在 Appwrite Console 的 `matrixflow-core` 函数变量中设置 `GLM_API_KEY` 或 `OPENAI_API_KEY`。密钥只放在云函数变量中，不得使用 `NEXT_PUBLIC_*` 或提交到仓库。
+AI 能力通过 Appwrite Function 统一接入两种协议：原生 Anthropic Messages API 和 OpenAI Chat Completions（因此也兼容 GLM、vLLM、LiteLLM、DeepSeek 等 OpenAI-compatible 网关）。密钥只放在云函数变量中，不得使用 `NEXT_PUBLIC_*` 或提交到仓库。
+
+推荐在 `matrixflow-core` 函数变量中显式设置 `MATRIXFLOW_AI_PROVIDER`：
+
+- `anthropic`：`ANTHROPIC_API_KEY`、`ANTHROPIC_MODEL`、可选 `ANTHROPIC_BASE_URL`。
+- `openai` / `openai-compatible`：`OPENAI_API_KEY`、`OPENAI_MODEL`、可选 `OPENAI_BASE_URL`。
+- `glm`：兼容旧部署的 `GLM_API_KEY`、`GLM_MODEL`、可选 `GLM_ENDPOINT`。
+- `auto`（默认）：保持旧环境的 GLM 优先，同时在未配置 GLM 时自动选择 Anthropic 或 OpenAI。
+
+Provider 层会统一处理系统提示、温度、`max_tokens`、top-p、超时、有限重试、429/5xx 错误映射和输入/输出用量。当前以同步文本模式运行，工具调用和流式输出会在连接器能力开放后逐步启用；不会把未实现的能力伪装成成功。
 
 ## 质量检查
 

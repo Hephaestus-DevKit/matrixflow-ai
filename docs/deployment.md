@@ -5,7 +5,7 @@
 - Web：Vercel（或任何支持 Next.js 15 的 Node.js 平台）。
 - Backend：Appwrite Cloud Singapore 项目。
 - Function：Appwrite Node.js 22 Runtime `matrixflow-core`。
-- AI：GLM 或 OpenAI，由函数变量提供密钥。
+- AI：Anthropic Messages 或 OpenAI Chat Completions，由函数变量提供密钥。
 
 ## 发布前
 
@@ -30,7 +30,22 @@ MATRIXFLOW_DEPLOY_KEY=... pnpm appwrite:provision
 appwrite push functions
 ```
 
-初始化脚本是幂等的，会创建或更新数据库、表权限、列、索引和文件桶。函数发布后，在 Appwrite Console 设置 `GLM_API_KEY` 或 `OPENAI_API_KEY`，再部署一个新版本使变量生效。
+初始化脚本是幂等的，会创建或更新数据库、表权限、列、索引和文件桶。函数发布后，在 Appwrite Console 的 `matrixflow-core` 变量中设置协议与密钥，再部署一个新版本使变量生效：
+
+```text
+MATRIXFLOW_AI_PROVIDER=anthropic      # anthropic | openai | openai-compatible | glm | auto
+ANTHROPIC_API_KEY=                   # 仅选择 anthropic 时需要
+ANTHROPIC_MODEL=claude-3-5-haiku-latest
+ANTHROPIC_BASE_URL=https://api.anthropic.com
+
+# 或者：
+MATRIXFLOW_AI_PROVIDER=openai-compatible
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_BASE_URL=https://api.openai.com/v1
+```
+
+`OPENAI_BASE_URL` 支持任意遵循 Chat Completions 请求/响应结构的网关；GLM 保留独立变量以兼容既有环境。`ANTHROPIC_API_KEY`、`OPENAI_API_KEY` 和 `GLM_API_KEY` 必须标记为 Secret，其他模型、端点和限流变量可以是普通变量。密钥永远不要放到 Web 环境变量或仓库。
 
 自动部署由 `.github/workflows/appwrite.yml` 提供。仓库 Secret `MATRIXFLOW_DEPLOY_KEY` 存在时，主分支的后端或基础设施变更会依次执行测试、Schema 更新、Function 部署和可选 smoke test；没有 Secret 时任务安全跳过。
 

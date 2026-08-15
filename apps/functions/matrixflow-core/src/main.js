@@ -1,4 +1,4 @@
-import { configuredProvider } from './provider.js';
+import { configuredProvider, providerCapabilities } from './provider.js';
 import { Query } from 'node-appwrite';
 import {
   askKnowledgeBase,
@@ -62,9 +62,19 @@ function routeParts(path) {
 function providerReadiness() {
   try {
     const provider = configuredProvider();
-    return { ready: true, provider: provider.name, model: provider.model };
+    return {
+      ready: true,
+      provider: provider.name,
+      protocol: provider.protocol,
+      model: provider.model,
+      capabilities: providerCapabilities,
+    };
   } catch (error) {
-    return { ready: false, code: error.code || 'AI_PROVIDER_UNAVAILABLE' };
+    return {
+      ready: false,
+      code: error.code || 'AI_PROVIDER_UNAVAILABLE',
+      capabilities: providerCapabilities,
+    };
   }
 }
 
@@ -95,7 +105,12 @@ async function handleRoute({ services, context, membership, path, method, body }
       status: ai.ready ? 'ACTIVE' : 'DRAFT',
       systemPrompt: input.systemPrompt,
       skills: input.skills,
-      configuration: { tools: input.tools },
+      configuration: {
+        tools: input.tools,
+        ...(input.temperature === undefined ? {} : { temperature: input.temperature }),
+        ...(input.maxTokens === undefined ? {} : { maxTokens: input.maxTokens }),
+        ...(input.topP === undefined ? {} : { topP: input.topP }),
+      },
     });
     await recordAudit(services, context, 'agent.created', 'agent', agent.id);
     return agent;
@@ -126,13 +141,23 @@ async function handleRoute({ services, context, membership, path, method, body }
     const input = parse(schemas.agentUpdate, body);
     const current = await getOwned(services, TABLES.agents, segments[1], context.teamId);
     const configuration =
-      input.tools === undefined
+      input.tools === undefined &&
+      input.temperature === undefined &&
+      input.maxTokens === undefined &&
+      input.topP === undefined
         ? undefined
-        : { ...(current.configuration || {}), tools: input.tools };
+        : {
+            ...(current.configuration || {}),
+            ...(input.tools === undefined ? {} : { tools: input.tools }),
+            ...(input.temperature === undefined ? {} : { temperature: input.temperature }),
+            ...(input.maxTokens === undefined ? {} : { maxTokens: input.maxTokens }),
+            ...(input.topP === undefined ? {} : { topP: input.topP }),
+          };
     const requestedStatus = input.status === 'ACTIVE' && !ai.ready ? 'DRAFT' : input.status;
     const updated = await updateOwned(services, TABLES.agents, segments[1], context.teamId, {
       name: input.name,
       role: input.role,
+      model: input.model,
       systemPrompt: input.systemPrompt,
       skills: input.skills,
       status: requestedStatus,

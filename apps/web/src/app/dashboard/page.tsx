@@ -69,7 +69,7 @@ export default function DashboardPage() {
     queryFn: () =>
       apiClient.get<{
         status: string;
-        ai: { ready: boolean; provider?: string; model?: string };
+        ai: { ready: boolean; provider?: string; protocol?: string; model?: string };
         limits: { monthlyAiCalls: number };
       }>('/health'),
     staleTime: 60_000,
@@ -129,7 +129,7 @@ export default function DashboardPage() {
               </p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 {health.data.ai.ready
-                  ? `${health.data.ai.provider} · ${health.data.ai.model} · 每月 ${health.data.limits.monthlyAiCalls} 次额度`
+                  ? `${health.data.ai.provider} · ${health.data.ai.protocol || '统一文本协议'} · ${health.data.ai.model} · 每月 ${health.data.limits.monthlyAiCalls} 次额度`
                   : '内容生成、知识问答、Agent 与 AI 工作流会安全拒绝请求，直到管理员在 Appwrite Function 中配置模型密钥。'}
               </p>
             </div>
