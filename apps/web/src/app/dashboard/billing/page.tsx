@@ -1,13 +1,21 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { Check, CreditCard, Sparkles } from 'lucide-react';
-import type { BillingPlan, SubscriptionSummary, UsageSummary } from '@matrixflow/shared';
+import type {
+  BillingPlan,
+  BillingRequest,
+  SubscriptionSummary,
+  UsageSummary,
+} from '@matrixflow/shared';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { ErrorState, LoadingCards } from '@/components/ui/states';
 import { PageHeader, SectionHeading } from '@/components/ui/page';
 import { useLocale, type Locale } from '@/lib/i18n';
+import { errorMessage } from '@/lib/errors';
+import { toast } from 'sonner';
 
 const COPY: Record<
   Locale,
@@ -29,6 +37,12 @@ const COPY: Record<
     waitlist: string;
     unsubscribed: string;
     month: string;
+    requestUpgrade: string;
+    requesting: string;
+    requested: string;
+    requestAlready: string;
+    requestFailed: string;
+    requestDescription: string;
   }
 > = {
   'zh-CN': {
@@ -49,6 +63,12 @@ const COPY: Record<
     waitlist: '候补未开放',
     unsubscribed: '尚未订阅',
     month: ' / 月',
+    requestUpgrade: '申请升级',
+    requesting: '提交中…',
+    requested: '已提交申请',
+    requestAlready: '升级申请已在处理中',
+    requestFailed: '升级申请提交失败，请稍后重试',
+    requestDescription: '提交后我们会根据团队规模联系你，支付接入后再完成正式开通。',
   },
   'zh-TW': {
     eyebrow: '方案與用量',
@@ -68,6 +88,12 @@ const COPY: Record<
     waitlist: '候補未開放',
     unsubscribed: '尚未訂閱',
     month: ' / 月',
+    requestUpgrade: '申請升級',
+    requesting: '提交中…',
+    requested: '已提交申請',
+    requestAlready: '升級申請正在處理中',
+    requestFailed: '升級申請提交失敗，請稍後再試',
+    requestDescription: '提交後我們會依團隊規模聯絡你，支付服務接入後再完成正式開通。',
   },
   en: {
     eyebrow: 'Plans & usage',
@@ -89,12 +115,24 @@ const COPY: Record<
     waitlist: 'Waitlist only',
     unsubscribed: 'Not subscribed',
     month: ' / month',
+    requestUpgrade: 'Request upgrade',
+    requesting: 'Submitting…',
+    requested: 'Request submitted',
+    requestAlready: 'An upgrade request is already in progress',
+    requestFailed: 'Could not submit the upgrade request. Try again shortly.',
+    requestDescription:
+      'We will follow up based on your team size and activate the plan after checkout is ready.',
   },
 };
 
 export default function BillingPage() {
   const { locale } = useLocale();
   const copy = COPY[locale];
+  const queryClient = useQueryClient();
+  const [intentPlan, setIntentPlan] = useState<string | null>(null);
+  useEffect(() => {
+    setIntentPlan(new URLSearchParams(window.location.search).get('plan'));
+  }, []);
   const plans = useQuery({
     queryKey: ['plans'],
     queryFn: () => apiClient.get<BillingPlan[]>('/billing/plans'),
@@ -106,6 +144,22 @@ export default function BillingPage() {
   const usage = useQuery({
     queryKey: ['usage'],
     queryFn: () => apiClient.get<UsageSummary>('/billing/usage'),
+  });
+  const requests = useQuery({
+    queryKey: ['billing-requests'],
+    queryFn: () => apiClient.get<BillingRequest[]>('/billing/requests'),
+  });
+  const requestMutation = useMutation({
+    mutationFn: (requestedPlan: 'pro' | 'team') =>
+      apiClient.post<{ request: BillingRequest; created: boolean }>('/billing/requests', {
+        requestedPlan,
+        requestedSeats: requestedPlan === 'pro' ? 5 : 20,
+      }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['billing-requests'] });
+      toast.success(result.created ? copy.requested : copy.requestAlready);
+    },
+    onError: (error: unknown) => toast.error(errorMessage(error, copy.requestFailed)),
   });
   const queries = [plans, current, usage];
   const isLoading = queries.some((query) => query.isLoading);
@@ -151,11 +205,18 @@ export default function BillingPage() {
             <SectionHeading title={copy.planning} description={copy.planningDescription} />
             <div className="grid gap-4 lg:grid-cols-3">
               {plans.data?.map((plan) => {
-                const selected = current.data?.plan?.id === plan.id;
+                const selected =
+                  current.data?.plan?.id === plan.id ||
+                  (plan.id === 'free' && current.data?.id === 'free-preview');
+                const isRequestable = plan.id === 'pro' || plan.id === 'team';
+                const requestPending = requests.data?.some(
+                  (request) => request.requestedPlan === plan.id && request.status === 'PENDING',
+                );
+                const isIntent = intentPlan === plan.id;
                 return (
                   <article
                     key={plan.id}
-                    className={`surface-card relative flex flex-col p-6 ${selected ? 'border-primary/40 ring-1 ring-primary/20' : ''}`}
+                    className={`surface-card relative flex flex-col p-6 ${selected || isIntent ? 'border-primary/40 ring-1 ring-primary/20' : ''}`}
                   >
                     {selected && (
                       <span className="absolute right-4 top-4 rounded-full bg-primary/10 px-2.5 py-1 text-[0.625rem] font-bold text-primary">
@@ -182,12 +243,31 @@ export default function BillingPage() {
                         </li>
                       ))}
                     </ul>
+                    {isRequestable && (
+                      <p className="mt-5 text-xs leading-5 text-muted-foreground">
+                        {copy.requestDescription}
+                      </p>
+                    )}
                     <Button
                       className="mt-6 w-full"
                       variant={selected ? 'outline' : 'default'}
-                      disabled
+                      disabled={
+                        selected || !isRequestable || requestPending || requestMutation.isPending
+                      }
+                      onClick={() => {
+                        if (plan.id === 'pro' || plan.id === 'team')
+                          requestMutation.mutate(plan.id);
+                      }}
                     >
-                      {selected ? copy.active : copy.waitlist}
+                      {selected
+                        ? copy.active
+                        : requestPending
+                          ? copy.requested
+                          : requestMutation.isPending && requestMutation.variables === plan.id
+                            ? copy.requesting
+                            : isRequestable
+                              ? copy.requestUpgrade
+                              : copy.waitlist}
                     </Button>
                   </article>
                 );

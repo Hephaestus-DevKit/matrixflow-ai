@@ -163,7 +163,9 @@ export function PricingContent() {
                 ))}
               </ul>
               <Button asChild className="mt-8 w-full" variant={available ? 'default' : 'outline'}>
-                <Link href="/register">{available ? copy.start : copy.waitlistAction}</Link>
+                <Link href={available ? '/register' : `/register?plan=${plan.name.toLowerCase()}`}>
+                  {available ? copy.start : copy.waitlistAction}
+                </Link>
               </Button>
             </section>
           );

@@ -154,6 +154,7 @@ async function routeGet(path: string) {
   }
   if (path === '/billing/plans') return PLANS;
   if (path === '/billing/current') return { id: 'free-preview', status: 'preview', plan: PLANS[0] };
+  if (path === '/billing/requests') return listRows(TABLES.billingRequests);
   if (path === '/billing/usage') {
     const now = new Date();
     const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));

@@ -96,6 +96,13 @@ export const schemas = {
     })
     .strict()
     .refine((value) => value.name || value.email || value.phone, '请至少填写姓名、邮箱或电话'),
+  billingRequest: z
+    .object({
+      requestedPlan: z.enum(['pro', 'team']),
+      requestedSeats: z.number().int().min(1).max(500).default(1),
+      note: z.string().trim().max(1_000).default(''),
+    })
+    .strict(),
 };
 
 export function parse(schema, value) {

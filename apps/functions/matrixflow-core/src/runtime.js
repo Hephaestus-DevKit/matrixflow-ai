@@ -22,6 +22,7 @@ export const TABLES = {
   messages: 'messages',
   usageRecords: 'usage_records',
   auditLogs: 'audit_logs',
+  billingRequests: 'billing_requests',
 };
 
 const JSON_FIELDS = new Set([

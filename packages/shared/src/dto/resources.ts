@@ -31,6 +31,17 @@ export interface SubscriptionSummary {
   plan?: BillingPlan;
 }
 
+export interface BillingRequest {
+  id: string;
+  organizationId: string;
+  requestedPlan: 'pro' | 'team';
+  requestedSeats: number;
+  status: 'PENDING' | 'CONTACTED' | 'CONVERTED' | 'CANCELED';
+  note?: string | null;
+  requestedBy: string;
+  createdAt: string;
+}
+
 export type UsageSummary = Record<string, number>;
 
 export interface AgentSkillSummary {

@@ -58,7 +58,7 @@ export default function RegisterPage() {
     setError('');
     try {
       await verifyOtp(userId, otpCode.trim(), name.trim());
-      router.replace('/dashboard');
+      router.replace(getPostRegistrationPath());
     } catch (cause) {
       setError(authErrorMessage(cause, '验证码不正确或已失效', locale));
     }
@@ -212,7 +212,7 @@ export default function RegisterPage() {
           </Button>
           <div className="text-center text-2xs text-muted-foreground">
             {countdown > 0 ? (
-              `${countdown} 秒后可重新发送`
+              `${countdown} ${t('auth.secondsRemaining')}`
             ) : (
               <button
                 type="button"
@@ -231,4 +231,12 @@ export default function RegisterPage() {
       </div>
     </AuthShell>
   );
+}
+
+function getPostRegistrationPath():
+  '/dashboard' | '/dashboard/billing?plan=pro' | '/dashboard/billing?plan=team' {
+  const requestedPlan = new URLSearchParams(window.location.search).get('plan');
+  if (requestedPlan === 'pro') return '/dashboard/billing?plan=pro';
+  if (requestedPlan === 'team') return '/dashboard/billing?plan=team';
+  return '/dashboard';
 }

@@ -21,4 +21,5 @@ export const TABLES = {
   marketplaceReviews: 'marketplace_reviews',
   usageRecords: 'usage_records',
   auditLogs: 'audit_logs',
+  billingRequests: 'billing_requests',
 } as const;

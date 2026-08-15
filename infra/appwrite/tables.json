@@ -1035,5 +1035,65 @@
         "orders": ["ASC", "ASC"]
       }
     ]
+  },
+  {
+    "$id": "billing_requests",
+    "databaseId": "matrixflow",
+    "name": "Billing requests",
+    "$permissions": [],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "requestedPlan",
+        "type": "varchar",
+        "size": 24,
+        "required": true
+      },
+      {
+        "key": "requestedSeats",
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "max": 500
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 24,
+        "required": true
+      },
+      {
+        "key": "note",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "requestedBy",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      }
+    ],
+    "indexes": [
+      {
+        "key": "billing_requests_org_status",
+        "type": "key",
+        "columns": ["organizationId", "status"],
+        "orders": ["ASC", "ASC"]
+      },
+      {
+        "key": "billing_requests_org_plan",
+        "type": "key",
+        "columns": ["organizationId", "requestedPlan"],
+        "orders": ["ASC", "ASC"]
+      }
+    ]
   }
 ]

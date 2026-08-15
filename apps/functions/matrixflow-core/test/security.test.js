@@ -25,6 +25,26 @@ test('customer input requires at least one identity field', () => {
   assert.equal(parse(schemas.customer, { email: 'hello@example.com' }).email, 'hello@example.com');
 });
 
+test('billing upgrade requests are bounded and reject mass assignment', () => {
+  assert.deepEqual(parse(schemas.billingRequest, { requestedPlan: 'pro' }), {
+    requestedPlan: 'pro',
+    requestedSeats: 1,
+    note: '',
+  });
+  assert.throws(
+    () => parse(schemas.billingRequest, { requestedPlan: 'pro', organizationId: 'other-team' }),
+    (error) => error.code === 'VALIDATION_ERROR',
+  );
+  assert.throws(
+    () => parse(schemas.billingRequest, { requestedPlan: 'enterprise', requestedSeats: 1 }),
+    (error) => error.code === 'VALIDATION_ERROR',
+  );
+  assert.throws(
+    () => parse(schemas.billingRequest, { requestedPlan: 'team', requestedSeats: 501 }),
+    (error) => error.code === 'VALIDATION_ERROR',
+  );
+});
+
 test('members can manage core resources but cannot access admin routes', () => {
   const member = { roles: ['member'] };
   assert.doesNotThrow(() => requireCapability(member, 'knowledge.manage'));

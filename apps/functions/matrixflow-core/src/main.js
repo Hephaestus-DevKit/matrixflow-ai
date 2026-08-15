@@ -257,6 +257,32 @@ async function handleRoute({ services, context, membership, path, method, body }
     return base;
   }
 
+  if (method === 'POST' && path === '/billing/requests') {
+    requireCapability(membership, 'billing.read');
+    const input = parse(schemas.billingRequest, body);
+    const pending = await listRows(services, TABLES.billingRequests, context.teamId, [
+      Query.equal('requestedPlan', input.requestedPlan),
+      Query.equal('status', 'PENDING'),
+    ]);
+    if (pending[0]) return { request: pending[0], created: false };
+    const request = await createRow(services, TABLES.billingRequests, context.teamId, {
+      requestedPlan: input.requestedPlan,
+      requestedSeats: input.requestedSeats,
+      status: 'PENDING',
+      note: input.note,
+      requestedBy: context.userId,
+    });
+    await recordAudit(
+      services,
+      context,
+      'billing.upgrade_requested',
+      'billing_request',
+      request.id,
+      { requestedPlan: input.requestedPlan, requestedSeats: input.requestedSeats },
+    );
+    return { request, created: true };
+  }
+
   if (method === 'POST' && path === '/kb/documents') {
     requireCapability(membership, 'knowledge.manage');
     const input = parse(schemas.knowledgeDocument, body);

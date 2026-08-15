@@ -243,7 +243,7 @@ export default function LoginPage() {
           </Button>
           <div className="text-center text-2xs text-muted-foreground">
             {countdown > 0 ? (
-              `${countdown} 秒后可重新发送`
+              `${countdown} ${t('auth.secondsRemaining')}`
             ) : (
               <button
                 type="button"
