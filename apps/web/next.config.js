@@ -1,5 +1,15 @@
 /** @type {import('next').NextConfig} */
 const isDevelopment = process.env.NODE_ENV === 'development';
+const appwriteEndpoint =
+  process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://sgp.cloud.appwrite.io/v1';
+let appwriteOrigin = 'https://sgp.cloud.appwrite.io';
+try {
+  appwriteOrigin = new URL(appwriteEndpoint).origin;
+} catch {
+  // Keep the production default when a malformed build-time endpoint is supplied.
+}
+const appwriteWebSocketOrigin = appwriteOrigin.replace(/^http/i, 'ws');
+const appwriteHostname = new URL(appwriteOrigin).hostname;
 
 const nextConfig = {
   reactStrictMode: true,
@@ -12,6 +22,7 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: 'sgp.cloud.appwrite.io' },
       { protocol: 'https', hostname: 'cloud.appwrite.io' },
+      { protocol: 'https', hostname: appwriteHostname },
     ],
   },
   typedRoutes: true,
@@ -29,7 +40,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://sgp.cloud.appwrite.io https://cloud.appwrite.io",
               "font-src 'self' data:",
-              "connect-src 'self' https://sgp.cloud.appwrite.io wss://sgp.cloud.appwrite.io",
+              `connect-src 'self' ${appwriteOrigin} ${appwriteWebSocketOrigin} https://cloud.appwrite.io wss://cloud.appwrite.io`,
               "object-src 'none'",
               "script-src-attr 'none'",
               "frame-ancestors 'none'",

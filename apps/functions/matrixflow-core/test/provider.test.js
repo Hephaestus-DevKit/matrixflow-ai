@@ -49,6 +49,17 @@ test('uses modern token limit field for first-party OpenAI and legacy field for 
   );
 });
 
+test('does not duplicate the Chat Completions path for a full compatible endpoint', () => {
+  assert.equal(
+    configuredProvider({
+      MATRIXFLOW_AI_PROVIDER: 'openai-compatible',
+      OPENAI_API_KEY: 'secret',
+      OPENAI_BASE_URL: 'https://gateway.example/v1/chat/completions/',
+    }).endpoint,
+    'https://gateway.example/v1/chat/completions',
+  );
+});
+
 test('sends Anthropic headers and normalizes content and usage', async () => {
   const originalFetch = globalThis.fetch;
   let request;

@@ -19,6 +19,12 @@ function normalizedBaseUrl(value, fallback) {
   return (text(value) || fallback).replace(/\/+$/, '');
 }
 
+function openAiEndpoint(value) {
+  const base = normalizedBaseUrl(value, 'https://api.openai.com/v1');
+  if (/\/chat\/completions$/i.test(base)) return base;
+  return `${base}/chat/completions`;
+}
+
 function anthropicEndpoint(value) {
   const base = normalizedBaseUrl(value, 'https://api.anthropic.com');
   return base.endsWith('/v1') ? `${base}/messages` : `${base}/v1/messages`;
@@ -97,7 +103,7 @@ export function configuredProvider(env = process.env) {
     return {
       name: 'openai',
       protocol: 'openai-chat-completions',
-      endpoint: `${normalizedBaseUrl(envValue(env, 'OPENAI_BASE_URL', 'OPENAI_API_BASE'), 'https://api.openai.com/v1')}/chat/completions`,
+      endpoint: openAiEndpoint(envValue(env, 'OPENAI_BASE_URL', 'OPENAI_API_BASE')),
       apiKey: openAiKey,
       model: envValue(env, 'OPENAI_MODEL') || 'gpt-4o-mini',
       maxTokensField:
@@ -135,7 +141,7 @@ export function configuredProvider(env = process.env) {
     return {
       name: 'openai',
       protocol: 'openai-chat-completions',
-      endpoint: `${normalizedBaseUrl(envValue(env, 'OPENAI_BASE_URL', 'OPENAI_API_BASE'), 'https://api.openai.com/v1')}/chat/completions`,
+      endpoint: openAiEndpoint(envValue(env, 'OPENAI_BASE_URL', 'OPENAI_API_BASE')),
       apiKey: openAiKey,
       model: envValue(env, 'OPENAI_MODEL') || 'gpt-4o-mini',
       maxTokensField: envValue(env, 'OPENAI_MAX_TOKENS_FIELD') || 'max_completion_tokens',
@@ -159,12 +165,17 @@ function boundedInteger(value, fallback, min, max) {
   return Math.round(boundedNumber(value, fallback, min, max));
 }
 
+function safeUsageValue(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.round(number)) : 0;
+}
+
 function openAiContent(payload) {
   const value = payload?.choices?.[0]?.message?.content;
   if (typeof value === 'string') return value;
   if (Array.isArray(value))
     return value
-      .filter((part) => part?.type === 'text')
+      .filter((part) => part?.type === 'text' && typeof part.text === 'string')
       .map((part) => part.text)
       .join(' ');
   return '';
@@ -174,7 +185,7 @@ function anthropicContent(payload) {
   if (!Array.isArray(payload?.content)) return '';
   return payload.content
     .filter((part) => part?.type === 'text')
-    .map((part) => part.text)
+    .map((part) => (typeof part.text === 'string' ? part.text : ''))
     .join(' ');
 }
 
@@ -288,6 +299,10 @@ export async function generateText(
     0,
     MAX_RETRIES,
   );
+  const safeRequestId =
+    typeof requestId === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(requestId)
+      ? requestId
+      : undefined;
   const request = requestFor(provider, {
     systemText,
     prompt,
@@ -295,7 +310,7 @@ export async function generateText(
     maxTokens: safeMaxTokens,
     topP: safeTopP,
     model: requestedModel,
-    requestId: text(requestId),
+    requestId: safeRequestId,
   });
   const startedAt = Date.now();
 
@@ -336,12 +351,12 @@ export async function generateText(
       const usage =
         provider.protocol === 'anthropic-messages'
           ? {
-              inputTokens: Number(payload?.usage?.input_tokens ?? 0),
-              outputTokens: Number(payload?.usage?.output_tokens ?? 0),
+              inputTokens: safeUsageValue(payload?.usage?.input_tokens),
+              outputTokens: safeUsageValue(payload?.usage?.output_tokens),
             }
           : {
-              inputTokens: Number(payload?.usage?.prompt_tokens ?? 0),
-              outputTokens: Number(payload?.usage?.completion_tokens ?? 0),
+              inputTokens: safeUsageValue(payload?.usage?.prompt_tokens),
+              outputTokens: safeUsageValue(payload?.usage?.completion_tokens),
             };
       return {
         content: content.trim(),

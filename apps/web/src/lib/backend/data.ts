@@ -5,6 +5,8 @@ import { getOrganizationContext } from './organization-context';
 
 type Data = Record<string, unknown>;
 type Row = Models.Row & Data;
+const PAGE_SIZE = 100;
+const MAX_LIST_ROWS = 10_000;
 
 const JSON_COLUMNS = new Set([
   'systemPrompt',
@@ -30,6 +32,20 @@ export class BackendError extends Error {
     super(message);
     this.name = 'BackendError';
   }
+}
+
+function normalizeAppwriteError(error: unknown, fallback = 'Appwrite 服务暂时不可用') {
+  if (error instanceof BackendError) return error;
+  const candidate = error as { code?: unknown; type?: unknown };
+  const status = Number(candidate?.code);
+  if (status === 401) return new BackendError('登录状态已失效，请重新登录', 401, 'UNAUTHENTICATED');
+  if (status === 403) return new BackendError('无权访问该团队资源', 403, 'FORBIDDEN');
+  if (status === 404) return new BackendError('资源不存在或已被删除', 404, 'RESOURCE_NOT_FOUND');
+  if (status === 409) return new BackendError('资源状态发生冲突，请刷新后重试', 409, 'CONFLICT');
+  if (status === 429) return new BackendError('请求过于频繁，请稍后重试', 429, 'RATE_LIMITED');
+  if (typeof candidate?.type === 'string' && candidate.type === 'general_rate_limit_exceeded')
+    return new BackendError('请求过于频繁，请稍后重试', 429, 'RATE_LIMITED');
+  return new BackendError(fallback, status >= 400 && status < 600 ? status : 502, 'APPWRITE_ERROR');
 }
 
 function parseJson(value: unknown) {
@@ -66,28 +82,43 @@ export async function listRows(
 ) {
   const organizationId = getOrganizationContext();
   const rows: Data[] = [];
+  let total = 0;
   const hasOrdering = queries.some((query) => query.includes('order'));
-  for (let offset = 0; offset < 2_000; offset += 100) {
-    const result = await tablesDB.listRows<Row>({
-      databaseId: DATABASE_ID,
-      tableId,
-      queries: [
-        Query.equal(organizationField, organizationId),
-        ...queries,
-        ...(hasOrdering ? [] : [Query.orderDesc('$createdAt')]),
-        Query.limit(100),
-        Query.offset(offset),
-      ],
-    });
+  for (let offset = 0; offset < MAX_LIST_ROWS; offset += PAGE_SIZE) {
+    let result: Models.RowList<Row>;
+    try {
+      result = await tablesDB.listRows<Row>({
+        databaseId: DATABASE_ID,
+        tableId,
+        queries: [
+          Query.equal(organizationField, organizationId),
+          ...queries,
+          ...(hasOrdering ? [] : [Query.orderDesc('$createdAt')]),
+          Query.limit(PAGE_SIZE),
+          Query.offset(offset),
+        ],
+      });
+    } catch (error) {
+      throw normalizeAppwriteError(error);
+    }
+    total = result.total;
     rows.push(...result.rows.map(decodeRow));
-    if (result.rows.length < 100 || rows.length >= result.total) break;
+    if (result.rows.length < PAGE_SIZE || rows.length >= result.total) break;
   }
+  if (rows.length >= MAX_LIST_ROWS && total > MAX_LIST_ROWS)
+    throw new BackendError('资源数量超过单次可加载上限，请缩小查询范围', 413, 'LIST_TOO_LARGE');
   return rows;
 }
 
 export async function getRow(tableId: string, rowId: string, organizationField = 'organizationId') {
   const organizationId = getOrganizationContext();
-  const row = decodeRow(await tablesDB.getRow<Row>({ databaseId: DATABASE_ID, tableId, rowId }));
+  let rawRow: Row;
+  try {
+    rawRow = await tablesDB.getRow<Row>({ databaseId: DATABASE_ID, tableId, rowId });
+  } catch (error) {
+    throw normalizeAppwriteError(error);
+  }
+  const row = decodeRow(rawRow);
   assertOwned(row, organizationId, organizationField);
   return row;
 }
@@ -100,12 +131,17 @@ export async function uploadKnowledgeFile(knowledgeBaseId: string, form: FormDat
     throw new BackendError('文件不能超过 20 MB', 400, 'FILE_TOO_LARGE');
   const organizationId = getOrganizationContext();
   const permissions = teamPermissions(organizationId);
-  const uploaded = await storage.createFile({
-    bucketId: KNOWLEDGE_BUCKET_ID,
-    fileId: ID.unique(),
-    file,
-    permissions,
-  });
+  let uploaded: Models.File;
+  try {
+    uploaded = await storage.createFile({
+      bucketId: KNOWLEDGE_BUCKET_ID,
+      fileId: ID.unique(),
+      file,
+      permissions,
+    });
+  } catch (error) {
+    throw normalizeAppwriteError(error, '文件上传失败，请稍后重试');
+  }
   let document: Data | undefined;
   try {
     document = await executeCore<Data>('/kb/documents', {
@@ -133,14 +169,19 @@ export async function uploadKnowledgeFile(knowledgeBaseId: string, form: FormDat
 }
 
 export async function executeCore<T>(path: string, body: Data, method = ExecutionMethod.POST) {
-  const execution = await appwriteFunctions.createExecution({
-    functionId: CORE_FUNCTION_ID,
-    body: JSON.stringify({ ...body, organizationId: getOrganizationContext() }),
-    async: false,
-    xpath: path,
-    method,
-    headers: { 'content-type': 'application/json' },
-  });
+  let execution: Models.Execution;
+  try {
+    execution = await appwriteFunctions.createExecution({
+      functionId: CORE_FUNCTION_ID,
+      body: JSON.stringify({ ...body, organizationId: getOrganizationContext() }),
+      async: false,
+      xpath: path,
+      method,
+      headers: { 'content-type': 'application/json' },
+    });
+  } catch (error) {
+    throw normalizeAppwriteError(error, '核心服务暂时不可用');
+  }
   const payload = parseJson(execution.responseBody) as
     { data?: T; error?: { message?: string; code?: string } } | T;
   if (execution.responseStatusCode < 200 || execution.responseStatusCode >= 300) {

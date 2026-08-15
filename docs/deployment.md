@@ -61,6 +61,8 @@ NEXT_PUBLIC_APPWRITE_ENDPOINT=https://sgp.cloud.appwrite.io/v1
 NEXT_PUBLIC_APPWRITE_PROJECT_ID=<project-id>
 ```
 
+如果使用自建或其他地域的 Appwrite，必须在构建时提供 endpoint；Next.js 会同步更新 CSP 与头像白名单。修改 Vercel 环境变量后需要重新部署，旧部署不会自动读取新端点。
+
 Appwrite Web Platform 同时登记生产域名和 `localhost`。向 `main` 推送后由 Vercel 自动发布；发布状态成功后再切换流量。
 
 ## 验证

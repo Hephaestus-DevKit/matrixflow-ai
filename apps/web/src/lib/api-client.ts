@@ -17,9 +17,18 @@ function normalizeError(error: unknown): never {
   if (error instanceof ApiError) throw error;
   if (error instanceof BackendError) throw new ApiError(error.message, error.status, error.code);
   const candidate = error as { message?: unknown; code?: unknown; type?: unknown };
-  const message = typeof candidate?.message === 'string' ? candidate.message : 'Appwrite 请求失败';
   const status = typeof candidate?.code === 'number' ? candidate.code : 500;
   const code = typeof candidate?.type === 'string' ? candidate.type : 'APPWRITE_ERROR';
+  const message =
+    status === 401
+      ? '登录状态已失效，请重新登录'
+      : status === 403
+        ? '无权访问该团队资源'
+        : status === 404
+          ? '资源不存在或已被删除'
+          : status === 429
+            ? '请求过于频繁，请稍后重试'
+            : 'Appwrite 服务暂时不可用';
   throw new ApiError(message, status, code);
 }
 

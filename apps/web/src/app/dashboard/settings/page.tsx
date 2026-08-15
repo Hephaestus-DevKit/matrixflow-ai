@@ -167,10 +167,17 @@ export default function SettingsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-border/60 gap-4 text-xs font-semibold">
+      <div
+        role="tablist"
+        aria-label="设置分类"
+        className="flex gap-4 border-b border-border/60 text-xs font-semibold"
+      >
         <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'profile'}
           onClick={() => setActiveTab('profile')}
-          className={`pb-2.5 border-b-2 px-1 transition-all ${
+          className={`border-b-2 px-1 pb-2.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
             activeTab === 'profile'
               ? 'border-primary text-primary font-bold'
               : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -179,8 +186,11 @@ export default function SettingsPage() {
           个人资料与头像
         </button>
         <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'enterprise'}
           onClick={() => setActiveTab('enterprise')}
-          className={`pb-2.5 border-b-2 px-1 transition-all ${
+          className={`border-b-2 px-1 pb-2.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
             activeTab === 'enterprise'
               ? 'border-primary text-primary font-bold'
               : 'border-transparent text-muted-foreground hover:text-foreground'

@@ -456,11 +456,19 @@ async function handleRoute({ services, context, membership, path, method, body }
 }
 
 export default async ({ req, res, log, error: logError }) => {
-  const requestId = req.headers['x-appwrite-execution-id'] || crypto.randomUUID();
+  const rawRequestId = req.headers['x-appwrite-execution-id'];
+  const requestId =
+    typeof rawRequestId === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(rawRequestId)
+      ? rawRequestId
+      : crypto.randomUUID();
   const startedAt = Date.now();
   try {
     const userId = req.headers['x-appwrite-user-id'];
     if (!userId) throw new HttpError('请先登录', 401, 'UNAUTHENTICATED');
+    const path = typeof req.path === 'string' && req.path.length <= 512 ? req.path : '/';
+    const method = String(req.method || 'POST').toUpperCase();
+    if (!['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method))
+      throw new HttpError('不支持的请求方法', 405, 'METHOD_NOT_ALLOWED');
     const body = requestBody(req);
     const teamId = body.organizationId;
     const payload = { ...body };
@@ -472,8 +480,8 @@ export default async ({ req, res, log, error: logError }) => {
       services,
       context,
       membership,
-      path: req.path || '/',
-      method: String(req.method || 'POST').toUpperCase(),
+      path,
+      method,
       body: payload,
     });
     log?.(
@@ -512,10 +520,17 @@ export default async ({ req, res, log, error: logError }) => {
         durationMs: Date.now() - startedAt,
       }),
     );
-    const message =
-      status >= 500 && !expectedError
-        ? '核心服务暂时不可用'
-        : String(caught?.message || '请求失败');
+    const message = expectedError
+      ? String(caught?.message || '请求失败')
+      : status === 401
+        ? '请重新登录后重试'
+        : status === 403
+          ? '无权访问该团队资源'
+          : status === 404
+            ? '请求的资源不存在'
+            : status === 429
+              ? '请求过于频繁，请稍后重试'
+              : '核心服务暂时不可用';
     return res.json(
       {
         error: {

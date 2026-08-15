@@ -3,6 +3,8 @@ import { Client, ID, Permission, Query, Role, Storage, TablesDB, Teams } from 'n
 export const DATABASE_ID = process.env.MATRIXFLOW_DATABASE_ID || 'matrixflow';
 export const BUCKET_ID = process.env.MATRIXFLOW_KNOWLEDGE_BUCKET_ID || 'knowledge-files';
 export const PAGE_SIZE = 100;
+const MAX_LIST_ROWS = 10_000;
+const MAX_REQUEST_BODY_BYTES = 128 * 1024;
 
 export const TABLES = {
   agents: 'agents',
@@ -57,34 +59,41 @@ export class HttpError extends Error {
 }
 
 export function requestBody(req) {
-  if (req.bodyJson && typeof req.bodyJson === 'object') {
+  if (req.bodyJson !== undefined) {
+    if (!req.bodyJson || typeof req.bodyJson !== 'object' || Array.isArray(req.bodyJson))
+      throw new HttpError('请求内容必须是 JSON 对象', 400, 'INVALID_JSON');
     let serialized;
     try {
       serialized = JSON.stringify(req.bodyJson);
     } catch {
       throw new HttpError('请求内容不是有效 JSON', 400, 'INVALID_JSON');
     }
-    if (Buffer.byteLength(serialized) > 128 * 1024)
+    if (Buffer.byteLength(serialized, 'utf8') > MAX_REQUEST_BODY_BYTES)
       throw new HttpError('请求内容过大', 413, 'BODY_TOO_LARGE');
     return req.bodyJson;
   }
   const text = typeof req.bodyText === 'string' ? req.bodyText : '';
-  if (Buffer.byteLength(text) > 128 * 1024)
+  if (Buffer.byteLength(text, 'utf8') > MAX_REQUEST_BODY_BYTES)
     throw new HttpError('请求内容过大', 413, 'BODY_TOO_LARGE');
+  let parsed;
   try {
-    return text ? JSON.parse(text) : {};
+    parsed = text ? JSON.parse(text) : {};
   } catch {
     throw new HttpError('请求内容不是有效 JSON', 400, 'INVALID_JSON');
   }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+    throw new HttpError('请求内容必须是 JSON 对象', 400, 'INVALID_JSON');
+  return parsed;
 }
 
 export function serverClient(req) {
   const key = req.headers['x-appwrite-key'];
+  const endpoint = process.env.APPWRITE_FUNCTION_API_ENDPOINT;
+  const projectId = process.env.APPWRITE_FUNCTION_PROJECT_ID;
   if (!key) throw new HttpError('函数运行凭证缺失', 500, 'FUNCTION_KEY_MISSING');
-  const client = new Client()
-    .setEndpoint(process.env.APPWRITE_FUNCTION_API_ENDPOINT)
-    .setProject(process.env.APPWRITE_FUNCTION_PROJECT_ID)
-    .setKey(key);
+  if (!endpoint || !projectId)
+    throw new HttpError('函数运行环境未正确配置', 500, 'FUNCTION_CONFIG_MISSING');
+  const client = new Client().setEndpoint(endpoint).setProject(projectId).setKey(key);
   return { tables: new TablesDB(client), teams: new Teams(client), storage: new Storage(client) };
 }
 
@@ -123,10 +132,18 @@ export function decodeRow(row) {
 export async function requireTeamMember(services, teamId, userId) {
   if (typeof teamId !== 'string' || !teamId)
     throw new HttpError('缺少团队空间', 400, 'ORGANIZATION_REQUIRED');
-  const members = await services.teams.listMemberships({
-    teamId,
-    queries: [Query.equal('userId', userId), Query.limit(1)],
-  });
+  let members;
+  try {
+    members = await services.teams.listMemberships({
+      teamId,
+      queries: [Query.equal('userId', userId), Query.limit(1)],
+    });
+  } catch (error) {
+    const status = Number(error?.status || error?.code);
+    if (status === 401 || status === 403 || status === 404)
+      throw new HttpError('无权访问该团队空间', 403, 'FORBIDDEN');
+    throw error;
+  }
   const membership = members.memberships[0];
   if (!membership) throw new HttpError('无权访问该团队空间', 403, 'FORBIDDEN');
   return { ...membership, roles: membership.roles?.length ? membership.roles : ['member'] };
@@ -150,6 +167,7 @@ export async function getOwned(services, tableId, rowId, teamId, field = 'organi
   } catch (error) {
     const status = Number(error?.status || error?.code);
     if (status === 404) throw new HttpError('资源不存在', 404, 'RESOURCE_NOT_FOUND');
+    if (status === 401 || status === 403) throw new HttpError('无权访问该资源', 403, 'FORBIDDEN');
     throw error;
   }
   const row = decodeRow(rawRow);
@@ -178,6 +196,8 @@ export async function updateOwned(
   field = 'organizationId',
 ) {
   await getOwned(services, tableId, rowId, teamId, field);
+  if (Object.hasOwn(data, field) && data[field] !== undefined && data[field] !== teamId)
+    throw new HttpError('资源所属团队不可修改', 400, 'ORGANIZATION_IMMUTABLE');
   return decodeRow(
     await services.tables.updateRow({
       databaseId: DATABASE_ID,
@@ -196,7 +216,8 @@ export async function deleteOwned(services, tableId, rowId, teamId, field = 'org
 
 export async function listRows(services, tableId, teamId, queries = [], field = 'organizationId') {
   const rows = [];
-  for (let offset = 0; offset < 2_000; offset += PAGE_SIZE) {
+  let total = 0;
+  for (let offset = 0; offset < MAX_LIST_ROWS; offset += PAGE_SIZE) {
     const result = await services.tables.listRows({
       databaseId: DATABASE_ID,
       tableId,
@@ -207,9 +228,12 @@ export async function listRows(services, tableId, teamId, queries = [], field = 
         Query.offset(offset),
       ],
     });
+    total = result.total;
     rows.push(...result.rows.map(decodeRow));
     if (result.rows.length < PAGE_SIZE || rows.length >= result.total) break;
   }
+  if (rows.length >= MAX_LIST_ROWS && total > MAX_LIST_ROWS)
+    throw new HttpError('资源数量超过单次可处理上限，请缩小查询范围', 413, 'LIST_TOO_LARGE');
   return rows;
 }
 
@@ -224,12 +248,18 @@ export async function recordAudit(services, context, action, resource, resourceI
 }
 
 export async function recordUsage(services, teamId, generated) {
+  const safeInputTokens = Number.isFinite(Number(generated?.usage?.inputTokens))
+    ? Math.max(0, Math.round(Number(generated.usage.inputTokens)))
+    : 0;
+  const safeOutputTokens = Number.isFinite(Number(generated?.usage?.outputTokens))
+    ? Math.max(0, Math.round(Number(generated.usage.outputTokens)))
+    : 0;
   const records = [
     ['ai_call', 1],
-    ['token_input', generated.usage.inputTokens],
-    ['token_output', generated.usage.outputTokens],
+    ['token_input', safeInputTokens],
+    ['token_output', safeOutputTokens],
   ];
-  await Promise.all(
+  const results = await Promise.allSettled(
     records.map(([metric, value]) =>
       createRow(services, TABLES.usageRecords, teamId, {
         metric,
@@ -245,6 +275,8 @@ export async function recordUsage(services, teamId, generated) {
       }),
     ),
   );
+  const failed = results.find((result) => result.status === 'rejected');
+  if (failed?.status === 'rejected') throw failed.reason;
 }
 
 async function usageCountSince(services, teamId, since) {

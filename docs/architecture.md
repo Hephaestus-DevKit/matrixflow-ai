@@ -48,6 +48,7 @@ Page → apiClient → Appwrite Function execution
 - 条件值经过显式类型转换，`false`、`0` 不会被当作非空字符串处理。
 - true/false 出边会真实控制后续节点；未激活节点记为 `SKIPPED`。
 - AI 调用有输入长度、512 KB 响应上限、5–60 秒可配置 Provider 超时、最多两次有界重试、月度额度和分钟级速率限制。协议适配层分别处理 Anthropic Messages 与 OpenAI Chat Completions，并统一返回文本、停止原因、token 用量、耗时和上游请求 ID。
+- 函数入口只接受 JSON 对象并限制 128 KB 请求体；列表读取最多扫描 10,000 行；资源的组织归属在更新时不可变。未知 Appwrite 异常统一转换为安全错误，避免把供应商内部细节回传到客户端。
 - 邮件与 Webhook 在安全连接器配置前明确失败。
 
 ## 数据与索引

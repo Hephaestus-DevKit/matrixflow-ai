@@ -159,12 +159,15 @@ export const useAuth = create<AuthState>()(
           set({ user: me, organizationId: orgId });
           return me;
         } catch (error) {
+          clearOrganizationContext();
           set({ user: null, organizationId: null });
           throw error;
         }
       },
 
       setOrg: (orgId) => {
+        const membership = get().user?.memberships.some((item) => item.organizationId === orgId);
+        if (!membership) throw new Error('无法切换到未授权的团队空间');
         setOrganizationContext(orgId);
         set({ organizationId: orgId });
       },

@@ -6,6 +6,7 @@ import {
   requestBody,
   requireAdmin,
   requireCapability,
+  requireTeamMember,
   rowPermissions,
 } from '../src/runtime.js';
 
@@ -48,6 +49,31 @@ test('pre-parsed request bodies keep the same size guard', () => {
   );
 });
 
+test('request bodies must be JSON objects', () => {
+  assert.throws(
+    () => requestBody({ bodyJson: ['unexpected-array'] }),
+    (error) => error.code === 'INVALID_JSON',
+  );
+  assert.throws(
+    () => requestBody({ bodyText: 'null' }),
+    (error) => error.code === 'INVALID_JSON',
+  );
+});
+
+test('owned rows cannot be moved to another team during update', async () => {
+  const services = {
+    tables: {
+      getRow: async () => ({ $id: 'row-1', organizationId: 'team-1' }),
+      updateRow: async () => ({ $id: 'row-1', organizationId: 'team-1' }),
+    },
+  };
+  const { updateOwned } = await import('../src/runtime.js');
+  await assert.rejects(
+    () => updateOwned(services, 'agents', 'row-1', 'team-1', { organizationId: 'team-2' }),
+    (error) => error.code === 'ORGANIZATION_IMMUTABLE',
+  );
+});
+
 test('missing tenant rows return a stable 404 instead of leaking Appwrite errors', async () => {
   await assert.rejects(
     () =>
@@ -60,5 +86,19 @@ test('missing tenant rows return a stable 404 instead of leaking Appwrite errors
         'team-1',
       ),
     (error) => error.code === 'RESOURCE_NOT_FOUND' && error.status === 404,
+  );
+});
+
+test('unknown teams never expose Appwrite membership details', async () => {
+  await assert.rejects(
+    () =>
+      requireTeamMember(
+        {
+          teams: { listMemberships: async () => Promise.reject({ code: 404, message: 'secret' }) },
+        },
+        'team-1',
+        'user-1',
+      ),
+    (error) => error.code === 'FORBIDDEN' && error.status === 403,
   );
 });
