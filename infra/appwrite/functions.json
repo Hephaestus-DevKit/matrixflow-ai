@@ -25,7 +25,11 @@
       "MATRIXFLOW_DATABASE_ID": "matrixflow",
       "MATRIXFLOW_KNOWLEDGE_BUCKET_ID": "knowledge-files",
       "MATRIXFLOW_AI_MONTHLY_LIMIT": "100",
-      "MATRIXFLOW_AI_PER_MINUTE_LIMIT": "20"
+      "MATRIXFLOW_AI_PER_MINUTE_LIMIT": "20",
+      "MATRIXFLOW_AGENT_LIMIT": "10",
+      "MATRIXFLOW_CONTENT_PROJECT_LIMIT": "10",
+      "MATRIXFLOW_KNOWLEDGE_BASE_LIMIT": "5",
+      "MATRIXFLOW_WORKFLOW_LIMIT": "3"
     },
     "ignore": "node_modules,.git,*.log"
   }

@@ -22,6 +22,7 @@ const GENERIC_ERROR_COPY: Record<
     aiUnauthorized: string;
     aiInvalid: string;
     quotaExceeded: string;
+    planLimit: string;
   }
 > = {
   'zh-CN': {
@@ -43,6 +44,7 @@ const GENERIC_ERROR_COPY: Record<
     aiUnauthorized: 'AI 服务凭证无效，请联系管理员检查 Appwrite Function 配置',
     aiInvalid: 'AI 请求或模型响应无效，请调整输入后重试',
     quotaExceeded: '本月 AI 额度已用尽，请升级套餐或下月再试',
+    planLimit: '已达到当前套餐的资源上限，请升级套餐后继续',
   },
   'zh-TW': {
     operationFailed: '操作失敗，請稍後再試',
@@ -63,6 +65,7 @@ const GENERIC_ERROR_COPY: Record<
     aiUnauthorized: 'AI 服務憑證無效，請聯絡管理員檢查 Appwrite Function 設定',
     aiInvalid: 'AI 請求或模型回應無效，請調整輸入後再試',
     quotaExceeded: '本月 AI 額度已用盡，請升級方案或下月再試',
+    planLimit: '已達到目前方案的資源上限，請升級方案後繼續',
   },
   en: {
     operationFailed: 'Something went wrong. Try again shortly.',
@@ -85,6 +88,7 @@ const GENERIC_ERROR_COPY: Record<
       'The AI credentials are invalid. Ask an administrator to check the Appwrite Function configuration.',
     aiInvalid: 'The AI request or model response was invalid. Adjust the input and try again.',
     quotaExceeded: 'This month’s AI quota is used up. Upgrade the plan or try again next month.',
+    planLimit: 'This plan has reached its resource limit. Upgrade to continue.',
   },
 };
 
@@ -126,6 +130,7 @@ const ERROR_COPY_BY_CODE: Record<string, keyof (typeof GENERIC_ERROR_COPY)['en']
   AI_SYSTEM_TOO_LARGE: 'tooLarge',
   AI_MONTHLY_QUOTA_EXCEEDED: 'quotaExceeded',
   AI_RATE_LIMITED: 'rateLimited',
+  PLAN_LIMIT_EXCEEDED: 'planLimit',
 };
 
 function currentLocale(): Locale {

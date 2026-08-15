@@ -141,7 +141,11 @@ export async function getRow(tableId: string, rowId: string, organizationField =
   return row;
 }
 
-export async function uploadKnowledgeFile(knowledgeBaseId: string, form: FormData) {
+export async function uploadKnowledgeFile(
+  knowledgeBaseId: string,
+  form: FormData,
+  options: { idempotencyKey?: string } = {},
+) {
   await getRow(TABLES.knowledgeBases, knowledgeBaseId);
   const file = form.get('file');
   if (!(file instanceof File)) throw new BackendError('请选择要上传的文件', 400, 'FILE_REQUIRED');
@@ -161,14 +165,20 @@ export async function uploadKnowledgeFile(knowledgeBaseId: string, form: FormDat
     throw normalizeAppwriteError(error, '文件上传失败，请稍后重试');
   }
   let document: Data | undefined;
+  const baseKey = options.idempotencyKey;
   try {
-    document = await executeCore<Data>('/kb/documents', {
-      knowledgeBaseId,
-      title: file.name.slice(0, 255),
-      fileId: uploaded.$id,
-      mimeType: file.type || 'application/octet-stream',
-      size: file.size,
-    });
+    document = await executeCore<Data>(
+      '/kb/documents',
+      {
+        knowledgeBaseId,
+        title: file.name.slice(0, 255),
+        fileId: uploaded.$id,
+        mimeType: file.type || 'application/octet-stream',
+        size: file.size,
+      },
+      ExecutionMethod.POST,
+      baseKey ? { idempotencyKey: `${baseKey}:document` } : {},
+    );
   } catch (error) {
     await storage
       .deleteFile({ bucketId: KNOWLEDGE_BUCKET_ID, fileId: uploaded.$id })
@@ -176,7 +186,12 @@ export async function uploadKnowledgeFile(knowledgeBaseId: string, form: FormDat
     throw error;
   }
   try {
-    return await executeCore<Data>('/kb/index', { documentId: document.id });
+    return await executeCore<Data>(
+      '/kb/index',
+      { documentId: document.id },
+      ExecutionMethod.POST,
+      baseKey ? { idempotencyKey: `${baseKey}:index` } : {},
+    );
   } catch (error) {
     return {
       ...document,

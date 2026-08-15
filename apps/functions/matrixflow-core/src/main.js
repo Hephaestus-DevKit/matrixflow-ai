@@ -1,6 +1,6 @@
 import { configuredProvider, providerCapabilities } from './provider.js';
 import { Query } from 'node-appwrite';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   askKnowledgeBase,
   crmReply,
@@ -15,7 +15,9 @@ import {
   HttpError,
   TABLES,
   createRow,
+  deleteIdempotency,
   deleteOwned,
+  enforceResourceLimit,
   getOwned,
   listRows,
   recordAudit,
@@ -106,6 +108,10 @@ async function handleRoute({ services, context, membership, path, method, body }
       limits: {
         monthlyAiCalls: Number(process.env.MATRIXFLOW_AI_MONTHLY_LIMIT || 100),
         aiCallsPerMinute: Number(process.env.MATRIXFLOW_AI_PER_MINUTE_LIMIT || 20),
+        agents: Number(process.env.MATRIXFLOW_AGENT_LIMIT || 10),
+        contentProjects: Number(process.env.MATRIXFLOW_CONTENT_PROJECT_LIMIT || 10),
+        knowledgeBases: Number(process.env.MATRIXFLOW_KNOWLEDGE_BASE_LIMIT || 5),
+        workflows: Number(process.env.MATRIXFLOW_WORKFLOW_LIMIT || 3),
       },
     };
   }
@@ -131,6 +137,14 @@ async function handleRoute({ services, context, membership, path, method, body }
 
   if (method === 'POST' && path === '/agents') {
     requireCapability(membership, 'agents.manage');
+    await enforceResourceLimit(
+      services,
+      TABLES.agents,
+      context.teamId,
+      process.env.MATRIXFLOW_AGENT_LIMIT || 10,
+      [],
+      'AI 员工',
+    );
     const input = parse(schemas.agentCreate, body);
     const agent = await createRow(services, TABLES.agents, context.teamId, {
       name: input.name,
@@ -218,6 +232,14 @@ async function handleRoute({ services, context, membership, path, method, body }
 
   if (method === 'POST' && path === '/content/projects') {
     requireCapability(membership, 'content.manage');
+    await enforceResourceLimit(
+      services,
+      TABLES.contentProjects,
+      context.teamId,
+      process.env.MATRIXFLOW_CONTENT_PROJECT_LIMIT || 10,
+      [],
+      '内容项目',
+    );
     const input = parse(schemas.contentProject, body);
     const project = await createRow(services, TABLES.contentProjects, context.teamId, {
       ...input,
@@ -282,6 +304,14 @@ async function handleRoute({ services, context, membership, path, method, body }
 
   if (method === 'POST' && path === '/kb') {
     requireCapability(membership, 'knowledge.manage');
+    await enforceResourceLimit(
+      services,
+      TABLES.knowledgeBases,
+      context.teamId,
+      process.env.MATRIXFLOW_KNOWLEDGE_BASE_LIMIT || 5,
+      [],
+      '知识库',
+    );
     const input = parse(schemas.knowledgeBase, body);
     const base = await createRow(services, TABLES.knowledgeBases, context.teamId, {
       ...input,
@@ -404,6 +434,14 @@ async function handleRoute({ services, context, membership, path, method, body }
 
   if (method === 'POST' && path === '/workflows') {
     requireCapability(membership, 'workflows.manage');
+    await enforceResourceLimit(
+      services,
+      TABLES.workflows,
+      context.teamId,
+      process.env.MATRIXFLOW_WORKFLOW_LIMIT || 3,
+      [],
+      '工作流',
+    );
     const input = parse(schemas.workflowCreate, body);
     const workflow = await createRow(services, TABLES.workflows, context.teamId, {
       ...input,
@@ -534,7 +572,7 @@ export default async ({ req, res, log, error: logError }) => {
   const requestId =
     typeof rawRequestId === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(rawRequestId)
       ? rawRequestId
-      : crypto.randomUUID();
+      : randomUUID();
   const startedAt = Date.now();
   try {
     const userId = req.headers['x-appwrite-user-id'];
@@ -576,6 +614,12 @@ export default async ({ req, res, log, error: logError }) => {
             replay = null;
           }
           if (replay) return res.json(replay, previous.status || 200);
+        } else {
+          // Expired keys must be removed before processing so the unique
+          // index can accept a fresh request with the same client-generated key.
+          await deleteIdempotency(services, teamId, previous.id).catch((error) => {
+            if (Number(error?.status || error?.code) !== 404) throw error;
+          });
         }
       }
     }

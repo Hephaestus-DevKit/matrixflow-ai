@@ -265,6 +265,30 @@ export async function saveIdempotency(services, teamId, data) {
   return createRow(services, 'idempotency_keys', teamId, data);
 }
 
+export async function deleteIdempotency(services, teamId, rowId) {
+  return deleteOwned(services, 'idempotency_keys', rowId, teamId);
+}
+
+export async function enforceResourceLimit(
+  services,
+  tableId,
+  teamId,
+  limit,
+  queries = [],
+  label = '资源',
+) {
+  const safeLimit = Math.max(1, Math.floor(Number(limit)));
+  const current = await countRows(services, tableId, teamId, queries);
+  if (current >= safeLimit) {
+    throw new HttpError(`${label}数量已达到当前套餐上限`, 403, 'PLAN_LIMIT_EXCEEDED', {
+      tableId,
+      limit: safeLimit,
+      used: current,
+    });
+  }
+  return { limit: safeLimit, used: current, remaining: safeLimit - current };
+}
+
 export async function recordAudit(services, context, action, resource, resourceId, metadata = {}) {
   return createRow(services, TABLES.auditLogs, context.teamId, {
     userId: context.userId,

@@ -8,6 +8,7 @@ import {
   requireCapability,
   requireTeamMember,
   rowPermissions,
+  enforceResourceLimit,
 } from '../src/runtime.js';
 import { splitTextIntoChunks } from '../src/features.js';
 
@@ -130,5 +131,20 @@ test('unknown teams never expose Appwrite membership details', async () => {
         'user-1',
       ),
     (error) => error.code === 'FORBIDDEN' && error.status === 403,
+  );
+});
+
+test('plan limits fail before creating another resource', async () => {
+  await assert.rejects(
+    () =>
+      enforceResourceLimit(
+        { tables: { listRows: async () => ({ total: 3, rows: [] }) } },
+        'workflows',
+        'team-1',
+        3,
+        [],
+        '工作流',
+      ),
+    (error) => error.code === 'PLAN_LIMIT_EXCEEDED' && error.status === 403,
   );
 });

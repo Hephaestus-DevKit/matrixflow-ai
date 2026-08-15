@@ -20,6 +20,7 @@ import {
 const MAX_KB_CONTEXT = 12_000;
 const MAX_CHUNK_BYTES = 24_000;
 const CHUNK_OVERLAP_CHARS = 240;
+const MAX_INDEX_TEXT_CHARS = 1_000_000;
 const CONTENT_TYPES = [
   'product_title',
   'listing',
@@ -177,10 +178,9 @@ export async function indexDocument(services, context, body) {
     } else if (mimeType.includes('wordprocessingml') || title.endsWith('.docx')) {
       text = (await mammoth.extractRawText({ buffer })).value;
     } else text = buffer.toString('utf8');
-    text = text
-      .replace(/\u0000/g, '')
-      .trim()
-      .slice(0, 90_000);
+    const normalizedText = text.replace(/\u0000/g, '').trim();
+    const truncated = normalizedText.length > MAX_INDEX_TEXT_CHARS;
+    text = normalizedText.slice(0, MAX_INDEX_TEXT_CHARS);
     if (!text) throw new HttpError('文档中没有可索引的文字', 422, 'EMPTY_DOCUMENT');
     const chunks = splitTextIntoChunks(text);
     const oldChunks = await listRows(services, TABLES.knowledgeChunks, context.teamId, [
@@ -215,7 +215,9 @@ export async function indexDocument(services, context, body) {
         extractedText: text.slice(0, 2_000),
         chunkCount: chunks.length,
         status: 'READY',
-        error: '',
+        error: truncated
+          ? `文档过长，已索引前 ${MAX_INDEX_TEXT_CHARS.toLocaleString()} 个字符`
+          : '',
       },
     );
     await recordAudit(services, context, 'knowledge.indexed', 'knowledge_document', document.id, {

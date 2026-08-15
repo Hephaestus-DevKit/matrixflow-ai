@@ -210,9 +210,13 @@ export async function routeBackend(
   return method === 'GET' ? routeGet(path) : routeWrite(method, path, body, options);
 }
 
-export async function routeUpload(path: string, body: FormData) {
+export async function routeUpload(
+  path: string,
+  body: FormData,
+  options: { idempotencyKey?: string } = {},
+) {
   const { segments } = parts(path);
   if (segments[0] === 'kb' && segments[2] === 'documents')
-    return uploadKnowledgeFile(segments[1], body);
+    return uploadKnowledgeFile(segments[1], body, options);
   throw new BackendError('不支持该文件上传', 404, 'ROUTE_NOT_FOUND');
 }

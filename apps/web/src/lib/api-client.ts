@@ -62,7 +62,8 @@ export const apiClient = {
   del: <T = unknown>(path: string) => call<T>('DELETE', path),
   upload: async <T = unknown>(path: string, body: FormData) => {
     try {
-      return (await routeUpload(path, body)) as T;
+      const idempotencyKey = `mf-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`}`;
+      return (await routeUpload(path, body, { idempotencyKey })) as T;
     } catch (error) {
       normalizeError(error);
     }
