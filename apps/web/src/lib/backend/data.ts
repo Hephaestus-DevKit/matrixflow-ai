@@ -153,16 +153,39 @@ export async function uploadKnowledgeFile(
     throw new BackendError('文件不能超过 20 MB', 400, 'FILE_TOO_LARGE');
   const organizationId = getOrganizationContext();
   const permissions = teamPermissions(organizationId);
+  const deterministicFileId = options.idempotencyKey
+    ? options.idempotencyKey.replace(/[^A-Za-z0-9._-]/g, '').slice(0, 36)
+    : undefined;
+  const fileId =
+    deterministicFileId && deterministicFileId.length >= 8 ? deterministicFileId : ID.unique();
   let uploaded: Models.File;
   try {
     uploaded = await storage.createFile({
       bucketId: KNOWLEDGE_BUCKET_ID,
-      fileId: ID.unique(),
+      fileId,
       file,
       permissions,
     });
   } catch (error) {
-    throw normalizeAppwriteError(error, '文件上传失败，请稍后重试');
+    // A retried upload reuses the same file ID. Resume from the existing
+    // object instead of allocating another storage object; reject a mismatch
+    // so one idempotency key can never silently point at two files.
+    if (deterministicFileId && Number((error as { code?: unknown })?.code) === 409) {
+      try {
+        const existing = await storage.getFile({
+          bucketId: KNOWLEDGE_BUCKET_ID,
+          fileId: deterministicFileId,
+        });
+        if (Number(existing.sizeOriginal) !== file.size)
+          throw new BackendError('同一幂等键对应的文件大小不一致', 409, 'UPLOAD_RETRY_CONFLICT');
+        uploaded = existing;
+      } catch (retryError) {
+        if (retryError instanceof BackendError) throw retryError;
+        throw normalizeAppwriteError(retryError, '重复上传无法恢复，请重新选择文件');
+      }
+    } else {
+      throw normalizeAppwriteError(error, '文件上传失败，请稍后重试');
+    }
   }
   let document: Data | undefined;
   const baseKey = options.idempotencyKey;

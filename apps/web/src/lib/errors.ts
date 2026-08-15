@@ -113,6 +113,7 @@ const ERROR_COPY_BY_CODE: Record<string, keyof (typeof GENERIC_ERROR_COPY)['en']
   INVALID_REQUEST: 'invalidRequest',
   FILE_REQUIRED: 'invalidRequest',
   FILE_TOO_LARGE: 'tooLarge',
+  UPLOAD_RETRY_CONFLICT: 'conflict',
   LIST_TOO_LARGE: 'tooLarge',
   AI_PROVIDER_UNAVAILABLE: 'aiUnavailable',
   AI_PROVIDER_ERROR: 'aiUnavailable',
