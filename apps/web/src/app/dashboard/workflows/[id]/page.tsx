@@ -72,15 +72,20 @@ const EDITOR_COPY = {
     promptTemplate: '选择 AI 提示词模板 (Prompt Key)',
     choosePrompt: '-- 请选择提示词模板 --',
     recipient: '通知收件人邮箱 (Email Address)',
+    recipientPlaceholder: '例如：boss@company.com',
     subject: '邮件主题',
     subjectPlaceholder: '工作流执行结果',
     body: '邮件正文模板',
     bodyPlaceholder: '执行结果：{{input}}',
     webhook: '网络钩子地址 (Webhook URL)',
+    webhookPlaceholder: '例如：https://api.mycrm.com/v1/leads',
     transform: '转换模板内容 (JSON/Txt Template)',
+    transformPlaceholder: '例如：将 {{ai.content}} 转换为文本…',
     field: '比较字段路径',
+    fieldPlaceholder: '例如：score',
     operator: '比较操作符',
     value: '期望值',
+    valuePlaceholder: '例如：0.8',
     conditionHint: '条件节点的第一条出边标记为 true，第二条出边标记为 false。',
     triggerHint: '手动触发器不需要额外配置。下一个连接节点会自动接收初始输入。',
     deleteNode: '删除节点',
@@ -144,15 +149,20 @@ const EDITOR_COPY = {
     promptTemplate: '選擇 AI 提示詞範本 (Prompt Key)',
     choosePrompt: '-- 請選擇提示詞範本 --',
     recipient: '通知收件人電子郵件 (Email Address)',
+    recipientPlaceholder: '例如：boss@company.com',
     subject: '郵件主旨',
     subjectPlaceholder: '工作流執行結果',
     body: '郵件內容範本',
     bodyPlaceholder: '執行結果：{{input}}',
     webhook: '網路鉤子位址 (Webhook URL)',
+    webhookPlaceholder: '例如：https://api.mycrm.com/v1/leads',
     transform: '轉換範本內容 (JSON/Txt Template)',
+    transformPlaceholder: '例如：將 {{ai.content}} 轉換為文字…',
     field: '比較欄位路徑',
+    fieldPlaceholder: '例如：score',
     operator: '比較運算子',
     value: '期望值',
+    valuePlaceholder: '例如：0.8',
     conditionHint: '條件節點的第一條出邊標記為 true，第二條出邊標記為 false。',
     triggerHint: '手動觸發器不需要額外設定。下一個連接節點會自動接收初始輸入。',
     deleteNode: '刪除節點',
@@ -216,15 +226,20 @@ const EDITOR_COPY = {
     promptTemplate: 'AI prompt template (Prompt Key)',
     choosePrompt: '-- Choose a prompt template --',
     recipient: 'Notification recipient (Email Address)',
+    recipientPlaceholder: 'e.g. boss@company.com',
     subject: 'Email subject',
     subjectPlaceholder: 'Workflow execution result',
     body: 'Email body template',
     bodyPlaceholder: 'Execution result: {{input}}',
     webhook: 'Webhook URL',
+    webhookPlaceholder: 'e.g. https://api.mycrm.com/v1/leads',
     transform: 'Transform template (JSON/Txt Template)',
+    transformPlaceholder: 'e.g. convert {{ai.content}} to text…',
     field: 'Comparison field path',
+    fieldPlaceholder: 'e.g. score',
     operator: 'Comparison operator',
     value: 'Expected value',
+    valuePlaceholder: 'e.g. 0.8',
     conditionHint: 'The first outgoing edge is true; the second outgoing edge is false.',
     triggerHint:
       'Manual triggers need no extra configuration. The next connected node receives the initial input.',
@@ -290,15 +305,20 @@ const EDITOR_COPY = {
     promptTemplate: string;
     choosePrompt: string;
     recipient: string;
+    recipientPlaceholder: string;
     subject: string;
     subjectPlaceholder: string;
     body: string;
     bodyPlaceholder: string;
     webhook: string;
+    webhookPlaceholder: string;
     transform: string;
+    transformPlaceholder: string;
     field: string;
+    fieldPlaceholder: string;
     operator: string;
     value: string;
+    valuePlaceholder: string;
     conditionHint: string;
     triggerHint: string;
     deleteNode: string;
@@ -699,7 +719,7 @@ export default function WorkflowEditorPage() {
                     type="email"
                     value={configText(editConfig, 'to')}
                     onChange={(e) => setEditConfig({ ...editConfig, to: e.target.value })}
-                    placeholder="e.g. boss@company.com"
+                    placeholder={copy.recipientPlaceholder}
                     className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
                   />
                   <Label className="text-xs font-semibold">{copy.subject}</Label>
@@ -727,7 +747,7 @@ export default function WorkflowEditorPage() {
                     type="url"
                     value={configText(editConfig, 'url')}
                     onChange={(e) => setEditConfig({ ...editConfig, url: e.target.value })}
-                    placeholder="e.g. https://api.mycrm.com/v1/leads"
+                    placeholder={copy.webhookPlaceholder}
                     className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
                   />
                 </div>
@@ -739,7 +759,7 @@ export default function WorkflowEditorPage() {
                   <textarea
                     value={configText(editConfig, 'template')}
                     onChange={(e) => setEditConfig({ ...editConfig, template: e.target.value })}
-                    placeholder="e.g. {{ai.content}} converted to text..."
+                    placeholder={copy.transformPlaceholder}
                     rows={4}
                     className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border-border/80 text-foreground"
                   />
@@ -752,7 +772,7 @@ export default function WorkflowEditorPage() {
                   <Input
                     value={configText(editConfig, 'field')}
                     onChange={(e) => setEditConfig({ ...editConfig, field: e.target.value })}
-                    placeholder="e.g. score"
+                    placeholder={copy.fieldPlaceholder}
                     className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
                   />
                   <Label className="text-xs font-semibold">{copy.operator}</Label>
@@ -773,7 +793,7 @@ export default function WorkflowEditorPage() {
                   <Input
                     value={configText(editConfig, 'value')}
                     onChange={(e) => setEditConfig({ ...editConfig, value: e.target.value })}
-                    placeholder="e.g. 0.8"
+                    placeholder={copy.valuePlaceholder}
                     className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
                   />
                   <p className="text-[10px] text-muted-foreground">{copy.conditionHint}</p>
