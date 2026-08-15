@@ -61,7 +61,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             ref={dialogRef}
             role="dialog"
             aria-modal="true"
-            aria-label="主导航"
+            aria-label={t('dashboard.dialogNavigation')}
             className="relative h-full w-72"
           >
             <Sidebar mobile onClose={() => setNavigationOpen(false)} />

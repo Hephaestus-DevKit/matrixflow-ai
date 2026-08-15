@@ -25,7 +25,7 @@ export default function RegisterPage() {
   const [accepted, setAccepted] = useState(false);
 
   const { registerWithOtp, verifyOtp, loading } = useAuth();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const router = useRouter();
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export default function RegisterPage() {
     event?.preventDefault();
     if (!email.trim() || !name.trim() || !password || !accepted) return;
     if (password.length < 8) {
-      setError('密码长度至少为 8 位');
+      setError(t('auth.passwordTooShort'));
       return;
     }
     setError('');
@@ -48,7 +48,7 @@ export default function RegisterPage() {
       setStep('otp');
       setCountdown(60);
     } catch (cause) {
-      setError(authErrorMessage(cause, '注册失败，请稍后重试'));
+      setError(authErrorMessage(cause, '注册失败，请稍后重试', locale));
     }
   }
 
@@ -60,7 +60,7 @@ export default function RegisterPage() {
       await verifyOtp(userId, otpCode.trim(), name.trim());
       router.replace('/dashboard');
     } catch (cause) {
-      setError(authErrorMessage(cause, '验证码不正确或已失效'));
+      setError(authErrorMessage(cause, '验证码不正确或已失效', locale));
     }
   }
 

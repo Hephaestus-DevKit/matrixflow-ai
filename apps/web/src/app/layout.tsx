@@ -4,6 +4,7 @@ import { Providers } from './providers';
 import { Toaster } from 'sonner';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { SkipLink } from '@/components/skip-link';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://matrixflow-ai.vercel.app'),
@@ -24,13 +25,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="zh-CN" suppressHydrationWarning data-scroll-behavior="smooth">
       <body className="min-h-screen bg-background font-sans antialiased">
-        <a
-          href="#main-content"
-          className="fixed left-4 top-3 z-[100] -translate-y-20 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg transition-transform focus:translate-y-0"
-        >
-          跳到主要内容
-        </a>
         <Providers>
+          <SkipLink />
           {children}
           <Toaster richColors position="top-right" />
           <Analytics />

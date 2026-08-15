@@ -34,7 +34,7 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
           <span className="min-w-0">
             <span className="block truncate text-sm font-bold tracking-tight">MatrixFlow AI</span>
             <span className="block text-[0.6875rem] font-semibold tracking-wide text-muted-foreground">
-              AI 运营工作台
+              {t('dashboard.workspaceLabel')}
             </span>
           </span>
         </Link>
@@ -43,14 +43,17 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
             type="button"
             onClick={onClose}
             className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="关闭导航"
+            aria-label={t('dashboard.closeNavigation')}
           >
             <X className="h-4 w-4" />
           </button>
         )}
       </div>
 
-      <nav aria-label="主导航" className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
+      <nav
+        aria-label={t('common.mainNavigation')}
+        className="flex-1 space-y-6 overflow-y-auto px-3 py-5"
+      >
         {DASHBOARD_NAVIGATION.map((group) => (
           <div key={group.label}>
             <p className="mb-2 px-3 text-[0.6875rem] font-bold tracking-wide text-muted-foreground">
@@ -133,7 +136,9 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
             </span>
           )}
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-xs font-bold">{user?.name ?? '个人用户'}</span>
+            <span className="block truncate text-xs font-bold">
+              {user?.name ?? t('common.personalUser')}
+            </span>
             <span className="mt-0.5 block truncate text-[0.6875rem] text-muted-foreground">
               {membership?.organizationName ?? user?.email ?? ''}
             </span>

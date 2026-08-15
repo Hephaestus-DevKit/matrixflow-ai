@@ -1,7 +1,10 @@
+'use client';
+
 import { AlertTriangle, LoaderCircle, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
+import { useLocale } from '@/lib/i18n';
 
 export function Spinner({ className }: { className?: string }) {
   return (
@@ -12,7 +15,8 @@ export function Spinner({ className }: { className?: string }) {
   );
 }
 
-export function PageLoader({ label = '正在加载' }: { label?: string }) {
+export function PageLoader({ label }: { label?: string }) {
+  const { t } = useLocale();
   return (
     <div
       role="status"
@@ -21,16 +25,17 @@ export function PageLoader({ label = '正在加载' }: { label?: string }) {
       <span className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
         <Spinner className="h-6 w-6" />
       </span>
-      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      <p className="text-sm font-medium text-muted-foreground">{label || t('common.loading')}</p>
     </div>
   );
 }
 
 export function LoadingCards({ count = 3 }: { count?: number }) {
+  const { t } = useLocale();
   return (
     <div
       role="status"
-      aria-label="正在加载内容"
+      aria-label={t('common.loadingContent')}
       className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
     >
       {Array.from({ length: count }, (_, index) => (
@@ -73,13 +78,8 @@ export function EmptyState({
   );
 }
 
-export function ErrorState({
-  message = '暂时无法获取数据，请稍后重试。',
-  onRetry,
-}: {
-  message?: string;
-  onRetry?: () => void;
-}) {
+export function ErrorState({ message, onRetry }: { message?: string; onRetry?: () => void }) {
+  const { t } = useLocale();
   return (
     <section
       role="alert"
@@ -88,11 +88,13 @@ export function ErrorState({
       <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
         <AlertTriangle className="h-6 w-6" aria-hidden="true" />
       </span>
-      <h2 className="text-base font-bold text-foreground">数据加载失败</h2>
-      <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{message}</p>
+      <h2 className="text-base font-bold text-foreground">{t('common.dataLoadFailed')}</h2>
+      <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+        {message ?? t('common.dataLoadFailedDescription')}
+      </p>
       {onRetry && (
         <Button variant="outline" size="sm" onClick={onRetry} className="mt-5">
-          重新加载
+          {t('common.retry')}
         </Button>
       )}
     </section>

@@ -13,6 +13,7 @@ import {
   GitFork,
   Sparkles,
   Zap,
+  type LucideIcon,
 } from 'lucide-react';
 import type {
   AgentSummary,
@@ -24,7 +25,7 @@ import { useAuth } from '@/lib/auth-store';
 import { apiClient } from '@/lib/api-client';
 import { ErrorState, LoadingCards } from '@/components/ui/states';
 import { PageHeader, SectionHeading, StatCard } from '@/components/ui/page';
-import { useLocale } from '@/lib/i18n';
+import { useLocale, type MessageKey } from '@/lib/i18n';
 
 const QUICK_ACTIONS = [
   {
@@ -45,7 +46,12 @@ const QUICK_ACTIONS = [
     title: 'dashboard.quick.workflow',
     description: 'dashboard.quick.workflowDescription',
   },
-] as const;
+] satisfies Array<{
+  href: '/dashboard/content' | '/dashboard/agents/new' | '/dashboard/workflows/new';
+  icon: LucideIcon;
+  title: MessageKey;
+  description: MessageKey;
+}>;
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -147,7 +153,7 @@ export default function DashboardPage() {
               </p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 {health.data.ai.ready
-                  ? `${health.data.ai.provider} · ${health.data.ai.protocol || '统一文本协议'} · ${health.data.ai.model} · 每月 ${health.data.limits.monthlyAiCalls} 次额度`
+                  ? `${health.data.ai.provider} · ${health.data.ai.protocol || t('dashboard.unifiedProtocol')} · ${health.data.ai.model} · ${health.data.limits.monthlyAiCalls} ${t('dashboard.monthlyQuota')}`
                   : t('dashboard.aiPendingDescription')}
               </p>
             </div>
@@ -183,7 +189,7 @@ export default function DashboardPage() {
                 )}
                 <span>
                   <span className="block text-[0.6875rem] text-muted-foreground">
-                    步骤 {index + 1}
+                    {t('dashboard.step')} {index + 1}
                   </span>
                   <span className="font-semibold">{step.label}</span>
                 </span>
@@ -247,11 +253,11 @@ export default function DashboardPage() {
                   <Icon className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <span className="mt-5 flex items-center gap-2 text-sm font-bold text-foreground group-hover:text-primary">
-                  {t(action.title as never)}
+                  {t(action.title)}
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </span>
                 <span className="mt-2 block text-xs leading-5 text-muted-foreground">
-                  {t(action.description as never)}
+                  {t(action.description)}
                 </span>
               </Link>
             );

@@ -27,7 +27,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
 
   const { login, sendOtp, verifyOtp, loading } = useAuth();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const router = useRouter();
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export default function LoginPage() {
       await login(email.trim(), password);
       router.replace('/dashboard');
     } catch (cause) {
-      setError(authErrorMessage(cause, '登录失败，请检查账号状态'));
+      setError(authErrorMessage(cause, '登录失败，请检查账号状态', locale));
     }
   }
 
@@ -65,7 +65,7 @@ export default function LoginPage() {
       setStep('otp');
       setCountdown(60);
     } catch (cause) {
-      setError(authErrorMessage(cause, '验证码发送失败，请稍后重试'));
+      setError(authErrorMessage(cause, '验证码发送失败，请稍后重试', locale));
     }
   }
 
@@ -77,7 +77,7 @@ export default function LoginPage() {
       await verifyOtp(userId, otpCode.trim());
       router.replace('/dashboard');
     } catch (cause) {
-      setError(authErrorMessage(cause, '验证码错误或已失效'));
+      setError(authErrorMessage(cause, '验证码错误或已失效', locale));
     }
   }
 

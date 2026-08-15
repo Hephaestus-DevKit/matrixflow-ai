@@ -6,6 +6,7 @@ import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import type { MarketplaceItemSummary } from '@matrixflow/shared';
 import { useLocale, type Locale } from '@/lib/i18n';
+import { toast } from 'sonner';
 
 const COPY: Record<
   Locale,
@@ -47,7 +48,7 @@ export default function ItemDetailPage() {
   const buy = useMutation({
     mutationFn: () => apiClient.post(`/market/items/${id}/purchase`, {}),
     onSuccess: () => {
-      alert(copy.success);
+      toast.success(copy.success);
       router.push('/dashboard/marketplace/purchased');
     },
   });

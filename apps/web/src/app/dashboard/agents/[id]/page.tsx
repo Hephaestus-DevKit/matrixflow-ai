@@ -210,8 +210,10 @@ export default function AgentDetailPage() {
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-border/40 pb-5">
         <button
+          type="button"
           onClick={() => router.push('/dashboard/agents')}
           className="text-muted-foreground hover:text-foreground transition-colors"
+          aria-label={copy.back}
         >
           <ArrowLeft className="h-4 w-4" />
         </button>

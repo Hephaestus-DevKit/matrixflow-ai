@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { errorMessage } from '@/lib/errors';
 import { useLocale, type Locale } from '@/lib/i18n';
+import { toast } from 'sonner';
 
 const TEMPLATES = [
   {
@@ -172,7 +173,7 @@ export default function NewAgentPage() {
       await apiClient.post(`/agents/from-template/${templateId}`, { name: finalName });
       router.push('/dashboard/agents');
     } catch (error: unknown) {
-      alert(errorMessage(error));
+      toast.error(errorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -191,7 +192,7 @@ export default function NewAgentPage() {
       });
       router.push('/dashboard/agents');
     } catch (error: unknown) {
-      alert(errorMessage(error));
+      toast.error(errorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -201,8 +202,10 @@ export default function NewAgentPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center gap-3 border-b border-border/40 pb-5">
         <button
+          type="button"
           onClick={() => router.back()}
           className="text-muted-foreground hover:text-foreground transition-colors"
+          aria-label={copy.back}
         >
           <ArrowLeft className="h-4 w-4" />
         </button>

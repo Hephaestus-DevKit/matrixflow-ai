@@ -45,6 +45,7 @@ interface EditorEdgeData {
 const EDITOR_COPY = {
   'zh-CN': {
     workflows: '工作流',
+    back: '返回工作流列表',
     editorFallback: '工作流编辑器',
     loading: '加载中…',
     currentVersion: (version: number) => `当前版本：v${version}`,
@@ -116,6 +117,7 @@ const EDITOR_COPY = {
   },
   'zh-TW': {
     workflows: '工作流',
+    back: '返回工作流列表',
     editorFallback: '工作流編輯器',
     loading: '載入中…',
     currentVersion: (version: number) => `目前版本：v${version}`,
@@ -187,6 +189,7 @@ const EDITOR_COPY = {
   },
   en: {
     workflows: 'Workflows',
+    back: 'Back to workflows',
     editorFallback: 'Workflow editor',
     loading: 'Loading…',
     currentVersion: (version: number) => `Current version: v${version}`,
@@ -261,6 +264,7 @@ const EDITOR_COPY = {
   Locale,
   {
     workflows: string;
+    back: string;
     editorFallback: string;
     loading: string;
     currentVersion: (version: number) => string;
@@ -435,7 +439,7 @@ export default function WorkflowEditorPage() {
   // Trigger executing the workflow run
   const runMutation = useMutation({
     mutationFn: () => apiClient.post<WorkflowRunAccepted>(`/workflows/${id}/run`, {}),
-    onSuccess: (result) => alert(copy.runSubmitted(result.status, result.runId)),
+    onSuccess: (result) => toast.success(copy.runSubmitted(result.status, result.runId)),
   });
 
   // Save new workflow DSL version back to database
@@ -444,10 +448,10 @@ export default function WorkflowEditorPage() {
       apiClient.post(`/workflows/${id}/versions`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wf', id] });
-      alert(copy.saved);
+      toast.success(copy.saved);
     },
     onError: (error: unknown) => {
-      alert(copy.saveFailed(errorMessage(error)));
+      toast.error(copy.saveFailed(errorMessage(error)));
     },
   });
   const deleteMutation = useMutation({
@@ -522,7 +526,7 @@ export default function WorkflowEditorPage() {
         return n;
       }),
     );
-    alert(copy.nodeCached);
+    toast.success(copy.nodeCached);
   };
 
   // Compile and save workflow version
@@ -563,25 +567,27 @@ export default function WorkflowEditorPage() {
   }
 
   return (
-    <div className="space-y-5 animate-fade-in flex flex-col h-[calc(100vh-140px)]">
+    <div className="flex min-h-[calc(100vh-140px)] flex-col space-y-5 animate-fade-in lg:h-[calc(100vh-140px)]">
       {/* Editor Top Bar */}
-      <div className="flex items-center justify-between border-b border-border/40 pb-4 shrink-0">
-        <div className="flex items-center gap-3">
+      <div className="flex shrink-0 flex-col items-start justify-between gap-3 border-b border-border/40 pb-4 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 items-center gap-3">
           <button
+            type="button"
             onClick={() => router.push('/dashboard/workflows')}
             className="text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={copy.back}
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
           <div>
             <h1 className="text-xl font-bold tracking-tight">{wf?.name ?? copy.editorFallback}</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="mt-0.5 text-xs text-muted-foreground">
               {copy.currentVersion(wf?.currentVersion ?? 1)} · {copy.editorHint}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           <Button
             size="sm"
             variant="ghost"
@@ -623,9 +629,9 @@ export default function WorkflowEditorPage() {
       </div>
 
       {/* Editor Body */}
-      <div className="flex gap-4 grow min-h-0">
+      <div className="flex min-h-0 grow flex-col gap-4 lg:flex-row">
         {/* Canvas Area */}
-        <div className="flex-1 rounded-xl border border-border bg-card relative overflow-hidden">
+        <div className="min-h-[420px] flex-1 rounded-xl border border-border bg-card relative overflow-hidden lg:min-h-0">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -647,7 +653,7 @@ export default function WorkflowEditorPage() {
         </div>
 
         {/* Properties / Nodes Control Sidebar */}
-        <div className="w-[320px] rounded-xl border border-border bg-card p-5 overflow-y-auto flex flex-col justify-between shrink-0 shadow-dark-sm">
+        <div className="max-h-[50vh] w-full shrink-0 overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-dark-sm lg:max-h-none lg:w-[320px]">
           {selectedNode ? (
             /* Selected Node Properties Editor */
             <div className="space-y-5">
