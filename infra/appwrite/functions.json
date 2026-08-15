@@ -9,6 +9,7 @@
     "execute": ["users/verified"],
     "enabled": true,
     "logging": true,
+    "deploymentRetention": 5,
     "timeout": 120,
     "scopes": [
       "teams.read",

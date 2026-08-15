@@ -7,6 +7,7 @@ export class ApiError extends Error {
     message: string,
     public readonly status: number,
     public readonly code?: string,
+    public readonly requestId?: string,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -15,7 +16,8 @@ export class ApiError extends Error {
 
 function normalizeError(error: unknown): never {
   if (error instanceof ApiError) throw error;
-  if (error instanceof BackendError) throw new ApiError(error.message, error.status, error.code);
+  if (error instanceof BackendError)
+    throw new ApiError(error.message, error.status, error.code, error.requestId);
   const candidate = error as { message?: unknown; code?: unknown; type?: unknown };
   const status = typeof candidate?.code === 'number' ? candidate.code : 500;
   const code = typeof candidate?.type === 'string' ? candidate.type : 'APPWRITE_ERROR';

@@ -28,6 +28,7 @@ export class BackendError extends Error {
     message: string,
     public readonly status = 500,
     public readonly code = 'BACKEND_ERROR',
+    public readonly requestId?: string,
   ) {
     super(message);
     this.name = 'BackendError';
@@ -248,13 +249,16 @@ export async function executeCore<T>(
     throw normalizeAppwriteError(error, '核心服务暂时不可用');
   }
   const payload = parseJson(execution.responseBody) as
-    { data?: T; error?: { message?: string; code?: string } } | T;
+    { data?: T; error?: { message?: string; code?: string; requestId?: string } } | T;
   if (execution.responseStatusCode < 200 || execution.responseStatusCode >= 300) {
-    const envelope = payload as { error?: { message?: string; code?: string } };
+    const envelope = payload as {
+      error?: { message?: string; code?: string; requestId?: string };
+    };
     throw new BackendError(
       envelope.error?.message || '核心服务执行失败',
       execution.responseStatusCode || 500,
       envelope.error?.code || 'FUNCTION_ERROR',
+      envelope.error?.requestId,
     );
   }
   return ((payload as { data?: T }).data ?? payload) as T;
