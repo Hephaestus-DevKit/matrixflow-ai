@@ -42,7 +42,7 @@ jobs:
             {
               echo "### Appwrite deployment skipped"
               echo
-              echo "The `MATRIXFLOW_DEPLOY_KEY` repository secret is not configured. This run did not change Appwrite Schema or Function state."
+              echo "The MATRIXFLOW_DEPLOY_KEY repository secret is not configured. This run did not change Appwrite Schema or Function state."
               echo
               echo "Configure a short-lived least-privilege key, run the workflow again, and verify the active deployment before treating the release as fully published."
             } >> "$GITHUB_STEP_SUMMARY"
