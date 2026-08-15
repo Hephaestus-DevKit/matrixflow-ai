@@ -18,5 +18,6 @@
 - 外部调用必须限制输入、超时和错误输出，并在未配置时失败关闭。
 - 跨端契约归属 `packages/shared`，页面到 Appwrite 的映射归属 `apps/web/src/lib/backend`。
 - 不提交 `.env`、凭据、个人数据、构建产物或 smoke test 数据。
+- Dependabot 只自动组合 npm 的 minor/patch 更新；Next.js、React、Zod、Tailwind、TypeScript 等 major 版本必须单独迁移并完整运行质量门禁，避免多个破坏性升级混入同一 PR。
 
 建议使用 Conventional Commits。安全漏洞不要提交公开 Issue，请按 [SECURITY.md](SECURITY.md) 报告。
