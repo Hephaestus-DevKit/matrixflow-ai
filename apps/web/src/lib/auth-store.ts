@@ -10,15 +10,19 @@ import {
   type MatrixFlowUser,
 } from '@/lib/backend/session';
 import { account } from './appwrite';
-import { ID } from 'appwrite';
+import { AuthenticationFactor, ID } from 'appwrite';
 
 type User = MatrixFlowUser;
+type MfaFactor = 'totp' | 'recoverycode';
 
 interface AuthState {
   user: User | null;
   organizationId: string | null;
+  pendingMfaChallengeId: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  startMfaChallenge: (factor: MfaFactor) => Promise<void>;
+  completeMfa: (otp: string) => Promise<void>;
   registerWithOtp: (email: string, password: string, name: string) => Promise<string>;
   sendOtp: (email: string) => Promise<string>;
   requestPasswordRecovery: (email: string) => Promise<void>;
@@ -36,6 +40,11 @@ interface AuthState {
 interface AppwriteErrorLike {
   code?: number;
   type?: string;
+}
+
+interface MfaRequiredError extends Error {
+  code: 'MFA_REQUIRED';
+  challengeId: string;
 }
 
 function isExistingAccount(error: unknown): boolean {
@@ -61,6 +70,7 @@ export const useAuth = create<AuthState>()(
     (set, get) => ({
       user: null,
       organizationId: null,
+      pendingMfaChallengeId: null,
       loading: false,
 
       login: async (email, password) => {
@@ -68,14 +78,49 @@ export const useAuth = create<AuthState>()(
         try {
           await clearSession();
           clearOrganizationContext();
-          set({ user: null, organizationId: null });
+          set({ user: null, organizationId: null, pendingMfaChallengeId: null });
           await account.createEmailPasswordSession({ email, password });
-          await requireVerifiedAccount();
+          const current = await requireVerifiedAccount();
+          if (current.mfa) {
+            await get().startMfaChallenge('totp');
+            const mfaError = new Error('MFA_REQUIRED') as MfaRequiredError;
+            mfaError.code = 'MFA_REQUIRED';
+            mfaError.challengeId = get().pendingMfaChallengeId ?? '';
+            throw mfaError;
+          }
           await get().fetchMe();
         } catch (error) {
+          if ((error as Partial<MfaRequiredError>)?.code === 'MFA_REQUIRED') throw error;
           await clearSession();
-          set({ user: null, organizationId: null });
+          set({ user: null, organizationId: null, pendingMfaChallengeId: null });
           throw error;
+        } finally {
+          set({ loading: false });
+        }
+      },
+
+      startMfaChallenge: async (factor) => {
+        const challenge = await account.createMFAChallenge({
+          factor:
+            factor === 'recoverycode'
+              ? AuthenticationFactor.Recoverycode
+              : AuthenticationFactor.Totp,
+        });
+        set({ pendingMfaChallengeId: challenge.$id });
+      },
+
+      completeMfa: async (otp) => {
+        const challengeId = get().pendingMfaChallengeId;
+        if (!challengeId) {
+          const expired = new Error('MFA_CHALLENGE_EXPIRED') as Error & { code: string };
+          expired.code = 'MFA_CHALLENGE_EXPIRED';
+          throw expired;
+        }
+        set({ loading: true });
+        try {
+          await account.updateMFAChallenge({ challengeId, otp });
+          set({ pendingMfaChallengeId: null });
+          await get().fetchMe();
         } finally {
           set({ loading: false });
         }
@@ -86,7 +131,7 @@ export const useAuth = create<AuthState>()(
         try {
           await clearSession();
           clearOrganizationContext();
-          set({ user: null, organizationId: null });
+          set({ user: null, organizationId: null, pendingMfaChallengeId: null });
           const userId = ID.unique();
           try {
             await account.create({ userId, email, password, name });
@@ -107,7 +152,7 @@ export const useAuth = create<AuthState>()(
         try {
           await clearSession();
           clearOrganizationContext();
-          set({ user: null, organizationId: null });
+          set({ user: null, organizationId: null, pendingMfaChallengeId: null });
           const token = await account.createEmailToken({ userId: ID.unique(), email });
           return token.userId;
         } finally {
@@ -128,14 +173,22 @@ export const useAuth = create<AuthState>()(
         try {
           clearAppwriteCache();
           await account.createSession({ userId, secret: code });
-          await requireVerifiedAccount();
+          const current = await requireVerifiedAccount();
+          if (current.mfa) {
+            await get().startMfaChallenge('totp');
+            const mfaError = new Error('MFA_REQUIRED') as MfaRequiredError;
+            mfaError.code = 'MFA_REQUIRED';
+            mfaError.challengeId = get().pendingMfaChallengeId ?? '';
+            throw mfaError;
+          }
           if (name) {
             await account.updateName({ name }).catch(() => undefined);
           }
           await get().fetchMe();
         } catch (error) {
+          if ((error as Partial<MfaRequiredError>)?.code === 'MFA_REQUIRED') throw error;
           await clearSession();
-          set({ user: null, organizationId: null });
+          set({ user: null, organizationId: null, pendingMfaChallengeId: null });
           throw error;
         } finally {
           set({ loading: false });
@@ -155,7 +208,7 @@ export const useAuth = create<AuthState>()(
       logout: async () => {
         await clearSession();
         clearOrganizationContext();
-        set({ user: null, organizationId: null });
+        set({ user: null, organizationId: null, pendingMfaChallengeId: null });
       },
 
       fetchMe: async () => {
@@ -170,7 +223,7 @@ export const useAuth = create<AuthState>()(
           return me;
         } catch (error) {
           clearOrganizationContext();
-          set({ user: null, organizationId: null });
+          set({ user: null, organizationId: null, pendingMfaChallengeId: null });
           throw error;
         }
       },

@@ -155,7 +155,7 @@ export function errorMessage(error: unknown, fallback?: string, locale?: Locale)
 }
 
 interface ServiceError {
-  code?: number;
+  code?: number | string;
   type?: string;
   message?: string;
 }
@@ -171,6 +171,8 @@ const AUTH_ERROR_COPY: Record<
     rateLimited: string;
     activeSession: string;
     unverified: string;
+    invalidCode: string;
+    mfaExpired: string;
   }
 > = {
   'zh-CN': {
@@ -182,6 +184,8 @@ const AUTH_ERROR_COPY: Record<
     rateLimited: '操作过于频繁，请稍后再试',
     activeSession: '当前账号已登录，请刷新页面',
     unverified: '邮箱尚未完成验证，请使用邮箱验证码登录',
+    invalidCode: '验证码或恢复代码不正确',
+    mfaExpired: '双重验证已过期，请重新登录',
   },
   'zh-TW': {
     network: 'MatrixFlow 服務尚未啟動，請稍後再試',
@@ -192,6 +196,8 @@ const AUTH_ERROR_COPY: Record<
     rateLimited: '操作過於頻繁，請稍後再試',
     activeSession: '目前帳號已登入，請重新整理頁面',
     unverified: '電子郵件尚未完成驗證，請使用電子郵件驗證碼登入',
+    invalidCode: '驗證碼或恢復代碼不正確',
+    mfaExpired: '雙重驗證已逾期，請重新登入',
   },
   en: {
     network: 'MatrixFlow is not available yet. Try again shortly.',
@@ -202,6 +208,8 @@ const AUTH_ERROR_COPY: Record<
     rateLimited: 'Too many attempts. Try again shortly.',
     activeSession: 'This account is already signed in. Refresh the page.',
     unverified: 'Your email is not verified yet. Use email verification to sign in.',
+    invalidCode: 'The verification or recovery code is incorrect.',
+    mfaExpired: 'Two-step verification expired. Sign in again.',
   },
 };
 
@@ -218,6 +226,7 @@ export function authErrorMessage(
   }
 
   const serviceError = error as ServiceError;
+  if (String(serviceError.code) === 'MFA_CHALLENGE_EXPIRED') return copy.mfaExpired;
   switch (serviceError.type) {
     case 'user_invalid_credentials':
       return copy.invalidCredentials;
@@ -227,6 +236,10 @@ export function authErrorMessage(
       return copy.rateLimited;
     case 'user_session_already_exists':
       return copy.activeSession;
+    case 'user_invalid_token':
+      return copy.invalidCode;
+    case 'user_mfa_challenge_expired':
+      return copy.mfaExpired;
   }
 
   if (/verified email|邮箱尚未完成验证/i.test(serviceError.message ?? '')) {

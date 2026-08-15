@@ -19,5 +19,4 @@ export function getOrganizationContext(): string {
 
 export function clearOrganizationContext() {
   setOrganizationContext(null);
-  if (typeof window !== 'undefined') localStorage.removeItem('mfa-auth');
 }

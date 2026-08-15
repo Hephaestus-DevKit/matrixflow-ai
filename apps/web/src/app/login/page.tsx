@@ -21,12 +21,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [otpCode, setOtpCode] = useState('');
-  const [step, setStep] = useState<'info' | 'otp'>('info');
+  const [step, setStep] = useState<'info' | 'otp' | 'mfa'>('info');
+  const [mfaMode, setMfaMode] = useState<'totp' | 'recoverycode'>('totp');
+  const [mfaCode, setMfaCode] = useState('');
   const [userId, setUserId] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [error, setError] = useState('');
 
-  const { login, sendOtp, verifyOtp, loading } = useAuth();
+  const { login, startMfaChallenge, completeMfa, sendOtp, verifyOtp, loading } = useAuth();
   const { t, locale } = useLocale();
   const router = useRouter();
 
@@ -40,6 +42,8 @@ export default function LoginPage() {
     setLoginMode(mode);
     setStep('info');
     setOtpCode('');
+    setMfaMode('totp');
+    setMfaCode('');
     setUserId('');
     setError('');
   }
@@ -51,7 +55,36 @@ export default function LoginPage() {
       await login(email.trim(), password);
       router.replace('/dashboard');
     } catch (cause) {
+      if ((cause as { code?: string })?.code === 'MFA_REQUIRED') {
+        setMfaMode('totp');
+        setStep('mfa');
+        return;
+      }
       setError(authErrorMessage(cause, '登录失败，请检查账号状态', locale));
+    }
+  }
+
+  async function changeMfaMode(mode: 'totp' | 'recoverycode') {
+    if (mode === mfaMode || loading) return;
+    setError('');
+    setMfaCode('');
+    try {
+      await startMfaChallenge(mode);
+      setMfaMode(mode);
+    } catch (cause) {
+      setError(authErrorMessage(cause, t('auth.mfaInfo'), locale));
+    }
+  }
+
+  async function handleMfa(event: React.FormEvent) {
+    event.preventDefault();
+    if (!mfaCode.trim()) return;
+    setError('');
+    try {
+      await completeMfa(mfaCode.trim());
+      router.replace('/dashboard');
+    } catch (cause) {
+      setError(authErrorMessage(cause, '验证码错误或已失效，请重新登录', locale));
     }
   }
 
@@ -77,6 +110,11 @@ export default function LoginPage() {
       await verifyOtp(userId, otpCode.trim());
       router.replace('/dashboard');
     } catch (cause) {
+      if ((cause as { code?: string })?.code === 'MFA_REQUIRED') {
+        setMfaMode('totp');
+        setStep('mfa');
+        return;
+      }
       setError(authErrorMessage(cause, '验证码错误或已失效', locale));
     }
   }
@@ -85,7 +123,13 @@ export default function LoginPage() {
     <AuthShell
       title={t('auth.welcomeBack')}
       description={t('auth.loginDescription')}
-      step={step === 'otp' ? t('auth.verifyStep') : t('auth.loginStep')}
+      step={
+        step === 'otp'
+          ? t('auth.verifyStep')
+          : step === 'mfa'
+            ? t('auth.mfaStep')
+            : t('auth.loginStep')
+      }
       footer={
         <>
           {t('auth.noAccount')}{' '}
@@ -122,7 +166,55 @@ export default function LoginPage() {
         ))}
       </div>
 
-      {loginMode === 'password' ? (
+      {step === 'mfa' ? (
+        <form onSubmit={handleMfa} className="space-y-4">
+          <AuthMessage tone="info">{t('auth.mfaInfo')}</AuthMessage>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="mfa-code">
+                {mfaMode === 'totp' ? t('auth.mfaLabel') : t('auth.recoveryCodeLabel')}
+              </Label>
+              <button
+                type="button"
+                onClick={() => void changeMfaMode(mfaMode === 'totp' ? 'recoverycode' : 'totp')}
+                className="text-2xs font-semibold text-primary hover:underline"
+              >
+                {mfaMode === 'totp' ? t('auth.useRecoveryCode') : t('auth.useAuthenticator')}
+              </button>
+            </div>
+            <Input
+              id="mfa-code"
+              value={mfaCode}
+              onChange={(event) =>
+                setMfaCode(
+                  mfaMode === 'totp'
+                    ? event.target.value.replace(/\D/g, '').slice(0, 6)
+                    : event.target.value.trimStart().slice(0, 128),
+                )
+              }
+              required
+              inputMode={mfaMode === 'totp' ? 'numeric' : 'text'}
+              autoComplete="one-time-code"
+              placeholder={
+                mfaMode === 'totp' ? t('auth.mfaPlaceholder') : t('auth.recoveryCodePlaceholder')
+              }
+              className={cn(
+                'h-12 rounded-xl bg-background/70 text-center font-mono text-lg font-black',
+                mfaMode === 'totp' && 'tracking-[0.35em]',
+              )}
+            />
+          </div>
+          {error && <AuthMessage>{error}</AuthMessage>}
+          <Button type="submit" className="h-11 w-full rounded-xl" disabled={loading}>
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4" />
+            )}
+            {loading ? t('auth.loadingVerify') : t('auth.verifyMfa')}
+          </Button>
+        </form>
+      ) : loginMode === 'password' ? (
         <form onSubmit={handlePasswordLogin} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="login-email">{t('auth.email')}</Label>

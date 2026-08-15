@@ -24,6 +24,7 @@ import { errorMessage } from '@/lib/errors';
 import { apiClient } from '@/lib/api-client';
 import { account } from '@/lib/appwrite';
 import { useLocale, type Locale } from '@/lib/i18n';
+import { MfaSecurityCard } from '@/components/settings/mfa-security-card';
 
 const COPY: Record<
   Locale,
@@ -474,9 +475,12 @@ export default function SettingsPage() {
 
   async function handleRevokeOthers() {
     try {
-      await account.deleteSessions();
+      const otherSessions = sessions.filter((session) => session.current === false);
+      await Promise.all(
+        otherSessions.map((session) => account.deleteSession({ sessionId: session.$id })),
+      );
+      setSessions((current) => current.filter((session) => session.current));
       toast.success(copy.sessionsRevoked);
-      await logout();
     } catch (error) {
       toast.error(errorMessage(error, copy.sessionsFailed));
     }
@@ -691,6 +695,8 @@ export default function SettingsPage() {
             )}
           </div>
 
+          <MfaSecurityCard />
+
           <div className="rounded-xl border border-border/60 bg-card p-6 shadow-sm space-y-4">
             <div className="flex items-start justify-between gap-4 border-b border-border/40 pb-3">
               <div>
@@ -699,7 +705,7 @@ export default function SettingsPage() {
                   {copy.sessionsDescription}
                 </p>
               </div>
-              {sessions.length > 1 && (
+              {sessions.some((session) => session.current === false) && (
                 <Button
                   type="button"
                   size="sm"
@@ -731,7 +737,7 @@ export default function SettingsPage() {
                         {[session.clientName, session.osName].filter(Boolean).join(' · ')}
                       </p>
                     </div>
-                    {!session.current && (
+                    {session.current === false && (
                       <Button
                         type="button"
                         size="sm"
@@ -890,8 +896,10 @@ export default function SettingsPage() {
                 {aiStatusError ? copy.unavailableDescription : copy.configurePrefix}
                 {!aiStatusError && (
                   <>
-                    <span className="font-semibold text-foreground">ANTHROPIC_API_KEY</span>、
-                    <span className="font-semibold text-foreground">OPENAI_API_KEY</span> 或
+                    <span className="font-semibold text-foreground">ANTHROPIC_API_KEY</span>
+                    {locale === 'en' ? ', ' : '、'}
+                    <span className="font-semibold text-foreground">OPENAI_API_KEY</span>
+                    {locale === 'en' ? ' or ' : ' 或 '}
                     <span className="font-semibold text-foreground">GLM_API_KEY</span>
                     {copy.configureSuffix}
                   </>

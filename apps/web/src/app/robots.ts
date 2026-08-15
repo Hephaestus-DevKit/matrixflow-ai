@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: ['/', '/pricing', '/privacy', '/terms'],
-        disallow: ['/dashboard/', '/login', '/register', '/invite'],
+        disallow: ['/dashboard/', '/login', '/register', '/recover', '/invite'],
       },
     ],
     sitemap: 'https://matrixflow-ai.vercel.app/sitemap.xml',
