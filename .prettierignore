@@ -2,6 +2,7 @@
 **/.next/
 **/dist/
 **/.turbo/
+pnpm-lock.yaml
 apps/api/
 apps/worker/
 apps/sidecar/
