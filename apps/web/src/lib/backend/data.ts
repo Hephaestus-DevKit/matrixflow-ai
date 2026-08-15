@@ -50,12 +50,9 @@ function decodeRow(row: Row): Data {
 }
 
 function teamPermissions(organizationId: string) {
-  return [
-    Permission.read(Role.team(organizationId)),
-    Permission.update(Role.team(organizationId)),
-    Permission.delete(Role.team(organizationId, 'owner')),
-    Permission.delete(Role.team(organizationId, 'admin')),
-  ];
+  // Files are uploaded by verified users, but subsequent writes stay inside
+  // the Function boundary where the team capability checks run.
+  return [Permission.read(Role.team(organizationId))];
 }
 
 function assertOwned(row: Data, organizationId: string, field = 'organizationId') {

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { Button } from '@/components/ui/button';
 import { PublicFooter, PublicHeader } from '@/components/public-shell';
 import {
@@ -14,6 +15,10 @@ import {
   Layers3,
   ShieldCheck,
 } from 'lucide-react';
+
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+};
 
 const OPERATING_FLOW = [
   {

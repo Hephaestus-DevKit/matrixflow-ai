@@ -7,6 +7,7 @@ import { PublicFooter, PublicHeader } from '@/components/public-shell';
 export const metadata: Metadata = {
   title: '定价',
   description: 'MatrixFlow AI 免费测试版与候补套餐信息。',
+  alternates: { canonical: '/pricing' },
 };
 
 const PLANS = [

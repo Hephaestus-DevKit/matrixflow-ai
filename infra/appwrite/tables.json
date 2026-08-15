@@ -359,6 +359,12 @@
         "type": "key",
         "columns": ["knowledgeBaseId"],
         "orders": ["ASC"]
+      },
+      {
+        "key": "docs_kb_status",
+        "type": "key",
+        "columns": ["knowledgeBaseId", "status"],
+        "orders": ["ASC", "ASC"]
       }
     ]
   },

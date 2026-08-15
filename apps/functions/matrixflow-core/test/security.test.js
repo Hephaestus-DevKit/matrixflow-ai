@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parse, schemas } from '../src/schemas.js';
-import { requireAdmin, requireCapability } from '../src/runtime.js';
+import { requestBody, requireAdmin, requireCapability, rowPermissions } from '../src/runtime.js';
 
 test('agent updates reject mass-assignment fields', () => {
   assert.throws(
@@ -29,4 +29,15 @@ test('members can manage core resources but cannot access admin routes', () => {
 
 test('owners can access admin routes', () => {
   assert.doesNotThrow(() => requireAdmin({ roles: ['owner'] }));
+});
+
+test('tenant rows expose read-only permissions to browser clients', () => {
+  assert.deepEqual(rowPermissions('team-1'), ['read("team:team-1")']);
+});
+
+test('pre-parsed request bodies keep the same size guard', () => {
+  assert.throws(
+    () => requestBody({ bodyJson: { prompt: 'x'.repeat(128 * 1024) } }),
+    (error) => error.code === 'BODY_TOO_LARGE',
+  );
 });

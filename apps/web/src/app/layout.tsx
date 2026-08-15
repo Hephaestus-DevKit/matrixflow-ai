@@ -10,7 +10,6 @@ export const metadata: Metadata = {
   applicationName: 'MatrixFlow AI',
   title: { default: 'MatrixFlow AI — AI 员工操作系统', template: '%s | MatrixFlow AI' },
   description: '面向跨境团队的 AI 内容、知识库、AI 员工与可追踪工作流平台。',
-  alternates: { canonical: '/' },
   openGraph: {
     type: 'website',
     locale: 'zh_CN',

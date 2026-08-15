@@ -129,12 +129,13 @@ async function handleRoute({ services, context, membership, path, method, body }
       input.tools === undefined
         ? undefined
         : { ...(current.configuration || {}), tools: input.tools };
+    const requestedStatus = input.status === 'ACTIVE' && !ai.ready ? 'DRAFT' : input.status;
     const updated = await updateOwned(services, TABLES.agents, segments[1], context.teamId, {
       name: input.name,
       role: input.role,
       systemPrompt: input.systemPrompt,
       skills: input.skills,
-      status: input.status,
+      status: requestedStatus,
       configuration,
     });
     await recordAudit(services, context, 'agent.updated', 'agent', updated.id);

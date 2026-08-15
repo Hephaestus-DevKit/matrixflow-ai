@@ -1,7 +1,11 @@
 import type { Metadata } from 'next';
 import { LegalPage } from '@/components/legal-page';
 
-export const metadata: Metadata = { title: '服务条款', description: 'MatrixFlow AI 服务条款' };
+export const metadata: Metadata = {
+  title: '服务条款',
+  description: 'MatrixFlow AI 服务条款',
+  alternates: { canonical: '/terms' },
+};
 
 export default function TermsPage() {
   return (

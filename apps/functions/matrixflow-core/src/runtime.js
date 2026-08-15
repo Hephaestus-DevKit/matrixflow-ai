@@ -57,7 +57,17 @@ export class HttpError extends Error {
 }
 
 export function requestBody(req) {
-  if (req.bodyJson && typeof req.bodyJson === 'object') return req.bodyJson;
+  if (req.bodyJson && typeof req.bodyJson === 'object') {
+    let serialized;
+    try {
+      serialized = JSON.stringify(req.bodyJson);
+    } catch {
+      throw new HttpError('请求内容不是有效 JSON', 400, 'INVALID_JSON');
+    }
+    if (Buffer.byteLength(serialized) > 128 * 1024)
+      throw new HttpError('请求内容过大', 413, 'BODY_TOO_LARGE');
+    return req.bodyJson;
+  }
   const text = typeof req.bodyText === 'string' ? req.bodyText : '';
   if (Buffer.byteLength(text) > 128 * 1024)
     throw new HttpError('请求内容过大', 413, 'BODY_TOO_LARGE');
@@ -79,14 +89,9 @@ export function serverClient(req) {
 }
 
 export function rowPermissions(teamId) {
-  return [
-    Permission.read(Role.team(teamId)),
-    Permission.update(Role.team(teamId, 'owner')),
-    Permission.update(Role.team(teamId, 'admin')),
-    Permission.update(Role.team(teamId, 'member')),
-    Permission.delete(Role.team(teamId, 'owner')),
-    Permission.delete(Role.team(teamId, 'admin')),
-  ];
+  // Browser clients can read team rows directly, but every write must pass
+  // through the Function's capability and schema checks.
+  return [Permission.read(Role.team(teamId))];
 }
 
 export function encodeData(data) {

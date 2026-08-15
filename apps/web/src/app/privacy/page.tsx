@@ -1,7 +1,11 @@
 import type { Metadata } from 'next';
 import { LegalPage } from '@/components/legal-page';
 
-export const metadata: Metadata = { title: '隐私政策', description: 'MatrixFlow AI 隐私政策' };
+export const metadata: Metadata = {
+  title: '隐私政策',
+  description: 'MatrixFlow AI 隐私政策',
+  alternates: { canonical: '/privacy' },
+};
 
 export default function PrivacyPage() {
   return (

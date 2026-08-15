@@ -255,9 +255,10 @@ export async function askKnowledgeBase(services, context, body) {
 }
 
 export async function runWorkflow(services, context, body) {
-  await enforceAiBudget(services, context.teamId);
   const workflow = await getOwned(services, TABLES.workflows, body.workflowId, context.teamId);
   const dag = validateDag(workflow.dsl);
+  const aiCalls = dag.order.filter((node) => node.type === 'ai').length;
+  if (aiCalls > 0) await enforceAiBudget(services, context.teamId, aiCalls);
   const run = await createRow(services, TABLES.workflowRuns, context.teamId, {
     workflowId: workflow.id,
     status: 'RUNNING',

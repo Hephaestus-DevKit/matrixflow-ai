@@ -39,6 +39,12 @@ export async function generateText({ system, prompt, temperature = 0.4 }, env = 
     throw new ProviderError('AI 输入不能为空', 400, 'INVALID_AI_INPUT');
   if (prompt.length > MAX_PROMPT_LENGTH)
     throw new ProviderError('AI 输入过长，请缩短后重试', 413, 'AI_INPUT_TOO_LARGE');
+  const systemText = typeof system === 'string' ? system : String(system || '');
+  if (systemText.length > MAX_PROMPT_LENGTH)
+    throw new ProviderError('AI 系统指令过长，请缩短后重试', 413, 'AI_SYSTEM_TOO_LARGE');
+  const safeTemperature = Number.isFinite(Number(temperature))
+    ? Math.min(2, Math.max(0, Number(temperature)))
+    : 0.4;
   const provider = configuredProvider(env);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
@@ -49,10 +55,10 @@ export async function generateText({ system, prompt, temperature = 0.4 }, env = 
       body: JSON.stringify({
         model: provider.model,
         messages: [
-          { role: 'system', content: system || 'You are a precise business assistant.' },
+          { role: 'system', content: systemText || 'You are a precise business assistant.' },
           { role: 'user', content: prompt },
         ],
-        temperature,
+        temperature: safeTemperature,
       }),
       signal: controller.signal,
     });

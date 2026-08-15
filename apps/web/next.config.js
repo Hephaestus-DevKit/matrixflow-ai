@@ -30,6 +30,8 @@ const nextConfig = {
               "img-src 'self' data: blob: https://sgp.cloud.appwrite.io https://cloud.appwrite.io",
               "font-src 'self' data:",
               "connect-src 'self' https://sgp.cloud.appwrite.io wss://sgp.cloud.appwrite.io",
+              "object-src 'none'",
+              "script-src-attr 'none'",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
@@ -39,6 +41,9 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
+          { key: 'X-DNS-Prefetch-Control', value: 'off' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
           ...(isDevelopment
             ? []
