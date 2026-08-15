@@ -1,8 +1,151 @@
 import { ApiError } from './api-client';
 import type { Locale } from './i18n';
 
-export function errorMessage(error: unknown, fallback = '操作失败，请稍后重试'): string {
-  return error instanceof Error && error.message ? error.message : fallback;
+const GENERIC_ERROR_COPY: Record<
+  Locale,
+  {
+    operationFailed: string;
+    network: string;
+    timeout: string;
+    unauthorized: string;
+    forbidden: string;
+    notFound: string;
+    conflict: string;
+    rateLimited: string;
+    unavailable: string;
+    preview: string;
+    adminDisabled: string;
+    paymentsDisabled: string;
+    invalidRequest: string;
+    tooLarge: string;
+    aiUnavailable: string;
+    aiUnauthorized: string;
+    aiInvalid: string;
+    quotaExceeded: string;
+  }
+> = {
+  'zh-CN': {
+    operationFailed: '操作失败，请稍后重试',
+    network: 'MatrixFlow 服务暂未启动，请稍后重试',
+    timeout: 'MatrixFlow 服务响应超时，请稍后重试',
+    unauthorized: '登录状态已失效，请重新登录',
+    forbidden: '无权访问该团队资源',
+    notFound: '资源不存在或已被删除',
+    conflict: '资源状态发生冲突，请刷新后重试',
+    rateLimited: '请求过于频繁，请稍后重试',
+    unavailable: '核心服务暂时不可用，请稍后重试',
+    preview: '该功能仍在受控预览中，当前暂未开放',
+    adminDisabled: '管理模块正在安全重构中',
+    paymentsDisabled: '付费结账尚未开放，当前不会产生扣款',
+    invalidRequest: '请求参数有误，请检查后重试',
+    tooLarge: '数据量超过当前限制，请缩小范围后重试',
+    aiUnavailable: 'AI 服务暂时不可用，请检查协议配置后重试',
+    aiUnauthorized: 'AI 服务凭证无效，请联系管理员检查 Appwrite Function 配置',
+    aiInvalid: 'AI 请求或模型响应无效，请调整输入后重试',
+    quotaExceeded: '本月 AI 额度已用尽，请升级套餐或下月再试',
+  },
+  'zh-TW': {
+    operationFailed: '操作失敗，請稍後再試',
+    network: 'MatrixFlow 服務尚未啟動，請稍後再試',
+    timeout: 'MatrixFlow 服務回應逾時，請稍後再試',
+    unauthorized: '登入狀態已失效，請重新登入',
+    forbidden: '無權存取該團隊資源',
+    notFound: '資源不存在或已被刪除',
+    conflict: '資源狀態發生衝突，請重新整理後再試',
+    rateLimited: '請求過於頻繁，請稍後再試',
+    unavailable: '核心服務暫時不可用，請稍後再試',
+    preview: '此功能仍在受控預覽中，目前尚未開放',
+    adminDisabled: '管理模組正在安全重構中',
+    paymentsDisabled: '付費結帳尚未開放，目前不會產生扣款',
+    invalidRequest: '請求參數有誤，請檢查後再試',
+    tooLarge: '資料量超過目前限制，請縮小範圍後再試',
+    aiUnavailable: 'AI 服務暫時不可用，請檢查協議設定後再試',
+    aiUnauthorized: 'AI 服務憑證無效，請聯絡管理員檢查 Appwrite Function 設定',
+    aiInvalid: 'AI 請求或模型回應無效，請調整輸入後再試',
+    quotaExceeded: '本月 AI 額度已用盡，請升級方案或下月再試',
+  },
+  en: {
+    operationFailed: 'Something went wrong. Try again shortly.',
+    network: 'MatrixFlow is not available yet. Try again shortly.',
+    timeout: 'MatrixFlow took too long to respond. Try again shortly.',
+    unauthorized: 'Your session has expired. Sign in again.',
+    forbidden: 'You do not have access to this team resource.',
+    notFound: 'This resource no longer exists or was removed.',
+    conflict: 'The resource changed. Refresh and try again.',
+    rateLimited: 'Too many requests. Try again shortly.',
+    unavailable: 'The core service is temporarily unavailable. Try again shortly.',
+    preview: 'This feature is still in a controlled preview and is not open yet.',
+    adminDisabled: 'The administration module is being rebuilt safely.',
+    paymentsDisabled: 'Checkout is not available and creates no charge.',
+    invalidRequest: 'Some request details are invalid. Check them and try again.',
+    tooLarge: 'This request is larger than the current limit. Narrow the scope and try again.',
+    aiUnavailable:
+      'The AI service is temporarily unavailable. Check the protocol configuration and try again.',
+    aiUnauthorized:
+      'The AI credentials are invalid. Ask an administrator to check the Appwrite Function configuration.',
+    aiInvalid: 'The AI request or model response was invalid. Adjust the input and try again.',
+    quotaExceeded: 'This month’s AI quota is used up. Upgrade the plan or try again next month.',
+  },
+};
+
+const ERROR_COPY_BY_CODE: Record<string, keyof (typeof GENERIC_ERROR_COPY)['en']> = {
+  NETWORK_ERROR: 'network',
+  REQUEST_TIMEOUT: 'timeout',
+  UNAUTHENTICATED: 'unauthorized',
+  FORBIDDEN: 'forbidden',
+  RESOURCE_NOT_FOUND: 'notFound',
+  ROUTE_NOT_FOUND: 'notFound',
+  CONFLICT: 'conflict',
+  RATE_LIMITED: 'rateLimited',
+  general_rate_limit_exceeded: 'rateLimited',
+  APPWRITE_ERROR: 'unavailable',
+  FUNCTION_ERROR: 'unavailable',
+  BACKEND_ERROR: 'unavailable',
+  MARKETPLACE_PREVIEW: 'preview',
+  FEATURE_PREVIEW: 'preview',
+  ADMIN_FEATURE_DISABLED: 'adminDisabled',
+  PAYMENTS_DISABLED: 'paymentsDisabled',
+  METHOD_NOT_ALLOWED: 'invalidRequest',
+  INVALID_REQUEST: 'invalidRequest',
+  FILE_REQUIRED: 'invalidRequest',
+  FILE_TOO_LARGE: 'tooLarge',
+  LIST_TOO_LARGE: 'tooLarge',
+  AI_PROVIDER_UNAVAILABLE: 'aiUnavailable',
+  AI_PROVIDER_ERROR: 'aiUnavailable',
+  AI_NETWORK_ERROR: 'aiUnavailable',
+  AI_TIMEOUT: 'aiUnavailable',
+  AI_PROVIDER_AUTH: 'aiUnauthorized',
+  AI_PROVIDER_BAD_REQUEST: 'aiInvalid',
+  AI_PROVIDER_INVALID: 'aiInvalid',
+  AI_MODEL_INVALID: 'aiInvalid',
+  AI_INVALID_RESPONSE: 'aiInvalid',
+  AI_INVALID_OUTPUT: 'aiInvalid',
+  INVALID_AI_INPUT: 'aiInvalid',
+  AI_INPUT_TOO_LARGE: 'tooLarge',
+  AI_RESPONSE_TOO_LARGE: 'tooLarge',
+  AI_SYSTEM_TOO_LARGE: 'tooLarge',
+  AI_MONTHLY_QUOTA_EXCEEDED: 'quotaExceeded',
+  AI_RATE_LIMITED: 'rateLimited',
+};
+
+function currentLocale(): Locale {
+  if (typeof document === 'undefined') return 'zh-CN';
+  const value = document.documentElement.lang;
+  return value === 'en' || value === 'zh-TW' || value === 'zh-CN' ? value : 'zh-CN';
+}
+
+export function errorMessage(error: unknown, fallback?: string, locale?: Locale): string {
+  const copy = GENERIC_ERROR_COPY[locale ?? currentLocale()];
+  const code =
+    error instanceof ApiError
+      ? error.code
+      : typeof error === 'object' && error !== null && 'code' in error
+        ? String((error as { code?: unknown }).code)
+        : undefined;
+  const mappedKey = code ? ERROR_COPY_BY_CODE[code] : undefined;
+  if (mappedKey) return copy[mappedKey];
+  if (error instanceof Error && error.message) return error.message;
+  return fallback ?? copy.operationFailed;
 }
 
 interface ServiceError {
@@ -83,5 +226,5 @@ export function authErrorMessage(
   if (/verified email|邮箱尚未完成验证/i.test(serviceError.message ?? '')) {
     return copy.unverified;
   }
-  return errorMessage(error, fallback);
+  return errorMessage(error, fallback, locale);
 }

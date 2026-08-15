@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Check, CreditCard, Sparkles } from 'lucide-react';
 import type {
   BillingPlan,
@@ -11,6 +11,9 @@ import type {
 } from '@matrixflow/shared';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { ErrorState, LoadingCards } from '@/components/ui/states';
 import { PageHeader, SectionHeading } from '@/components/ui/page';
 import { useLocale, type Locale } from '@/lib/i18n';
@@ -43,6 +46,20 @@ const COPY: Record<
     requestAlready: string;
     requestFailed: string;
     requestDescription: string;
+    requestFormTitle: string;
+    requestFormDescription: string;
+    requestedSeats: string;
+    requestedSeatsHint: string;
+    note: string;
+    notePlaceholder: string;
+    noteOptional: string;
+    cancel: string;
+    submitRequest: string;
+    seatValidation: string;
+    requestHistory: string;
+    status: string;
+    requestedOn: string;
+    statuses: Record<BillingRequest['status'], string>;
   }
 > = {
   'zh-CN': {
@@ -69,6 +86,20 @@ const COPY: Record<
     requestAlready: '升级申请已在处理中',
     requestFailed: '升级申请提交失败，请稍后重试',
     requestDescription: '提交后我们会根据团队规模联系你，支付接入后再完成正式开通。',
+    requestFormTitle: '告诉我们你的升级计划',
+    requestFormDescription: '席位数量和备注会随申请发送给团队管理员，便于更快确认方案。',
+    requestedSeats: '预计席位数',
+    requestedSeatsHint: '1–500 个席位',
+    note: '补充说明',
+    notePlaceholder: '例如：预计下月扩展到 12 人，需要优先处理内容工作流。',
+    noteOptional: '可选',
+    cancel: '取消',
+    submitRequest: '提交升级申请',
+    seatValidation: '请输入 1 到 500 之间的整数。',
+    requestHistory: '申请记录',
+    status: '状态',
+    requestedOn: '提交于',
+    statuses: { PENDING: '处理中', CONTACTED: '已联系', CONVERTED: '已开通', CANCELED: '已取消' },
   },
   'zh-TW': {
     eyebrow: '方案與用量',
@@ -94,6 +125,20 @@ const COPY: Record<
     requestAlready: '升級申請正在處理中',
     requestFailed: '升級申請提交失敗，請稍後再試',
     requestDescription: '提交後我們會依團隊規模聯絡你，支付服務接入後再完成正式開通。',
+    requestFormTitle: '告訴我們你的升級計畫',
+    requestFormDescription: '席位數量與備註會隨申請傳送給團隊管理員，方便更快確認方案。',
+    requestedSeats: '預計席位數',
+    requestedSeatsHint: '1–500 個席位',
+    note: '補充說明',
+    notePlaceholder: '例如：預計下月擴展到 12 人，需要優先處理內容工作流。',
+    noteOptional: '選填',
+    cancel: '取消',
+    submitRequest: '提交升級申請',
+    seatValidation: '請輸入 1 到 500 之間的整數。',
+    requestHistory: '申請記錄',
+    status: '狀態',
+    requestedOn: '提交於',
+    statuses: { PENDING: '處理中', CONTACTED: '已聯絡', CONVERTED: '已開通', CANCELED: '已取消' },
   },
   en: {
     eyebrow: 'Plans & usage',
@@ -122,6 +167,27 @@ const COPY: Record<
     requestFailed: 'Could not submit the upgrade request. Try again shortly.',
     requestDescription:
       'We will follow up based on your team size and activate the plan after checkout is ready.',
+    requestFormTitle: 'Tell us about your upgrade plan',
+    requestFormDescription:
+      'Seat count and notes are shared with the team administrator so we can confirm the right plan faster.',
+    requestedSeats: 'Estimated seats',
+    requestedSeatsHint: '1–500 seats',
+    note: 'Additional context',
+    notePlaceholder:
+      'For example: We expect 12 users next month and need priority content workflows.',
+    noteOptional: 'Optional',
+    cancel: 'Cancel',
+    submitRequest: 'Submit upgrade request',
+    seatValidation: 'Enter a whole number between 1 and 500.',
+    requestHistory: 'Request history',
+    status: 'Status',
+    requestedOn: 'Requested on',
+    statuses: {
+      PENDING: 'In progress',
+      CONTACTED: 'Contacted',
+      CONVERTED: 'Activated',
+      CANCELED: 'Canceled',
+    },
   },
 };
 
@@ -130,8 +196,17 @@ export default function BillingPage() {
   const copy = COPY[locale];
   const queryClient = useQueryClient();
   const [intentPlan, setIntentPlan] = useState<string | null>(null);
+  const [requestPlan, setRequestPlan] = useState<'pro' | 'team' | null>(null);
+  const [requestedSeats, setRequestedSeats] = useState('');
+  const [requestNote, setRequestNote] = useState('');
+  const [seatError, setSeatError] = useState(false);
   useEffect(() => {
-    setIntentPlan(new URLSearchParams(window.location.search).get('plan'));
+    const plan = new URLSearchParams(window.location.search).get('plan');
+    setIntentPlan(plan);
+    if (plan === 'pro' || plan === 'team') {
+      setRequestPlan(plan);
+      setRequestedSeats(plan === 'pro' ? '5' : '20');
+    }
   }, []);
   const plans = useQuery({
     queryKey: ['plans'],
@@ -150,20 +225,49 @@ export default function BillingPage() {
     queryFn: () => apiClient.get<BillingRequest[]>('/billing/requests'),
   });
   const requestMutation = useMutation({
-    mutationFn: (requestedPlan: 'pro' | 'team') =>
+    mutationFn: (input: { requestedPlan: 'pro' | 'team'; requestedSeats: number; note: string }) =>
       apiClient.post<{ request: BillingRequest; created: boolean }>('/billing/requests', {
-        requestedPlan,
-        requestedSeats: requestedPlan === 'pro' ? 5 : 20,
+        requestedPlan: input.requestedPlan,
+        requestedSeats: input.requestedSeats,
+        note: input.note,
       }),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['billing-requests'] });
       toast.success(result.created ? copy.requested : copy.requestAlready);
+      setRequestPlan(null);
+      setRequestNote('');
     },
     onError: (error: unknown) => toast.error(errorMessage(error, copy.requestFailed)),
   });
   const queries = [plans, current, usage];
   const isLoading = queries.some((query) => query.isLoading);
   const isError = queries.some((query) => query.isError);
+  const submitUpgradeRequest = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!requestPlan) return;
+    const seats = Number(requestedSeats);
+    if (!Number.isInteger(seats) || seats < 1 || seats > 500) {
+      setSeatError(true);
+      return;
+    }
+    setSeatError(false);
+    requestMutation.mutate({
+      requestedPlan: requestPlan,
+      requestedSeats: seats,
+      note: requestNote.trim(),
+    });
+  };
+  const openRequestForm = (plan: 'pro' | 'team') => {
+    setRequestPlan(plan);
+    setRequestedSeats(plan === 'pro' ? '5' : '20');
+    setRequestNote('');
+    setSeatError(false);
+  };
+  const formatRequestedDate = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(date);
+  };
 
   return (
     <div className="space-y-8">
@@ -255,15 +359,15 @@ export default function BillingPage() {
                         selected || !isRequestable || requestPending || requestMutation.isPending
                       }
                       onClick={() => {
-                        if (plan.id === 'pro' || plan.id === 'team')
-                          requestMutation.mutate(plan.id);
+                        if (plan.id === 'pro' || plan.id === 'team') openRequestForm(plan.id);
                       }}
                     >
                       {selected
                         ? copy.active
                         : requestPending
                           ? copy.requested
-                          : requestMutation.isPending && requestMutation.variables === plan.id
+                          : requestMutation.isPending &&
+                              requestMutation.variables?.requestedPlan === plan.id
                             ? copy.requesting
                             : isRequestable
                               ? copy.requestUpgrade
@@ -273,6 +377,104 @@ export default function BillingPage() {
                 );
               })}
             </div>
+            {requestPlan && (
+              <form
+                className="surface-card border-primary/25 bg-primary/[0.035] p-5 sm:p-6"
+                onSubmit={submitUpgradeRequest}
+              >
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-base font-bold">
+                    {copy.requestFormTitle} · {requestPlan === 'pro' ? 'Pro' : 'Team'}
+                  </h3>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    {copy.requestFormDescription}
+                  </p>
+                </div>
+                <div className="mt-5 grid gap-4 sm:grid-cols-[minmax(0,13rem)_1fr]">
+                  <div className="space-y-2">
+                    <Label htmlFor="requested-seats">{copy.requestedSeats}</Label>
+                    <Input
+                      id="requested-seats"
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={500}
+                      value={requestedSeats}
+                      aria-invalid={seatError}
+                      onChange={(event) => {
+                        setRequestedSeats(event.target.value);
+                        if (seatError) setSeatError(false);
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">{copy.requestedSeatsHint}</p>
+                    {seatError && (
+                      <p className="text-xs font-medium text-destructive">{copy.seatValidation}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="upgrade-note">
+                      {copy.note}{' '}
+                      <span className="font-normal text-muted-foreground">
+                        ({copy.noteOptional})
+                      </span>
+                    </Label>
+                    <Textarea
+                      id="upgrade-note"
+                      value={requestNote}
+                      maxLength={1000}
+                      placeholder={copy.notePlaceholder}
+                      onChange={(event) => setRequestNote(event.target.value)}
+                    />
+                    <p className="text-right text-xs text-muted-foreground">
+                      {requestNote.length}/1000
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <Button type="button" variant="ghost" onClick={() => setRequestPlan(null)}>
+                    {copy.cancel}
+                  </Button>
+                  <Button type="submit" disabled={requestMutation.isPending}>
+                    {requestMutation.isPending ? copy.requesting : copy.submitRequest}
+                  </Button>
+                </div>
+              </form>
+            )}
+            {requests.data && requests.data.length > 0 && (
+              <section className="surface-card overflow-hidden">
+                <div className="border-b border-border/60 px-5 py-4">
+                  <h3 className="text-sm font-bold">{copy.requestHistory}</h3>
+                </div>
+                <div className="divide-y divide-border/60">
+                  {requests.data.map((request) => (
+                    <div
+                      key={request.id}
+                      className="flex flex-col gap-2 px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="rounded-lg bg-muted px-2.5 py-1 text-xs font-bold uppercase">
+                          {request.requestedPlan}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {request.requestedSeats} {copy.seat}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <span>
+                          {copy.status}:{' '}
+                          <strong className="font-semibold text-foreground">
+                            {copy.statuses[request.status]}
+                          </strong>
+                        </span>
+                        <span>
+                          {copy.requestedOn} {formatRequestedDate(request.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
           </section>
         </>
       )}
