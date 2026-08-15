@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-store';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { PageLoader } from '@/components/ui/states';
+import { useLocale } from '@/lib/i18n';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { locale } = useLocale();
   const { user, fetchMe } = useAuth();
   const router = useRouter();
   const [checking, setChecking] = useState(true);
@@ -39,7 +41,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (checking || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <PageLoader label="正在加载工作台" />
+        <PageLoader
+          label={
+            locale === 'en'
+              ? 'Loading workspace'
+              : locale === 'zh-TW'
+                ? '正在載入工作台'
+                : '正在加载工作台'
+          }
+        />
       </div>
     );
   }

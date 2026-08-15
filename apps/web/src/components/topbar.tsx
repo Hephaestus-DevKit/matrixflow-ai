@@ -7,6 +7,7 @@ import { LogOut, Menu, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/lib/auth-store';
 import { Button } from '@/components/ui/button';
 import { navigationItemForPath } from '@/components/dashboard-navigation';
+import { useLocale } from '@/lib/i18n';
 
 export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
   const pathname = usePathname();
@@ -14,6 +15,7 @@ export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const current = navigationItemForPath(pathname);
+  const { t } = useLocale();
 
   useEffect(() => setMounted(true), []);
 
@@ -25,14 +27,14 @@ export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
           size="icon"
           onClick={onOpenNavigation}
           className="h-10 w-10 lg:hidden"
-          aria-label="打开导航"
+          aria-label={t('dashboard.openNavigation')}
         >
           <Menu className="h-5 w-5" />
         </Button>
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold text-foreground">{current.label}</p>
+          <p className="truncate text-sm font-bold text-foreground">{t(current.labelKey)}</p>
           <p className="hidden truncate text-[0.6875rem] text-muted-foreground sm:block">
-            {current.description}
+            {t(current.descriptionKey)}
           </p>
         </div>
       </div>
@@ -43,7 +45,7 @@ export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
             size="icon"
             onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
             className="h-10 w-10 text-muted-foreground"
-            aria-label={resolvedTheme === 'dark' ? '切换为亮色模式' : '切换为暗色模式'}
+            aria-label={resolvedTheme === 'dark' ? t('common.theme.light') : t('common.theme.dark')}
           >
             {resolvedTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
@@ -53,11 +55,11 @@ export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
           variant="ghost"
           size="sm"
           onClick={() => void logout()}
-          aria-label="退出当前账号"
+          aria-label={t('dashboard.logoutAria')}
           className="h-10 gap-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
         >
           <LogOut className="h-4 w-4" />
-          <span className="hidden sm:inline">退出</span>
+          <span className="hidden sm:inline">{t('dashboard.logout')}</span>
         </Button>
       </div>
     </header>

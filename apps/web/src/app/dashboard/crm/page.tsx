@@ -13,8 +13,98 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { errorMessage } from '@/lib/errors';
 import { toast } from 'sonner';
+import { useLocale, type Locale } from '@/lib/i18n';
+
+const COPY: Record<
+  Locale,
+  {
+    eyebrow: string;
+    title: string;
+    description: string;
+    cancel: string;
+    createCustomer: string;
+    customerName: string;
+    customerEmail: string;
+    creating: string;
+    loading: string;
+    buyerDb: string;
+    noCustomers: string;
+    noCustomersDescription: string;
+    leads: string;
+    noLeads: string;
+    anonymous: string;
+    intent: string;
+    inviteError: string;
+    customerCreated: string;
+  }
+> = {
+  'zh-CN': {
+    eyebrow: '客户洞察',
+    title: '智能 CRM',
+    description: '先维护客户与内部对话；外部渠道连接器将在完成安全配置后开放。',
+    cancel: '取消',
+    createCustomer: '新建客户',
+    customerName: '客户姓名',
+    customerEmail: '客户邮箱',
+    creating: '创建中…',
+    loading: '正在加载客户数据',
+    buyerDb: '买家客户库',
+    noCustomers: '暂无买家客户数据',
+    noCustomersDescription: '新建第一个客户后，可在详情页维护内部对话与 AI 回复建议。',
+    leads: '智能意向线索',
+    noLeads: '暂无智能识别的销售线索',
+    anonymous: '匿名线索',
+    intent: '意向分',
+    inviteError: '无法创建客户',
+    customerCreated: '客户已创建',
+  },
+  'zh-TW': {
+    eyebrow: '客戶洞察',
+    title: '智慧 CRM',
+    description: '先維護客戶與內部對話；外部渠道連接器將在完成安全設定後開放。',
+    cancel: '取消',
+    createCustomer: '建立客戶',
+    customerName: '客戶姓名',
+    customerEmail: '客戶電子郵件',
+    creating: '建立中…',
+    loading: '正在載入客戶資料',
+    buyerDb: '買家客戶庫',
+    noCustomers: '暫無買家客戶資料',
+    noCustomersDescription: '建立第一個客戶後，可在詳情頁維護內部對話與 AI 回覆建議。',
+    leads: '智慧意向線索',
+    noLeads: '暫無智慧識別的銷售線索',
+    anonymous: '匿名線索',
+    intent: '意向分',
+    inviteError: '無法建立客戶',
+    customerCreated: '客戶已建立',
+  },
+  en: {
+    eyebrow: 'Customer insights',
+    title: 'Smart CRM',
+    description:
+      'Maintain customers and internal conversations first; external connectors open after secure configuration.',
+    cancel: 'Cancel',
+    createCustomer: 'New customer',
+    customerName: 'Customer name',
+    customerEmail: 'Customer email',
+    creating: 'Creating…',
+    loading: 'Loading customer data',
+    buyerDb: 'Buyer customer base',
+    noCustomers: 'No customer data yet',
+    noCustomersDescription:
+      'Create a customer to maintain internal conversations and AI reply suggestions.',
+    leads: 'Intent leads',
+    noLeads: 'No sales leads identified yet',
+    anonymous: 'Anonymous lead',
+    intent: 'Intent',
+    inviteError: 'Could not create customer',
+    customerCreated: 'Customer created',
+  },
+};
 
 export default function CrmPage() {
+  const { locale } = useLocale();
+  const copy = COPY[locale];
   const queryClient = useQueryClient();
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
@@ -43,21 +133,21 @@ export default function CrmPage() {
       setEmail('');
       setCreating(false);
       await queryClient.invalidateQueries({ queryKey: ['customers'] });
-      toast.success('客户已创建');
+      toast.success(copy.customerCreated);
     },
-    onError: (error: unknown) => toast.error(errorMessage(error, '无法创建客户')),
+    onError: (error: unknown) => toast.error(errorMessage(error, copy.inviteError)),
   });
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="客户洞察"
-        title="智能 CRM"
-        description="先维护客户与内部对话；外部渠道连接器将在完成安全配置后开放。"
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        description={copy.description}
         actions={
           <Button size="sm" onClick={() => setCreating((value) => !value)}>
             {creating ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-            {creating ? '取消' : '新建客户'}
+            {creating ? copy.cancel : copy.createCustomer}
           </Button>
         }
       />
@@ -71,7 +161,7 @@ export default function CrmPage() {
           }}
         >
           <div className="space-y-2">
-            <Label htmlFor="customer-name">客户姓名</Label>
+            <Label htmlFor="customer-name">{copy.customerName}</Label>
             <Input
               id="customer-name"
               value={name}
@@ -80,7 +170,7 @@ export default function CrmPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="customer-email">客户邮箱</Label>
+            <Label htmlFor="customer-email">{copy.customerEmail}</Label>
             <Input
               id="customer-email"
               type="email"
@@ -93,12 +183,12 @@ export default function CrmPage() {
             type="submit"
             disabled={createCustomer.isPending || (!name.trim() && !email.trim())}
           >
-            {createCustomer.isPending ? '创建中…' : '创建客户'}
+            {createCustomer.isPending ? copy.creating : copy.createCustomer}
           </Button>
         </form>
       )}
 
-      {isLoading && <PageLoader label="正在加载客户数据" />}
+      {isLoading && <PageLoader label={copy.loading} />}
       {isError && (
         <ErrorState
           onRetry={() => void Promise.all([customersQuery.refetch(), leadsQuery.refetch()])}
@@ -110,14 +200,14 @@ export default function CrmPage() {
           {/* Customers */}
           <div className="space-y-3">
             <h2 className="text-sm font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
-              <Users className="h-4 w-4 text-primary" /> 买家客户库
+              <Users className="h-4 w-4 text-primary" /> {copy.buyerDb}
             </h2>
             {(!customers || customers.length === 0) && (
               <EmptyState
                 icon={Users}
-                title="暂无买家客户数据"
-                description="新建第一个客户后，可在详情页维护内部对话与 AI 回复建议。"
-                action={<Button onClick={() => setCreating(true)}>新建客户</Button>}
+                title={copy.noCustomers}
+                description={copy.noCustomersDescription}
+                action={<Button onClick={() => setCreating(true)}>{copy.createCustomer}</Button>}
               />
             )}
             <div className="space-y-2">
@@ -143,10 +233,10 @@ export default function CrmPage() {
           {/* Sales Leads */}
           <div className="space-y-3">
             <h2 className="text-sm font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
-              <TrendingUp className="h-4 w-4 text-success" /> 智能意向线索
+              <TrendingUp className="h-4 w-4 text-success" /> {copy.leads}
             </h2>
             {(!leads || leads.length === 0) && (
-              <EmptyState icon={TrendingUp} title="暂无智能识别的销售线索" />
+              <EmptyState icon={TrendingUp} title={copy.noLeads} />
             )}
             <div className="space-y-2">
               {leads?.map((l) => (
@@ -155,10 +245,10 @@ export default function CrmPage() {
                   className="surface-card flex items-center justify-between rounded-xl px-4 py-3 text-xs font-semibold"
                 >
                   <span className="text-foreground">
-                    {l.customer?.name ?? l.customer?.email ?? '匿名线索'}
+                    {l.customer?.name ?? l.customer?.email ?? copy.anonymous}
                   </span>
                   <span className="rounded-full bg-success/10 px-2 py-0.5 text-success text-[10px] font-bold">
-                    意向分 {l.score}
+                    {copy.intent} {l.score}
                   </span>
                 </div>
               ))}

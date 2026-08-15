@@ -7,11 +7,13 @@ import { Cloud, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-store';
 import { cn } from '@/lib/cn';
 import { DASHBOARD_NAVIGATION } from '@/components/dashboard-navigation';
+import { useLocale } from '@/lib/i18n';
 
 export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
   const { user, organizationId } = useAuth();
   const membership = user?.memberships.find((item) => item.organizationId === organizationId);
+  const { t } = useLocale();
 
   return (
     <aside
@@ -52,7 +54,7 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
         {DASHBOARD_NAVIGATION.map((group) => (
           <div key={group.label}>
             <p className="mb-2 px-3 text-[0.6875rem] font-bold tracking-wide text-muted-foreground">
-              {group.label}
+              {t(group.labelKey)}
             </p>
             <div className="space-y-1">
               {group.items.map((item) => {
@@ -84,9 +86,9 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
                       <Icon className="h-4 w-4" aria-hidden="true" />
                     </span>
                     <span className="min-w-0">
-                      <span className="block truncate leading-4">{item.label}</span>
+                      <span className="block truncate leading-4">{t(item.labelKey)}</span>
                       <span className="mt-0.5 block truncate text-[0.6875rem] font-normal text-muted-foreground">
-                        {item.description}
+                        {t(item.descriptionKey)}
                       </span>
                     </span>
                   </Link>
@@ -103,8 +105,12 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
             <Cloud className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
           <span className="min-w-0">
-            <span className="block truncate font-semibold text-foreground">托管数据服务</span>
-            <span className="block text-[0.6875rem] text-muted-foreground">Appwrite Cloud</span>
+            <span className="block truncate font-semibold text-foreground">
+              {t('common.hostedData')}
+            </span>
+            <span className="block text-[0.6875rem] text-muted-foreground">
+              {t('common.appwrite')}
+            </span>
           </span>
         </div>
         <Link

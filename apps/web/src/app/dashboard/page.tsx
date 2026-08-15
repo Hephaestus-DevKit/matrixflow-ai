@@ -24,30 +24,32 @@ import { useAuth } from '@/lib/auth-store';
 import { apiClient } from '@/lib/api-client';
 import { ErrorState, LoadingCards } from '@/components/ui/states';
 import { PageHeader, SectionHeading, StatCard } from '@/components/ui/page';
+import { useLocale } from '@/lib/i18n';
 
 const QUICK_ACTIONS = [
   {
     href: '/dashboard/content',
     icon: Factory,
-    title: '启动内容矩阵',
-    description: '从产品资料批量生成 Listing、广告和社媒内容。',
+    title: 'dashboard.quick.content',
+    description: 'dashboard.quick.contentDescription',
   },
   {
     href: '/dashboard/agents/new',
     icon: Bot,
-    title: '部署 AI 员工',
-    description: '配置角色、模型、提示词和可调用的业务技能。',
+    title: 'dashboard.quick.agent',
+    description: 'dashboard.quick.agentDescription',
   },
   {
     href: '/dashboard/workflows/new',
     icon: GitFork,
-    title: '编排自动化',
-    description: '将 AI、条件判断与数据转换连接成可追踪流程。',
+    title: 'dashboard.quick.workflow',
+    description: 'dashboard.quick.workflowDescription',
   },
 ] as const;
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { t } = useLocale();
   const agents = useQuery({
     queryKey: ['agents'],
     queryFn: () => apiClient.get<AgentSummary[]>('/agents'),
@@ -81,29 +83,45 @@ export default function DashboardPage() {
   const activeAgents = agents.data?.filter((agent) => agent.status === 'ACTIVE').length ?? 0;
   const aiCalls = usage.data?.ai_call ?? 0;
   const onboarding = [
-    { label: '连接 AI 服务', done: Boolean(health.data?.ai.ready), href: '/dashboard/settings' },
     {
-      label: '创建知识库',
+      label: t('dashboard.connectAI'),
+      done: Boolean(health.data?.ai.ready),
+      href: '/dashboard/settings',
+    },
+    {
+      label: t('dashboard.createKnowledge'),
       done: Boolean(knowledge.data?.length),
       href: '/dashboard/knowledge/new',
     },
-    { label: '创建 AI 员工', done: Boolean(agents.data?.length), href: '/dashboard/agents/new' },
-    { label: '建立内容项目', done: Boolean(projects.data?.length), href: '/dashboard/content' },
+    {
+      label: t('dashboard.createAgent'),
+      done: Boolean(agents.data?.length),
+      href: '/dashboard/agents/new',
+    },
+    {
+      label: t('dashboard.createProject'),
+      done: Boolean(projects.data?.length),
+      href: '/dashboard/content',
+    },
   ] as const;
   const onboardingComplete = onboarding.every((step) => step.done);
 
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="团队运行概况"
-        title={<>欢迎回来，{user?.name || '伙伴'}</>}
-        description="集中查看 AI 团队、内容项目、知识资产与本月资源消耗。"
+        eyebrow={t('dashboard.eyebrow')}
+        title={
+          <>
+            {t('dashboard.welcome')}，{user?.name || t('dashboard.group.workspace')}
+          </>
+        }
+        description={t('dashboard.description')}
         actions={
           <Link
             href="/dashboard/agents/new"
             className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-primary/15"
           >
-            <Sparkles className="h-3.5 w-3.5" /> 部署新员工
+            <Sparkles className="h-3.5 w-3.5" /> {t('dashboard.deployAgent')}
           </Link>
         }
       />
@@ -125,12 +143,12 @@ export default function DashboardPage() {
             )}
             <div>
               <p className="text-sm font-bold">
-                {health.data.ai.ready ? 'AI 服务已就绪' : '数据服务已连接，AI 服务尚未配置'}
+                {health.data.ai.ready ? t('dashboard.aiReady') : t('dashboard.aiPending')}
               </p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 {health.data.ai.ready
                   ? `${health.data.ai.provider} · ${health.data.ai.protocol || '统一文本协议'} · ${health.data.ai.model} · 每月 ${health.data.limits.monthlyAiCalls} 次额度`
-                  : '内容生成、知识问答、Agent 与 AI 工作流会安全拒绝请求，直到管理员在 Appwrite Function 中配置模型密钥。'}
+                  : t('dashboard.aiPendingDescription')}
               </p>
             </div>
           </div>
@@ -141,13 +159,14 @@ export default function DashboardPage() {
         <section className="surface-card p-5 sm:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-base font-bold">首次运行清单</h2>
+              <h2 className="text-base font-bold">{t('dashboard.onboardingTitle')}</h2>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                按顺序完成基础配置，形成可验证的内容与知识闭环。
+                {t('dashboard.onboardingDescription')}
               </p>
             </div>
             <span className="text-xs font-semibold text-muted-foreground">
-              {onboarding.filter((step) => step.done).length} / {onboarding.length} 已完成
+              {onboarding.filter((step) => step.done).length} / {onboarding.length}{' '}
+              {t('dashboard.onboardingDone')}
             </span>
           </div>
           <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
@@ -175,35 +194,35 @@ export default function DashboardPage() {
       )}
 
       {hasError ? (
-        <ErrorState message="部分工作台指标未能加载，请检查连接后重试。" onRetry={retry} />
+        <ErrorState message={t('dashboard.metricsError')} onRetry={retry} />
       ) : isLoading ? (
         <LoadingCards count={4} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            label="活跃 AI 员工"
+            label={t('dashboard.activeAgents')}
             value={activeAgents}
-            detail={`共 ${agents.data?.length ?? 0} 个角色`}
+            detail={`${agents.data?.length ?? 0} ${t('dashboard.roles')}`}
             icon={Bot}
           />
           <StatCard
-            label="内容项目"
+            label={t('dashboard.contentProjects')}
             value={projects.data?.length ?? 0}
-            detail="已沉淀的内容生产任务"
+            detail={t('dashboard.contentProjectDetail')}
             icon={Factory}
             tone="success"
           />
           <StatCard
-            label="本月 AI 调用"
+            label={t('dashboard.aiCalls')}
             value={aiCalls.toLocaleString()}
-            detail="按当前组织汇总"
+            detail={t('dashboard.currentOrganization')}
             icon={Zap}
             tone="warning"
           />
           <StatCard
-            label="关联知识库"
+            label={t('dashboard.knowledgeBases')}
             value={knowledge.data?.length ?? 0}
-            detail="可用于检索增强生成"
+            detail={t('dashboard.knowledgeDetail')}
             icon={FolderOpen}
             tone="info"
           />
@@ -211,7 +230,10 @@ export default function DashboardPage() {
       )}
 
       <section className="space-y-4">
-        <SectionHeading title="快捷入口" description="从最常用的操作开始，减少工作流转路径。" />
+        <SectionHeading
+          title={t('dashboard.quickActions')}
+          description={t('dashboard.quickActionsDescription')}
+        />
         <div className="grid gap-4 md:grid-cols-3">
           {QUICK_ACTIONS.map((action) => {
             const Icon = action.icon;
@@ -225,11 +247,11 @@ export default function DashboardPage() {
                   <Icon className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <span className="mt-5 flex items-center gap-2 text-sm font-bold text-foreground group-hover:text-primary">
-                  {action.title}
+                  {t(action.title as never)}
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </span>
                 <span className="mt-2 block text-xs leading-5 text-muted-foreground">
-                  {action.description}
+                  {t(action.description as never)}
                 </span>
               </Link>
             );

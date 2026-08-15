@@ -22,14 +22,229 @@ import { toast } from 'sonner';
 import Image from 'next/image';
 import { errorMessage } from '@/lib/errors';
 import { apiClient } from '@/lib/api-client';
+import { useLocale, type Locale } from '@/lib/i18n';
+
+const COPY: Record<
+  Locale,
+  {
+    title: string;
+    description: string;
+    tabs: { profile: string; enterprise: string };
+    preview: string;
+    previewDescription: string;
+    workName: string;
+    avatarStyle: string;
+    avatarHosted: string;
+    saving: string;
+    save: string;
+    nameRequired: string;
+    profileSaved: string;
+    saveFailed: string;
+    orgPermissions: string;
+    orgDescription: string;
+    orgName: string;
+    noOrg: string;
+    role: string;
+    unassigned: string;
+    currentOrg: string;
+    orgHint: string;
+    createTeam: string;
+    createTeamDescription: string;
+    teamName: string;
+    creating: string;
+    create: string;
+    inviteTeam: string;
+    inviteAllowed: string;
+    inviteDenied: string;
+    memberEmail: string;
+    memberRole: string;
+    member: string;
+    admin: string;
+    invite: string;
+    inviteSent: string;
+    inviteFailed: string;
+    protocolTitle: string;
+    protocolDescription: string;
+    checking: string;
+    connected: string;
+    unavailable: string;
+    pending: string;
+    checkingDescription: string;
+    readyPrefix: string;
+    changeHint: string;
+    unavailableDescription: string;
+    configurePrefix: string;
+    configureSuffix: string;
+    logout: string;
+  }
+> = {
+  'zh-CN': {
+    title: '设置中心',
+    description: '管理您的个人身份属性、企业配置以及系统级集成',
+    tabs: { profile: '个人资料与头像', enterprise: '企业设置与安全' },
+    preview: '头像与工作身份预览',
+    previewDescription: '即时同步在左下角及工作台的系统级状态中',
+    workName: '工作姓名',
+    avatarStyle: '选择莫兰迪风格头像',
+    avatarHosted: '或者使用 Appwrite 托管头像链接',
+    saving: '正在保存…',
+    save: '保存更改',
+    nameRequired: '名称不能为空',
+    profileSaved: '个人身份及头像保存成功！',
+    saveFailed: '保存失败，请稍后重试',
+    orgPermissions: '组织角色权限',
+    orgDescription: '当前登录企业级节点及资源范围说明',
+    orgName: '所属企业组织',
+    noOrg: '未选择组织',
+    role: '组织角色定位',
+    unassigned: '未分配',
+    currentOrg: '当前工作组织',
+    orgHint: '切换后，后续 API 请求会自动限定到所选组织。',
+    createTeam: '创建新团队',
+    createTeamDescription: '创建独立的数据与权限空间，完成后自动切换。',
+    teamName: '团队名称',
+    creating: '处理中…',
+    create: '创建团队',
+    inviteTeam: '邀请团队成员',
+    inviteAllowed: 'Appwrite 将发送带有安全验证链接的邀请邮件。',
+    inviteDenied: '只有团队所有者或管理员可以邀请成员。',
+    memberEmail: '成员邮箱',
+    memberRole: '成员角色',
+    member: '成员',
+    admin: '管理员',
+    invite: '邀请',
+    inviteSent: '团队邀请已发送',
+    inviteFailed: '团队邀请发送失败',
+    protocolTitle: 'AI 协议连接',
+    protocolDescription: '由 Appwrite Function 安全托管模型密钥，浏览器不会接触任何凭证',
+    checking: '检测中',
+    connected: '已连接',
+    unavailable: '状态不可用',
+    pending: '待配置',
+    checkingDescription: '正在检查 Appwrite Function 的 AI 连接状态…',
+    readyPrefix: '当前使用',
+    changeHint: '。如需切换，请在 Appwrite Console 的 matrixflow-core 函数变量中修改协议和密钥。',
+    unavailableDescription: '暂时无法读取连接状态，请稍后刷新重试。',
+    configurePrefix: '管理员配置 ',
+    configureSuffix: ' 后，重新部署函数即可启用。',
+    logout: '退出当前登录',
+  },
+  'zh-TW': {
+    title: '設定中心',
+    description: '管理您的個人身分屬性、企業設定與系統級整合',
+    tabs: { profile: '個人資料與頭像', enterprise: '企業設定與安全' },
+    preview: '頭像與工作身分預覽',
+    previewDescription: '即時同步在左下角及工作台的系統狀態中',
+    workName: '工作姓名',
+    avatarStyle: '選擇莫蘭迪風格頭像',
+    avatarHosted: '或使用 Appwrite 託管頭像連結',
+    saving: '正在儲存…',
+    save: '儲存變更',
+    nameRequired: '名稱不能為空',
+    profileSaved: '個人身分與頭像儲存成功！',
+    saveFailed: '儲存失敗，請稍後重試',
+    orgPermissions: '組織角色權限',
+    orgDescription: '目前登入企業節點及資源範圍說明',
+    orgName: '所屬企業組織',
+    noOrg: '未選擇組織',
+    role: '組織角色定位',
+    unassigned: '未分配',
+    currentOrg: '目前工作組織',
+    orgHint: '切換後，後續 API 請求會自動限定到所選組織。',
+    createTeam: '建立新團隊',
+    createTeamDescription: '建立獨立的資料與權限空間，完成後自動切換。',
+    teamName: '團隊名稱',
+    creating: '處理中…',
+    create: '建立團隊',
+    inviteTeam: '邀請團隊成員',
+    inviteAllowed: 'Appwrite 將發送帶有安全驗證連結的邀請郵件。',
+    inviteDenied: '只有團隊擁有者或管理員可以邀請成員。',
+    memberEmail: '成員電子郵件',
+    memberRole: '成員角色',
+    member: '成員',
+    admin: '管理員',
+    invite: '邀請',
+    inviteSent: '團隊邀請已發送',
+    inviteFailed: '團隊邀請發送失敗',
+    protocolTitle: 'AI 協議連線',
+    protocolDescription: '由 Appwrite Function 安全託管模型金鑰，瀏覽器不會接觸任何憑證',
+    checking: '檢查中',
+    connected: '已連線',
+    unavailable: '狀態不可用',
+    pending: '待設定',
+    checkingDescription: '正在檢查 Appwrite Function 的 AI 連線狀態…',
+    readyPrefix: '目前使用',
+    changeHint: '。如需切換，請在 Appwrite Console 的 matrixflow-core 函數變數中修改協議與金鑰。',
+    unavailableDescription: '暫時無法讀取連線狀態，請稍後重新整理重試。',
+    configurePrefix: '管理員設定 ',
+    configureSuffix: ' 後，重新部署函數即可啟用。',
+    logout: '登出目前帳號',
+  },
+  en: {
+    title: 'Settings',
+    description: 'Manage your identity, organization configuration, and system integrations',
+    tabs: { profile: 'Profile & avatar', enterprise: 'Organization & security' },
+    preview: 'Avatar and work identity',
+    previewDescription: 'Synced to the sidebar and workspace status',
+    workName: 'Work name',
+    avatarStyle: 'Choose a Morandi-style avatar',
+    avatarHosted: 'Or use an Appwrite-hosted avatar URL',
+    saving: 'Saving…',
+    save: 'Save changes',
+    nameRequired: 'Name is required',
+    profileSaved: 'Profile and avatar saved.',
+    saveFailed: 'Save failed. Try again later.',
+    orgPermissions: 'Organization permissions',
+    orgDescription: 'Your current organization scope and role',
+    orgName: 'Organization',
+    noOrg: 'No organization selected',
+    role: 'Role',
+    unassigned: 'Unassigned',
+    currentOrg: 'Current workspace',
+    orgHint: 'Future API requests are automatically scoped to the selected organization.',
+    createTeam: 'Create a team',
+    createTeamDescription: 'Create an isolated data and permission space, then switch to it.',
+    teamName: 'Team name',
+    creating: 'Working…',
+    create: 'Create team',
+    inviteTeam: 'Invite a team member',
+    inviteAllowed: 'Appwrite will send an invitation email with a secure verification link.',
+    inviteDenied: 'Only an owner or administrator can invite members.',
+    memberEmail: 'Member email',
+    memberRole: 'Member role',
+    member: 'Member',
+    admin: 'Administrator',
+    invite: 'Invite',
+    inviteSent: 'Team invitation sent.',
+    inviteFailed: 'Could not send the team invitation.',
+    protocolTitle: 'AI protocol connection',
+    protocolDescription: 'Model keys are secured by Appwrite Function and never reach the browser',
+    checking: 'Checking',
+    connected: 'Connected',
+    unavailable: 'Unavailable',
+    pending: 'Needs setup',
+    checkingDescription: 'Checking the AI connection in Appwrite Function…',
+    readyPrefix: 'Using',
+    changeHint:
+      '. To switch, edit the protocol and key variables in the matrixflow-core Appwrite Function.',
+    unavailableDescription: 'The connection status is unavailable. Refresh and try again.',
+    configurePrefix: 'An administrator must configure ',
+    configureSuffix: ' then redeploy the function to enable it.',
+    logout: 'Log out',
+  },
+};
 
 const PRESET_AVATARS = [
-  { id: 'slate', color: '#607987', label: '柔蓝' },
-  { id: 'rose', color: '#ba7678', label: '落粉' },
-  { id: 'sage', color: '#7b8672', label: '黛绿' },
-  { id: 'camel', color: '#bd9b70', label: '驼黄' },
-  { id: 'terracotta', color: '#a36d65', label: '赭红' },
-  { id: 'clay', color: '#888481', label: '烟灰' },
+  { id: 'slate', color: '#607987', labels: { 'zh-CN': '柔蓝', 'zh-TW': '柔藍', en: 'Slate' } },
+  { id: 'rose', color: '#ba7678', labels: { 'zh-CN': '落粉', 'zh-TW': '落粉', en: 'Rose' } },
+  { id: 'sage', color: '#7b8672', labels: { 'zh-CN': '黛绿', 'zh-TW': '黛綠', en: 'Sage' } },
+  { id: 'camel', color: '#bd9b70', labels: { 'zh-CN': '驼黄', 'zh-TW': '駝黃', en: 'Camel' } },
+  {
+    id: 'terracotta',
+    color: '#a36d65',
+    labels: { 'zh-CN': '赭红', 'zh-TW': '赭紅', en: 'Terracotta' },
+  },
+  { id: 'clay', color: '#888481', labels: { 'zh-CN': '烟灰', 'zh-TW': '煙灰', en: 'Clay' } },
 ];
 
 function makeSvgAvatar(color: string): string {
@@ -39,6 +254,8 @@ function makeSvgAvatar(color: string): string {
 }
 
 export default function SettingsPage() {
+  const { locale } = useLocale();
+  const copy = COPY[locale];
   const { user, organizationId, setOrg, updateProfile, logout, createTeam, inviteMember } =
     useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'enterprise'>('profile');
@@ -113,15 +330,15 @@ export default function SettingsPage() {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      toast.error('名称不能为空');
+      toast.error(copy.nameRequired);
       return;
     }
     setSaving(true);
     try {
       await updateProfile(name, avatarUrl);
-      toast.success('个人身份及头像保存成功！');
+      toast.success(copy.profileSaved);
     } catch (err: unknown) {
-      toast.error(errorMessage(err, '保存失败，请稍后重试'));
+      toast.error(errorMessage(err, copy.saveFailed));
     } finally {
       setSaving(false);
     }
@@ -133,9 +350,24 @@ export default function SettingsPage() {
     try {
       await createTeam(teamName);
       setTeamName('');
-      toast.success('团队已创建并切换');
+      toast.success(
+        locale === 'en'
+          ? 'Team created and selected.'
+          : locale === 'zh-TW'
+            ? '團隊已建立並切換'
+            : '团队已创建并切换',
+      );
     } catch (error) {
-      toast.error(errorMessage(error, '团队创建失败'));
+      toast.error(
+        errorMessage(
+          error,
+          locale === 'en'
+            ? 'Could not create the team.'
+            : locale === 'zh-TW'
+              ? '團隊建立失敗'
+              : '团队创建失败',
+        ),
+      );
     } finally {
       setTeamPending(false);
     }
@@ -147,9 +379,9 @@ export default function SettingsPage() {
     try {
       await inviteMember(inviteEmail, inviteRole);
       setInviteEmail('');
-      toast.success('团队邀请已发送');
+      toast.success(copy.inviteSent);
     } catch (error) {
-      toast.error(errorMessage(error, '团队邀请发送失败'));
+      toast.error(errorMessage(error, copy.inviteFailed));
     } finally {
       setTeamPending(false);
     }
@@ -159,17 +391,15 @@ export default function SettingsPage() {
     <div className="max-w-2xl space-y-6">
       <div className="border-b border-border/40 pb-5">
         <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-          设置中心
+          {copy.title}
         </h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          管理您的个人身份属性、企业配置以及系统级集成
-        </p>
+        <p className="text-xs text-muted-foreground mt-0.5">{copy.description}</p>
       </div>
 
       {/* Tabs */}
       <div
         role="tablist"
-        aria-label="设置分类"
+        aria-label={copy.title}
         className="flex gap-4 border-b border-border/60 text-xs font-semibold"
       >
         <button
@@ -183,7 +413,7 @@ export default function SettingsPage() {
               : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          个人资料与头像
+          {copy.tabs.profile}
         </button>
         <button
           type="button"
@@ -196,7 +426,7 @@ export default function SettingsPage() {
               : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          企业设置与安全
+          {copy.tabs.enterprise}
         </button>
       </div>
 
@@ -210,7 +440,7 @@ export default function SettingsPage() {
                 {avatarUrl ? (
                   <Image
                     src={avatarUrl}
-                    alt="Preview"
+                    alt={copy.preview}
                     width={64}
                     height={64}
                     unoptimized
@@ -227,10 +457,8 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <h3 className="text-sm font-bold text-foreground">头像与工作身份预览</h3>
-                <p className="text-2xs text-muted-foreground mt-0.5">
-                  即时同步在左下角及工作台的系统级状态中
-                </p>
+                <h3 className="text-sm font-bold text-foreground">{copy.preview}</h3>
+                <p className="text-2xs text-muted-foreground mt-0.5">{copy.previewDescription}</p>
               </div>
             </div>
 
@@ -238,7 +466,7 @@ export default function SettingsPage() {
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="profileName" className="text-xs font-semibold text-foreground">
-                  工作姓名
+                  {copy.workName}
                 </Label>
                 <Input
                   id="profileName"
@@ -252,7 +480,7 @@ export default function SettingsPage() {
 
               {/* Presets Grid */}
               <div className="space-y-2">
-                <Label className="text-xs font-semibold text-foreground">选择莫兰迪风格头像</Label>
+                <Label className="text-xs font-semibold text-foreground">{copy.avatarStyle}</Label>
                 <div className="grid grid-cols-6 gap-3">
                   {PRESET_AVATARS.map((p) => {
                     const presetUri = makeSvgAvatar(p.color);
@@ -267,14 +495,14 @@ export default function SettingsPage() {
                             ? 'border-primary bg-primary/5 ring-1 ring-primary'
                             : 'border-border hover:border-foreground/40 bg-muted/10'
                         }`}
-                        title={p.label}
+                        title={p.labels[locale]}
                       >
                         <div
                           className="h-7 w-7 rounded-full shadow-sm border border-black/5"
                           style={{ backgroundColor: p.color }}
                         />
                         <span className="text-[10px] text-muted-foreground mt-1.5 group-hover:text-foreground font-medium">
-                          {p.label}
+                          {p.labels[locale]}
                         </span>
                         {isSelected && (
                           <div className="absolute top-1 right-1 bg-primary text-primary-foreground p-0.5 rounded-full">
@@ -290,7 +518,7 @@ export default function SettingsPage() {
               {/* Custom Input */}
               <div className="space-y-1.5">
                 <Label htmlFor="customAvatar" className="text-xs font-semibold text-foreground">
-                  或者使用 Appwrite 托管头像链接
+                  {copy.avatarHosted}
                 </Label>
                 <Input
                   id="customAvatar"
@@ -310,7 +538,7 @@ export default function SettingsPage() {
               className="gap-1.5 text-xs font-bold px-5 shadow-glow-sm hover:shadow-glow"
             >
               <Save className="h-3.5 w-3.5" />
-              {saving ? '正在保存...' : '保存更改'}
+              {saving ? copy.saving : copy.save}
             </Button>
           </div>
         </form>
@@ -323,35 +551,33 @@ export default function SettingsPage() {
                 <ShieldCheck className="h-4.5 w-4.5" />
               </div>
               <div>
-                <h3 className="text-xs font-bold text-foreground">组织角色权限</h3>
-                <p className="text-2xs text-muted-foreground mt-0.5">
-                  当前登录企业级节点及资源范围说明
-                </p>
+                <h3 className="text-xs font-bold text-foreground">{copy.orgPermissions}</h3>
+                <p className="text-2xs text-muted-foreground mt-0.5">{copy.orgDescription}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div className="bg-muted/10 p-3 rounded-lg border border-border/40">
                 <p className="text-[10px] text-muted-foreground font-semibold uppercase">
-                  所属企业组织
+                  {copy.orgName}
                 </p>
                 <p className="font-bold text-foreground mt-1">
-                  {membership?.organizationName ?? '未选择组织'}
+                  {membership?.organizationName ?? copy.noOrg}
                 </p>
               </div>
               <div className="bg-muted/10 p-3 rounded-lg border border-border/40">
                 <p className="text-[10px] text-muted-foreground font-semibold uppercase">
-                  组织角色定位
+                  {copy.role}
                 </p>
                 <p className="font-bold text-primary mt-1 flex items-center gap-1">
-                  {membership?.role ?? '未分配'}
+                  {membership?.role ?? copy.unassigned}
                 </p>
               </div>
             </div>
             {user && user.memberships.length > 1 && (
               <div className="space-y-1.5">
                 <Label htmlFor="organization" className="text-xs font-semibold text-foreground">
-                  当前工作组织
+                  {copy.currentOrg}
                 </Label>
                 <select
                   id="organization"
@@ -365,9 +591,7 @@ export default function SettingsPage() {
                     </option>
                   ))}
                 </select>
-                <p className="text-[0.6875rem] text-muted-foreground">
-                  切换后，后续 API 请求会自动限定到所选组织。
-                </p>
+                <p className="text-[0.6875rem] text-muted-foreground">{copy.orgHint}</p>
               </div>
             )}
           </div>
@@ -379,13 +603,13 @@ export default function SettingsPage() {
             >
               <div className="flex items-center gap-2">
                 <Plus className="h-4 w-4 text-primary" />
-                <h3 className="text-sm font-bold">创建新团队</h3>
+                <h3 className="text-sm font-bold">{copy.createTeam}</h3>
               </div>
               <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                创建独立的数据与权限空间，完成后自动切换。
+                {copy.createTeamDescription}
               </p>
               <Label htmlFor="new-team-name" className="mt-4 block text-xs">
-                团队名称
+                {copy.teamName}
               </Label>
               <Input
                 id="new-team-name"
@@ -400,7 +624,7 @@ export default function SettingsPage() {
                 className="mt-3 w-full"
                 disabled={!teamName.trim() || teamPending}
               >
-                {teamPending ? '处理中…' : '创建团队'}
+                {teamPending ? copy.creating : copy.create}
               </Button>
             </form>
 
@@ -410,15 +634,13 @@ export default function SettingsPage() {
             >
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-primary" />
-                <h3 className="text-sm font-bold">邀请团队成员</h3>
+                <h3 className="text-sm font-bold">{copy.inviteTeam}</h3>
               </div>
               <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                {canInvite
-                  ? 'Appwrite 将发送带有安全验证链接的邀请邮件。'
-                  : '只有团队所有者或管理员可以邀请成员。'}
+                {canInvite ? copy.inviteAllowed : copy.inviteDenied}
               </p>
               <Label htmlFor="invite-email" className="mt-4 block text-xs">
-                成员邮箱
+                {copy.memberEmail}
               </Label>
               <Input
                 id="invite-email"
@@ -431,17 +653,17 @@ export default function SettingsPage() {
               />
               <div className="mt-2 flex gap-2">
                 <select
-                  aria-label="成员角色"
+                  aria-label={copy.memberRole}
                   value={inviteRole}
                   onChange={(event) => setInviteRole(event.target.value as 'member' | 'admin')}
                   disabled={!canInvite}
                   className="h-10 flex-1 rounded-lg border border-input bg-background px-3 text-sm"
                 >
-                  <option value="member">成员</option>
-                  <option value="admin">管理员</option>
+                  <option value="member">{copy.member}</option>
+                  <option value="admin">{copy.admin}</option>
                 </select>
                 <Button type="submit" disabled={!canInvite || !inviteEmail.trim() || teamPending}>
-                  <Mail className="h-4 w-4" /> 邀请
+                  <Mail className="h-4 w-4" /> {copy.invite}
                 </Button>
               </div>
             </form>
@@ -454,27 +676,27 @@ export default function SettingsPage() {
                   <Network className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-foreground">AI 协议连接</p>
+                  <p className="text-xs font-bold text-foreground">{copy.protocolTitle}</p>
                   <p className="text-2xs text-muted-foreground mt-0.5">
-                    由 Appwrite Function 安全托管模型密钥，浏览器不会接触任何凭证
+                    {copy.protocolDescription}
                   </p>
                 </div>
               </div>
               {aiStatusLoading ? (
                 <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-bold text-muted-foreground">
-                  检测中
+                  {copy.checking}
                 </span>
               ) : aiStatus?.ready ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-[10px] font-bold text-success">
-                  <CircleCheck className="h-3 w-3" /> 已连接
+                  <CircleCheck className="h-3 w-3" /> {copy.connected}
                 </span>
               ) : aiStatusError ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[10px] font-bold text-muted-foreground">
-                  <CircleAlert className="h-3 w-3" /> 状态不可用
+                  <CircleAlert className="h-3 w-3" /> {copy.unavailable}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-1 text-[10px] font-bold text-warning">
-                  <CircleAlert className="h-3 w-3" /> 待配置
+                  <CircleAlert className="h-3 w-3" /> {copy.pending}
                 </span>
               )}
             </div>
@@ -482,7 +704,14 @@ export default function SettingsPage() {
               {[
                 ['Anthropic', 'Messages API'],
                 ['OpenAI', 'Chat Completions'],
-                ['兼容网关', 'GLM / vLLM / LiteLLM'],
+                [
+                  locale === 'en'
+                    ? 'Compatible gateway'
+                    : locale === 'zh-TW'
+                      ? '相容閘道'
+                      : '兼容网关',
+                  'GLM / vLLM / LiteLLM',
+                ],
               ].map(([name, protocol]) => (
                 <div
                   key={name}
@@ -495,25 +724,25 @@ export default function SettingsPage() {
             </div>
             {aiStatusLoading ? (
               <p className="text-[11px] leading-5 text-muted-foreground">
-                正在检查 Appwrite Function 的 AI 连接状态…
+                {copy.checkingDescription}
               </p>
             ) : aiStatus?.ready ? (
               <p className="text-[11px] leading-5 text-muted-foreground">
-                当前使用 <span className="font-semibold text-foreground">{aiStatus.provider}</span>
+                {copy.readyPrefix}{' '}
+                <span className="font-semibold text-foreground">{aiStatus.provider}</span>
                 {aiStatus.protocol ? ` · ${aiStatus.protocol}` : ''}
-                {aiStatus.model ? ` · ${aiStatus.model}` : ''}。如需切换，请在 Appwrite Console 的
-                <span className="font-semibold text-foreground"> matrixflow-core</span>{' '}
-                函数变量中修改协议和密钥。
+                {aiStatus.model ? ` · ${aiStatus.model}` : ''}
+                {copy.changeHint}
               </p>
             ) : (
               <p className="text-[11px] leading-5 text-muted-foreground">
-                {aiStatusError ? '暂时无法读取连接状态，请稍后刷新重试。' : '管理员配置 '}
+                {aiStatusError ? copy.unavailableDescription : copy.configurePrefix}
                 {!aiStatusError && (
                   <>
                     <span className="font-semibold text-foreground">ANTHROPIC_API_KEY</span>、
                     <span className="font-semibold text-foreground">OPENAI_API_KEY</span> 或
-                    <span className="font-semibold text-foreground">GLM_API_KEY</span>{' '}
-                    后，重新部署函数即可启用。
+                    <span className="font-semibold text-foreground">GLM_API_KEY</span>
+                    {copy.configureSuffix}
                   </>
                 )}
               </p>
@@ -527,7 +756,7 @@ export default function SettingsPage() {
               onClick={logout}
               className="w-full sm:w-auto text-xs font-semibold gap-1.5 px-5"
             >
-              <LogOut className="h-3.5 w-3.5" /> 退出当前登录
+              <LogOut className="h-3.5 w-3.5" /> {copy.logout}
             </Button>
           </div>
         </div>

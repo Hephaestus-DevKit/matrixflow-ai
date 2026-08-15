@@ -10,6 +10,7 @@ import { AuthMessage, AuthShell } from '@/components/auth-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useLocale } from '@/lib/i18n';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -24,6 +25,7 @@ export default function RegisterPage() {
   const [accepted, setAccepted] = useState(false);
 
   const { registerWithOtp, verifyOtp, loading } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
 
   useEffect(() => {
@@ -64,18 +66,14 @@ export default function RegisterPage() {
 
   return (
     <AuthShell
-      title={step === 'info' ? '创建你的 AI 团队' : '验证工作邮箱'}
-      description={
-        step === 'info'
-          ? '填写基础资料，邮箱验证完成后即可进入工作台。'
-          : '输入邮件中的 6 位验证码，完成账号绑定与首次登录。'
-      }
-      step={step === 'info' ? '免费开始 · 第 1 步' : '邮箱验证 · 第 2 步'}
+      title={step === 'info' ? t('auth.registerTitle') : t('auth.verifyStep')}
+      description={step === 'info' ? t('auth.registerDescription') : t('auth.verifyDescription')}
+      step={step === 'info' ? t('auth.registerStep') : t('auth.verifyStep')}
       footer={
         <>
-          已有账号？{' '}
+          {t('auth.haveAccount')}{' '}
           <Link href="/login" className="font-bold text-primary hover:underline">
-            直接登录
+            {t('public.login')}
           </Link>
         </>
       }
@@ -83,19 +81,19 @@ export default function RegisterPage() {
       {step === 'info' ? (
         <form onSubmit={handleRegister} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="register-name">姓名</Label>
+            <Label htmlFor="register-name">{t('auth.name')}</Label>
             <Input
               id="register-name"
               value={name}
               onChange={(event) => setName(event.target.value)}
               required
               autoComplete="name"
-              placeholder="Alex Wang"
+              placeholder={t('auth.name')}
               className="h-11 rounded-xl bg-background/70"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="register-email">工作邮箱</Label>
+            <Label htmlFor="register-email">{t('auth.email')}</Label>
             <Input
               id="register-email"
               type="email"
@@ -103,14 +101,14 @@ export default function RegisterPage() {
               onChange={(event) => setEmail(event.target.value)}
               required
               autoComplete="email"
-              placeholder="you@example.com"
+              placeholder={t('auth.emailPlaceholder')}
               className="h-11 rounded-xl bg-background/70"
             />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="register-password">账号密码</Label>
-              <span className="text-2xs text-muted-foreground">至少 8 位</span>
+              <Label htmlFor="register-password">{t('auth.password')}</Label>
+              <span className="text-2xs text-muted-foreground">{t('auth.passwordHint')}</span>
             </div>
             <div className="relative">
               <Input
@@ -121,13 +119,13 @@ export default function RegisterPage() {
                 required
                 minLength={8}
                 autoComplete="new-password"
-                placeholder="设置安全密码"
+                placeholder={t('auth.passwordPlaceholder')}
                 className="h-11 rounded-xl bg-background/70 pr-11"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((visible) => !visible)}
-                aria-label={showPassword ? '隐藏密码' : '显示密码'}
+                aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                 className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -135,7 +133,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <AuthMessage tone="info">已注册但未完成验证？继续使用同一邮箱即可恢复验证。</AuthMessage>
+          <AuthMessage tone="info">{t('auth.otpInfoRegister')}</AuthMessage>
           <label className="flex items-start gap-2.5 text-xs leading-5 text-muted-foreground">
             <input
               type="checkbox"
@@ -145,40 +143,41 @@ export default function RegisterPage() {
               className="mt-1 h-4 w-4 rounded border-input accent-primary"
             />
             <span>
-              我已阅读并同意{' '}
+              {t('auth.agreementPrefix')}{' '}
               <Link
                 href="/terms"
                 target="_blank"
                 className="font-semibold text-primary hover:underline"
               >
-                服务条款
+                {t('public.terms')}
               </Link>{' '}
-              与{' '}
+              {t('auth.and')}{' '}
               <Link
                 href="/privacy"
                 target="_blank"
                 className="font-semibold text-primary hover:underline"
               >
-                隐私政策
+                {t('public.privacy')}
               </Link>
-              。
             </span>
           </label>
           {error && <AuthMessage>{error}</AuthMessage>}
 
           <Button type="submit" className="h-11 w-full rounded-xl" disabled={loading || !accepted}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            {loading ? '正在创建账号...' : '发送邮箱验证码'}
+            {loading ? t('auth.loadingRegister') : t('auth.sendOtp')}
           </Button>
         </form>
       ) : (
         <form onSubmit={handleVerify} className="space-y-4">
           <AuthMessage tone="success">
-            <span className="font-semibold">验证码已发送至 {email}</span>
+            <span className="font-semibold">
+              {t('auth.otpSent')} {email}
+            </span>
           </AuthMessage>
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="register-otp">6 位验证码</Label>
+              <Label htmlFor="register-otp">{t('auth.otpLabel')}</Label>
               <button
                 type="button"
                 onClick={() => {
@@ -188,7 +187,7 @@ export default function RegisterPage() {
                 }}
                 className="text-2xs font-semibold text-primary hover:underline"
               >
-                修改资料
+                {t('auth.changeDetails')}
               </button>
             </div>
             <Input
@@ -198,7 +197,7 @@ export default function RegisterPage() {
               required
               inputMode="numeric"
               autoComplete="one-time-code"
-              placeholder="000000"
+              placeholder={t('auth.otpPlaceholder')}
               className="h-12 rounded-xl bg-background/70 text-center font-mono text-lg font-black tracking-[0.35em]"
             />
           </div>
@@ -209,7 +208,7 @@ export default function RegisterPage() {
             ) : (
               <CheckCircle2 className="h-4 w-4" />
             )}
-            {loading ? '正在验证并创建工作区...' : '验证并进入工作台'}
+            {loading ? t('auth.loadingRegisterVerify') : t('auth.verifyAndEnter')}
           </Button>
           <div className="text-center text-2xs text-muted-foreground">
             {countdown > 0 ? (
@@ -220,7 +219,7 @@ export default function RegisterPage() {
                 onClick={() => handleRegister()}
                 className="font-bold text-primary hover:underline"
               >
-                重新发送验证码
+                {t('auth.resend')}
               </button>
             )}
           </div>
@@ -228,7 +227,7 @@ export default function RegisterPage() {
       )}
 
       <div className="mt-5 flex items-center justify-center gap-2 border-t border-border/60 pt-5 text-2xs text-muted-foreground">
-        <UserPlus className="h-3.5 w-3.5 text-primary" /> 验证成功后自动创建默认组织
+        <UserPlus className="h-3.5 w-3.5 text-primary" /> {t('auth.defaultOrg')}
       </div>
     </AuthShell>
   );

@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/cn';
+import { useLocale } from '@/lib/i18n';
 
 type LoginMode = 'password' | 'otp';
 
@@ -26,6 +27,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
 
   const { login, sendOtp, verifyOtp, loading } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
 
   useEffect(() => {
@@ -81,23 +83,26 @@ export default function LoginPage() {
 
   return (
     <AuthShell
-      title="欢迎回来"
-      description="验证身份后继续管理你的 AI 团队与自动化业务。"
-      step={step === 'otp' ? '验证邮箱 · 第 2 步' : '安全登录'}
+      title={t('auth.welcomeBack')}
+      description={t('auth.loginDescription')}
+      step={step === 'otp' ? t('auth.verifyStep') : t('auth.loginStep')}
       footer={
         <>
-          还没有账号？{' '}
+          {t('auth.noAccount')}{' '}
           <Link href="/register" className="font-bold text-primary hover:underline">
-            免费注册
+            {t('auth.freeRegister')}
           </Link>
         </>
       }
     >
-      <div className="mb-6 grid grid-cols-2 rounded-xl bg-muted/70 p-1" aria-label="登录方式">
+      <div
+        className="mb-6 grid grid-cols-2 rounded-xl bg-muted/70 p-1"
+        aria-label={t('auth.loginMethods')}
+      >
         {(
           [
-            ['password', Lock, '密码登录'],
-            ['otp', Mail, '邮箱验证码'],
+            ['password', Lock, t('auth.passwordLogin')],
+            ['otp', Mail, t('auth.otpLogin')],
           ] as const
         ).map(([mode, Icon, label]) => (
           <button
@@ -120,7 +125,7 @@ export default function LoginPage() {
       {loginMode === 'password' ? (
         <form onSubmit={handlePasswordLogin} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="login-email">邮箱</Label>
+            <Label htmlFor="login-email">{t('auth.email')}</Label>
             <Input
               id="login-email"
               type="email"
@@ -128,19 +133,19 @@ export default function LoginPage() {
               onChange={(event) => setEmail(event.target.value)}
               required
               autoComplete="email"
-              placeholder="you@example.com"
+              placeholder={t('auth.emailPlaceholder')}
               className="h-11 rounded-xl bg-background/70"
             />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="login-password">密码</Label>
+              <Label htmlFor="login-password">{t('auth.password')}</Label>
               <button
                 type="button"
                 onClick={() => changeMode('otp')}
                 className="text-2xs font-semibold text-primary hover:underline"
               >
-                无法使用密码？
+                {t('auth.passwordHelp')}
               </button>
             </div>
             <div className="relative">
@@ -151,13 +156,13 @@ export default function LoginPage() {
                 onChange={(event) => setPassword(event.target.value)}
                 required
                 autoComplete="current-password"
-                placeholder="输入账号密码"
+                placeholder={t('auth.passwordPlaceholder')}
                 className="h-11 rounded-xl bg-background/70 pr-11"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((visible) => !visible)}
-                aria-label={showPassword ? '隐藏密码' : '显示密码'}
+                aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                 className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -173,14 +178,14 @@ export default function LoginPage() {
             ) : (
               <KeyRound className="h-4 w-4" />
             )}
-            {loading ? '正在验证并同步账号...' : '进入工作台'}
+            {loading ? t('auth.loadingLogin') : t('auth.enterWorkspace')}
           </Button>
         </form>
       ) : step === 'info' ? (
         <form onSubmit={handleSendOtp} className="space-y-4">
-          <AuthMessage tone="info">验证码可用于登录，也可恢复尚未完成验证的账号。</AuthMessage>
+          <AuthMessage tone="info">{t('auth.otpInfoLogin')}</AuthMessage>
           <div className="space-y-2">
-            <Label htmlFor="otp-email">邮箱</Label>
+            <Label htmlFor="otp-email">{t('auth.email')}</Label>
             <Input
               id="otp-email"
               type="email"
@@ -188,30 +193,32 @@ export default function LoginPage() {
               onChange={(event) => setEmail(event.target.value)}
               required
               autoComplete="email"
-              placeholder="you@example.com"
+              placeholder={t('auth.emailPlaceholder')}
               className="h-11 rounded-xl bg-background/70"
             />
           </div>
           {error && <AuthMessage>{error}</AuthMessage>}
           <Button type="submit" className="h-11 w-full rounded-xl" disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            {loading ? '正在发送验证码...' : '发送邮箱验证码'}
+            {loading ? t('auth.loadingSend') : t('auth.sendOtp')}
           </Button>
         </form>
       ) : (
         <form onSubmit={handleVerifyOtp} className="space-y-4">
           <AuthMessage tone="success">
-            <span className="font-semibold">验证码已发送至 {email}</span>
+            <span className="font-semibold">
+              {t('auth.otpSent')} {email}
+            </span>
           </AuthMessage>
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="otp-code">6 位验证码</Label>
+              <Label htmlFor="otp-code">{t('auth.otpLabel')}</Label>
               <button
                 type="button"
                 onClick={() => setStep('info')}
                 className="text-2xs font-semibold text-primary hover:underline"
               >
-                修改邮箱
+                {t('auth.changeEmail')}
               </button>
             </div>
             <Input
@@ -221,7 +228,7 @@ export default function LoginPage() {
               required
               inputMode="numeric"
               autoComplete="one-time-code"
-              placeholder="000000"
+              placeholder={t('auth.otpPlaceholder')}
               className="h-12 rounded-xl bg-background/70 text-center font-mono text-lg font-black tracking-[0.35em]"
             />
           </div>
@@ -232,7 +239,7 @@ export default function LoginPage() {
             ) : (
               <CheckCircle2 className="h-4 w-4" />
             )}
-            {loading ? '正在验证并同步账号...' : '验证并进入工作台'}
+            {loading ? t('auth.loadingVerify') : t('auth.verifyAndEnter')}
           </Button>
           <div className="text-center text-2xs text-muted-foreground">
             {countdown > 0 ? (
@@ -243,7 +250,7 @@ export default function LoginPage() {
                 onClick={() => handleSendOtp()}
                 className="font-bold text-primary hover:underline"
               >
-                重新发送验证码
+                {t('auth.resend')}
               </button>
             )}
           </div>

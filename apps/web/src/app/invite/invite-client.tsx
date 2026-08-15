@@ -8,11 +8,59 @@ import { teams } from '@/lib/appwrite';
 import { Button } from '@/components/ui/button';
 import { PublicFooter, PublicHeader } from '@/components/public-shell';
 import { errorMessage } from '@/lib/errors';
+import { useLocale, type Locale } from '@/lib/i18n';
+
+const COPY: Record<
+  Locale,
+  {
+    loading: string;
+    invalid: string;
+    success: string;
+    title: string;
+    enter: string;
+    back: string;
+    fallback: string;
+    loadingLabel: string;
+  }
+> = {
+  'zh-CN': {
+    loading: '正在验证团队邀请…',
+    invalid: '邀请链接不完整或已经失效。',
+    success: '已成功加入团队，可以进入工作台。',
+    title: '团队邀请',
+    enter: '进入工作台',
+    back: '返回登录',
+    fallback: '邀请验证失败或链接已失效。',
+    loadingLabel: '正在加载邀请',
+  },
+  'zh-TW': {
+    loading: '正在驗證團隊邀請…',
+    invalid: '邀請連結不完整或已經失效。',
+    success: '已成功加入團隊，可以進入工作台。',
+    title: '團隊邀請',
+    enter: '進入工作台',
+    back: '返回登入',
+    fallback: '邀請驗證失敗或連結已失效。',
+    loadingLabel: '正在載入邀請',
+  },
+  en: {
+    loading: 'Verifying your team invitation…',
+    invalid: 'This invitation link is incomplete or has expired.',
+    success: 'You joined the team. You can enter the workspace now.',
+    title: 'Team invitation',
+    enter: 'Enter workspace',
+    back: 'Back to login',
+    fallback: 'Invitation verification failed or the link has expired.',
+    loadingLabel: 'Loading invitation',
+  },
+};
 
 export function InviteClient() {
+  const { locale } = useLocale();
+  const copy = COPY[locale];
   const search = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('正在验证团队邀请…');
+  const [message, setMessage] = useState(copy.loading);
 
   useEffect(() => {
     const teamId = search.get('teamId');
@@ -21,20 +69,20 @@ export function InviteClient() {
     const secret = search.get('secret');
     if (!teamId || !membershipId || !userId || !secret) {
       setStatus('error');
-      setMessage('邀请链接不完整或已经失效。');
+      setMessage(copy.invalid);
       return;
     }
     teams
       .updateMembershipStatus({ teamId, membershipId, userId, secret })
       .then(() => {
         setStatus('success');
-        setMessage('已成功加入团队，可以进入工作台。');
+        setMessage(copy.success);
       })
       .catch((error: unknown) => {
         setStatus('error');
-        setMessage(errorMessage(error, '邀请验证失败或链接已失效。'));
+        setMessage(errorMessage(error, copy.fallback));
       });
-  }, [search]);
+  }, [copy, search]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -51,12 +99,12 @@ export function InviteClient() {
           ) : (
             <XCircle className="mx-auto h-10 w-10 text-destructive" />
           )}
-          <h1 className="mt-5 text-xl font-bold">团队邀请</h1>
+          <h1 className="mt-5 text-xl font-bold">{copy.title}</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">{message}</p>
           {status !== 'loading' && (
             <Button asChild className="mt-6">
               <Link href={status === 'success' ? '/dashboard' : '/login'}>
-                {status === 'success' ? '进入工作台' : '返回登录'}
+                {status === 'success' ? copy.enter : copy.back}
               </Link>
             </Button>
           )}

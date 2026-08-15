@@ -8,8 +8,57 @@ import { FolderOpen, Plus, FileText } from 'lucide-react';
 import type { KnowledgeBaseSummary } from '@matrixflow/shared';
 import { EmptyState, ErrorState, LoadingCards } from '@/components/ui/states';
 import { PageHeader } from '@/components/ui/page';
+import { useLocale, type Locale } from '@/lib/i18n';
+
+const COPY: Record<
+  Locale,
+  {
+    eyebrow: string;
+    title: string;
+    description: string;
+    create: string;
+    empty: string;
+    emptyDescription: string;
+    first: string;
+    documents: string;
+  }
+> = {
+  'zh-CN': {
+    eyebrow: '知识库与 RAG',
+    title: '知识库',
+    description: '上传并管理产品说明、问答和历史业务资料。',
+    create: '新建知识库',
+    empty: '暂无关联知识库',
+    emptyDescription: '新建专属知识库并上传企业文档，为 AI 员工提供可信的业务上下文。',
+    first: '创建第一个知识库',
+    documents: '个知识文档',
+  },
+  'zh-TW': {
+    eyebrow: '知識庫與 RAG',
+    title: '知識庫',
+    description: '上傳並管理產品說明、問答與歷史業務資料。',
+    create: '建立知識庫',
+    empty: '暫無關聯知識庫',
+    emptyDescription: '建立專屬知識庫並上傳企業文件，為 AI 員工提供可信的業務脈絡。',
+    first: '建立第一個知識庫',
+    documents: '個知識文件',
+  },
+  en: {
+    eyebrow: 'Knowledge & RAG',
+    title: 'Knowledge base',
+    description: 'Upload and manage product references, Q&A, and historical business material.',
+    create: 'Create knowledge base',
+    empty: 'No linked knowledge bases',
+    emptyDescription:
+      'Create a dedicated knowledge base and upload documents to give AI workers trusted context.',
+    first: 'Create your first knowledge base',
+    documents: 'documents',
+  },
+};
 
 export default function KbListPage() {
+  const { locale } = useLocale();
+  const copy = COPY[locale];
   const {
     data: kbs,
     isLoading,
@@ -24,12 +73,12 @@ export default function KbListPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Knowledge & RAG"
-        title="知识库"
-        description="上传并管理产品说明、问答和历史业务资料。"
+        title={copy.title}
+        description={copy.description}
         actions={
           <Button asChild className="gap-1.5 text-xs font-semibold">
             <Link href="/dashboard/knowledge/new">
-              <Plus className="h-3.5 w-3.5" /> 新建知识库
+              <Plus className="h-3.5 w-3.5" /> {copy.create}
             </Link>
           </Button>
         }
@@ -41,11 +90,11 @@ export default function KbListPage() {
       {!isLoading && !isError && kbs && kbs.length === 0 && (
         <EmptyState
           icon={FolderOpen}
-          title="暂无关联知识库"
-          description="新建专属知识库并上传企业文档，为 AI 员工提供可信的业务上下文。"
+          title={copy.empty}
+          description={copy.emptyDescription}
           action={
             <Button asChild size="sm" variant="outline" className="text-xs">
-              <Link href="/dashboard/knowledge/new">创建第一个知识库</Link>
+              <Link href="/dashboard/knowledge/new">{copy.first}</Link>
             </Button>
           }
         />
@@ -68,7 +117,7 @@ export default function KbListPage() {
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                   <FileText className="h-3.5 w-3.5" />
-                  {kb._count?.documents ?? 0} 个知识文档
+                  {kb._count?.documents ?? 0} {copy.documents}
                 </p>
               </div>
             </Link>

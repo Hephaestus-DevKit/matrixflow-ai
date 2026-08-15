@@ -4,12 +4,14 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/sidebar';
 import { Topbar } from '@/components/topbar';
+import { useLocale } from '@/lib/i18n';
 
 export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [navigationOpen, setNavigationOpen] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const { t } = useLocale();
 
   useEffect(() => setNavigationOpen(false), [pathname]);
   useEffect(() => {
@@ -51,7 +53,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             type="button"
-            aria-label="关闭导航"
+            aria-label={t('dashboard.closeNavigation')}
             className="absolute inset-0 bg-slate-950/55 backdrop-blur-sm"
             onClick={() => setNavigationOpen(false)}
           />

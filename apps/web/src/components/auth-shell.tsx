@@ -1,13 +1,17 @@
+'use client';
+
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { LocaleSwitcher } from '@/components/locale-switcher';
+import { useLocale } from '@/lib/i18n';
 
 const highlights = [
-  'Appwrite 托管身份与邮箱验证',
-  '组织级权限与数据严格隔离',
-  '会话自动续期与安全退出',
-];
+  'auth.highlight.identity',
+  'auth.highlight.isolation',
+  'auth.highlight.session',
+] as const;
 
 interface AuthShellProps {
   title: string;
@@ -18,6 +22,8 @@ interface AuthShellProps {
 }
 
 export function AuthShell({ title, description, children, footer, step }: AuthShellProps) {
+  const { t } = useLocale();
+
   return (
     <main
       id="main-content"
@@ -39,17 +45,17 @@ export function AuthShell({ title, description, children, footer, step }: AuthSh
 
         <div className="relative max-w-xl space-y-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
-            <Sparkles className="h-3.5 w-3.5" /> 一支随时在线的智能团队
+            <Sparkles className="h-3.5 w-3.5" /> {t('auth.badge')}
           </div>
           <div className="space-y-4">
             <h2 className="max-w-lg text-4xl font-black leading-[1.08] tracking-tight xl:text-5xl">
-              从身份验证开始，
+              {t('auth.title')}{' '}
               <span className="bg-gradient-to-r from-violet-500 via-primary to-indigo-500 bg-clip-text text-transparent">
-                安全地驱动每次协作
+                {t('auth.titleAccent')}
               </span>
             </h2>
             <p className="max-w-lg text-sm leading-7 text-muted-foreground">
-              登录后即可管理 AI 员工、知识库、自动化工作流与团队业务数据。
+              {t('auth.description')}
             </p>
           </div>
           <ul className="grid gap-3 text-sm">
@@ -59,7 +65,7 @@ export function AuthShell({ title, description, children, footer, step }: AuthSh
                 className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/55 px-4 py-3 backdrop-blur-sm"
               >
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
-                <span className="font-medium">{item}</span>
+                <span className="font-medium">{t(item)}</span>
               </li>
             ))}
           </ul>
@@ -67,16 +73,19 @@ export function AuthShell({ title, description, children, footer, step }: AuthSh
 
         <div className="relative flex items-center gap-2 text-xs text-muted-foreground">
           <ShieldCheck className="h-4 w-4 text-success" />
-          认证由 Appwrite 安全托管
+          {t('auth.securedBy')}
         </div>
       </section>
 
       <section className="relative flex min-h-screen items-center justify-center px-4 py-10 sm:px-8 lg:px-12">
+        <div className="absolute right-5 top-5">
+          <LocaleSwitcher compact />
+        </div>
         <Link
           href="/"
           className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
         >
-          <ArrowLeft className="h-3.5 w-3.5" /> 返回首页
+          <ArrowLeft className="h-3.5 w-3.5" /> {t('auth.backHome')}
         </Link>
 
         <div className="w-full max-w-md animate-slide-up">
