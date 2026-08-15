@@ -27,10 +27,20 @@ npm audit --omit=dev --prefix apps/functions/matrixflow-core
 
 ```bash
 MATRIXFLOW_DEPLOY_KEY=... pnpm appwrite:provision
-appwrite push functions --function-id matrixflow-core
 ```
 
-日常发布不要加 `--with-variables`：该 CLI 选项会用本地清单替换函数变量，可能清掉 Console 中的 Secret。生产流水线使用幂等部署脚本，只更新受管的非敏感变量并保留模型密钥。
+也可以使用不读取本地变量的显式部署命令，避免把 Console 中的 Secret 误覆盖：
+
+```bash
+appwrite functions create-deployment \
+  --function-id matrixflow-core \
+  --code apps/functions/matrixflow-core \
+  --activate \
+  --entrypoint src/main.js \
+  --commands "npm ci --omit=dev"
+```
+
+日常发布不要加 `--with-variables`：该 CLI 选项会用本地清单替换函数变量，可能清掉 Console 中的 Secret。生产流水线使用幂等部署脚本，只更新受管的非敏感变量并保留模型密钥。当前线上还需要保留 `MATRIXFLOW_AGENT_LIMIT`、`MATRIXFLOW_CONTENT_PROJECT_LIMIT`、`MATRIXFLOW_KNOWLEDGE_BASE_LIMIT`、`MATRIXFLOW_WORKFLOW_LIMIT` 四个资源额度变量。
 
 初始化脚本是幂等的，会创建或更新数据库、表权限、列、索引和文件桶。函数发布后，在 Appwrite Console 的 `matrixflow-core` 变量中设置协议与密钥，再部署一个新版本使变量生效：
 

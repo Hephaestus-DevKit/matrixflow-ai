@@ -13,9 +13,13 @@
 - PDF、DOCX、TXT、Markdown、CSV 文件上传、解析、相关片段检索、失败重试与同步删除。
 - 可视化 DAG 工作流，支持不可变版本记录、有界校验、真实条件分支、运行日志和级联删除。
 - 统一的响应式工作台、AI 就绪状态、首次运行清单、团队创建与邮件邀请。
+- 全站简体中文、繁體中文与 English 三语切换；语言选择会在刷新和认证页面间保持。
 - Appwrite 原生升级申请闭环：定价页保留套餐意向，注册后直达计费页，团队成员可提交 Pro/Team 申请并由服务端去重、审计与后续结算适配器承接。
 - Appwrite 配置即代码、幂等资源更新、独立后端部署流水线、云函数安全测试和真实 smoke test。
 - 统一错误边界、请求体与分页上限、租户归属不可变、Provider 端点规范化和生产级可观测请求 ID。
+- 写入请求默认使用幂等键，上传、索引、资源创建在网络重试时不会重复落库；Free 预览会在服务端执行 AI 调用、AI 员工、内容项目、知识库和工作流额度。
+
+生产环境：<https://matrixflow-ai.vercel.app>。生产前端部署在 Vercel，数据与 Function 部署在 Appwrite Cloud Singapore；生产 Function 的部署保留策略为 5 天，便于回滚同时避免无界堆积。
 
 ## 架构
 
@@ -55,7 +59,7 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-打开 `http://localhost:3000`。仓库已提供公开的 Appwrite endpoint 与 project ID 默认值；如果复制项目，请在 `.env.local` 中替换。
+打开 `http://localhost:3000`。仓库已提供公开的 Appwrite endpoint 与 project ID 默认值；如果复制项目，请在 `.env.local` 中替换。公开页面、登录、注册、恢复密码和工作台均支持简体中文、繁體中文与 English。
 
 AI 能力通过 Appwrite Function 统一接入两种协议：原生 Anthropic Messages API 和 OpenAI Chat Completions（因此也兼容 GLM、vLLM、LiteLLM、DeepSeek 等 OpenAI-compatible 网关）。密钥只放在云函数变量中，不得使用 `NEXT_PUBLIC_*` 或提交到仓库。
 
@@ -68,7 +72,7 @@ AI 能力通过 Appwrite Function 统一接入两种协议：原生 Anthropic Me
 
 Provider 层会统一处理系统提示、温度、`max_tokens`、top-p、超时、有限重试、429/5xx 错误映射和输入/输出用量。当前以同步文本模式运行，工具调用和流式输出会在连接器能力开放后逐步启用；不会把未实现的能力伪装成成功。
 
-业务列表默认按团队过滤并限制单次最多加载 10,000 条，避免大数据量拖垮浏览器或函数执行；超过范围时会返回可重试的明确错误。未知 Appwrite/上游异常只返回稳定的用户提示，详细内部信息不会回传到浏览器。
+业务列表默认按团队过滤并限制单次最多加载 10,000 条，避免大数据量拖垮浏览器或函数执行；超过范围时会返回可重试的明确错误。普通业务行只读权限开放给团队成员，审计、用量、计费和幂等记录只能由 Function 访问。未知 Appwrite/上游异常只返回稳定的用户提示，详细内部信息不会回传到浏览器。
 
 ## 质量检查
 
@@ -86,7 +90,7 @@ npm audit --omit=dev --prefix apps/functions/matrixflow-core
 
 ```bash
 MATRIXFLOW_DEPLOY_KEY=... pnpm appwrite:provision
-appwrite push functions
+appwrite functions create-deployment --function-id matrixflow-core --code apps/functions/matrixflow-core --activate --entrypoint src/main.js --commands "npm ci --omit=dev"
 ```
 
 部署后应立即撤销临时 key，并运行 `apps/functions/matrixflow-core/scripts/smoke.mjs` 验证登录、团队权限、浏览器禁写、服务端写入和函数健康状态。仓库还提供 `.github/workflows/appwrite.yml`，在配置短期部署密钥后自动同步后端。发布、回滚和配置清单见 [部署手册](docs/deployment.md)。
