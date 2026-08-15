@@ -18,6 +18,9 @@ const COPY: Record<
     description: string;
     enabledStatus: string;
     disabledStatus: string;
+    unavailableStatus: string;
+    loadingStatus: string;
+    unavailableDescription: string;
     start: string;
     setupTitle: string;
     setupDescription: string;
@@ -43,6 +46,9 @@ const COPY: Record<
     description: '为账号增加一层身份验证器保护，登录时需要输入动态验证码。',
     enabledStatus: '已启用',
     disabledStatus: '未启用',
+    unavailableStatus: '状态不可用',
+    loadingStatus: '检查中',
+    unavailableDescription: '暂时无法读取 MFA 状态，请刷新后重试。',
     start: '设置身份验证器',
     setupTitle: '绑定身份验证器',
     setupDescription: '在身份验证器应用中添加下方链接或密钥，然后输入 6 位验证码完成绑定。',
@@ -67,6 +73,9 @@ const COPY: Record<
     description: '為帳號增加一層驗證器保護，登入時需要輸入動態驗證碼。',
     enabledStatus: '已啟用',
     disabledStatus: '未啟用',
+    unavailableStatus: '狀態不可用',
+    loadingStatus: '檢查中',
+    unavailableDescription: '暫時無法讀取 MFA 狀態，請重新整理後再試。',
     start: '設定驗證器',
     setupTitle: '綁定驗證器',
     setupDescription: '在驗證器應用程式中加入下方連結或密鑰，然後輸入 6 位驗證碼完成綁定。',
@@ -92,6 +101,9 @@ const COPY: Record<
       'Add authenticator protection to your account. Sign-in will require a rotating code.',
     enabledStatus: 'Enabled',
     disabledStatus: 'Not enabled',
+    unavailableStatus: 'Unavailable',
+    loadingStatus: 'Checking',
+    unavailableDescription: 'MFA status is unavailable. Refresh and try again.',
     start: 'Set up authenticator',
     setupTitle: 'Link an authenticator',
     setupDescription:
@@ -119,7 +131,9 @@ const COPY: Record<
 export function MfaSecurityCard() {
   const { locale } = useLocale();
   const copy = COPY[locale];
-  const [enabled, setEnabled] = useState(false);
+  const [status, setStatus] = useState<'loading' | 'enabled' | 'disabled' | 'unavailable'>(
+    'loading',
+  );
   const [setup, setSetup] = useState<{ uri: string; secret: string } | null>(null);
   const [otp, setOtp] = useState('');
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
@@ -130,9 +144,11 @@ export function MfaSecurityCard() {
     void account
       .get()
       .then((current) => {
-        if (active) setEnabled(current.mfa);
+        if (active) setStatus(current.mfa ? 'enabled' : 'disabled');
       })
-      .catch(() => undefined)
+      .catch(() => {
+        if (active) setStatus('unavailable');
+      })
       .finally(() => {
         if (active) setLoading(false);
       });
@@ -176,7 +192,7 @@ export function MfaSecurityCard() {
       await account.updateMFA({ mfa: true });
       const recovery = await account.createMFARecoveryCodes().catch(() => null);
       setRecoveryCodes(recovery?.recoveryCodes ?? []);
-      setEnabled(true);
+      setStatus('enabled');
       setSetup(null);
       setOtp('');
       toast.success(copy.enabled);
@@ -193,7 +209,7 @@ export function MfaSecurityCard() {
     try {
       await account.updateMFA({ mfa: false });
       await account.deleteMFAAuthenticator({ type: AuthenticatorType.Totp }).catch(() => undefined);
-      setEnabled(false);
+      setStatus('disabled');
       setSetup(null);
       setOtp('');
       setRecoveryCodes([]);
@@ -245,13 +261,23 @@ export function MfaSecurityCard() {
           </div>
         </div>
         <span
-          className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${enabled ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}
+          className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${status === 'enabled' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}
         >
-          {enabled ? copy.enabledStatus : copy.disabledStatus}
+          {status === 'loading'
+            ? copy.loadingStatus
+            : status === 'enabled'
+              ? copy.enabledStatus
+              : status === 'unavailable'
+                ? copy.unavailableStatus
+                : copy.disabledStatus}
         </span>
       </div>
 
-      {!enabled && !setup && (
+      {status === 'unavailable' && (
+        <p className="text-xs leading-5 text-muted-foreground">{copy.unavailableDescription}</p>
+      )}
+
+      {status === 'disabled' && !setup && (
         <Button
           type="button"
           variant="outline"
@@ -310,7 +336,7 @@ export function MfaSecurityCard() {
         </form>
       )}
 
-      {enabled && (
+      {status === 'enabled' && (
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
