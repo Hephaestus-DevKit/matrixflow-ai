@@ -19,7 +19,6 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ secrets.MATRIXFLOW_DEPLOY_KEY != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -28,24 +27,48 @@ jobs:
       MATRIXFLOW_APPWRITE_PROJECT_ID: 6a43f0af000862e7b0ef
       MATRIXFLOW_FUNCTION_ARCHIVE: ${{ github.workspace }}/matrixflow-core.tar.gz
     steps:
+      - name: Check deployment credential
+        id: credential
+        shell: bash
+        env:
+          TEST_EMAIL: ${{ secrets.MATRIXFLOW_TEST_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.MATRIXFLOW_TEST_PASSWORD }}
+        run: |
+          if [[ -n "$MATRIXFLOW_DEPLOY_KEY" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "MATRIXFLOW_DEPLOY_KEY is not configured; Appwrite deployment will be skipped safely."
+          fi
+          if [[ -n "$TEST_EMAIL" && -n "$TEST_PASSWORD" ]]; then
+            echo "smoke=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "smoke=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: steps.credential.outputs.enabled == 'true'
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        if: steps.credential.outputs.enabled == 'true'
         with:
           node-version: 22.14.0
           cache: npm
           cache-dependency-path: apps/functions/matrixflow-core/package-lock.json
       - name: Install and verify function
+        if: steps.credential.outputs.enabled == 'true'
         working-directory: apps/functions/matrixflow-core
         run: npm ci && npm run check && npm test
       - name: Apply Appwrite schema
+        if: steps.credential.outputs.enabled == 'true'
         run: node apps/functions/matrixflow-core/scripts/provision.mjs
       - name: Package function source
+        if: steps.credential.outputs.enabled == 'true'
         working-directory: apps/functions/matrixflow-core
         run: tar --exclude=node_modules --exclude='*.log' -czf "$MATRIXFLOW_FUNCTION_ARCHIVE" .
       - name: Deploy function
+        if: steps.credential.outputs.enabled == 'true'
         run: node apps/functions/matrixflow-core/scripts/deploy.mjs
       - name: Smoke test
-        if: ${{ secrets.MATRIXFLOW_TEST_EMAIL != '' && secrets.MATRIXFLOW_TEST_PASSWORD != '' }}
+        if: steps.credential.outputs.enabled == 'true' && steps.credential.outputs.smoke == 'true'
         env:
           MATRIXFLOW_TEST_EMAIL: ${{ secrets.MATRIXFLOW_TEST_EMAIL }}
           MATRIXFLOW_TEST_PASSWORD: ${{ secrets.MATRIXFLOW_TEST_PASSWORD }}
