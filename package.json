@@ -19,6 +19,7 @@
     "function:check": "npm --prefix apps/functions/matrixflow-core run check",
     "function:test": "npm --prefix apps/functions/matrixflow-core test",
     "appwrite:provision": "node apps/functions/matrixflow-core/scripts/provision.mjs",
+    "smoke:production": "node scripts/production-smoke.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "clean": "rimraf apps/web/.next packages/shared/dist node_modules"

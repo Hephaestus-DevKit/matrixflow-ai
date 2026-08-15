@@ -39,7 +39,7 @@ Browser / Next.js
                                       └─ quota-bounded workflow runtime
 ```
 
-租户边界以 Appwrite Team ID 为唯一组织标识；浏览器只能读取已有团队行，业务写入全部经过云函数的成员、角色与字段校验。详细说明见 [架构文档](docs/architecture.md) 和 [安全文档](docs/security.md)。
+租户边界以 Appwrite Team ID 为唯一组织标识；浏览器只能读取已有团队行，业务写入全部经过云函数的成员、角色与字段校验。详细说明见 [架构文档](docs/architecture.md) 和 [安全文档](docs/security.md)。产品成熟度与外部发布条件见 [产品成熟度清单](docs/product-readiness.md)。
 
 ## 仓库结构
 
@@ -86,6 +86,7 @@ pnpm function:check
 pnpm function:test
 pnpm audit --prod --audit-level=high
 npm audit --omit=dev --prefix apps/functions/matrixflow-core
+pnpm smoke:production
 ```
 
 ## Appwrite 部署
