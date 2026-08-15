@@ -238,6 +238,8 @@ export async function recordUsage(services, teamId, generated) {
           provider: generated.provider,
           protocol: generated.protocol,
           model: generated.model,
+          durationMs: generated.durationMs,
+          upstreamRequestId: generated.upstreamRequestId,
         },
         recordedAt: new Date().toISOString(),
       }),

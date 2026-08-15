@@ -3,6 +3,7 @@ const DEFAULT_TIMEOUT_MS = 25_000;
 const DEFAULT_MAX_TOKENS = 2_048;
 const MAX_TOKENS = 32_000;
 const MAX_RETRIES = 2;
+const MAX_RESPONSE_BYTES = 512 * 1024;
 const ANTHROPIC_VERSION = '2023-06-01';
 
 const text = (value) => (typeof value === 'string' ? value.trim() : '');
@@ -192,13 +193,17 @@ function responseError(payload, status) {
   return new ProviderError(`AI 服务暂时不可用（${status}）`, 502, 'AI_PROVIDER_ERROR');
 }
 
-function requestFor(provider, { systemText, prompt, temperature, maxTokens, topP, model }) {
+function requestFor(
+  provider,
+  { systemText, prompt, temperature, maxTokens, topP, model, requestId },
+) {
   if (provider.protocol === 'anthropic-messages') {
     const headers = {
       'x-api-key': provider.apiKey,
       'anthropic-version': provider.version,
       'content-type': 'application/json',
     };
+    if (requestId) headers['x-client-request-id'] = requestId;
     if (provider.beta) headers['anthropic-beta'] = provider.beta;
     return {
       headers,
@@ -216,6 +221,7 @@ function requestFor(provider, { systemText, prompt, temperature, maxTokens, topP
     authorization: `Bearer ${provider.apiKey}`,
     'content-type': 'application/json',
   };
+  if (requestId) headers['X-Client-Request-Id'] = requestId;
   if (provider.organization) headers['OpenAI-Organization'] = provider.organization;
   if (provider.project) headers['OpenAI-Project'] = provider.project;
   const tokenLimit =
@@ -249,7 +255,7 @@ function retryDelay(response, attempt) {
 
 /** Generate one text response through a native or OpenAI-compatible protocol. */
 export async function generateText(
-  { system, prompt, temperature = 0.4, maxTokens = DEFAULT_MAX_TOKENS, topP, model },
+  { system, prompt, temperature = 0.4, maxTokens = DEFAULT_MAX_TOKENS, topP, model, requestId },
   env = process.env,
 ) {
   if (typeof prompt !== 'string' || !prompt.trim())
@@ -289,7 +295,9 @@ export async function generateText(
     maxTokens: safeMaxTokens,
     topP: safeTopP,
     model: requestedModel,
+    requestId: text(requestId),
   });
+  const startedAt = Date.now();
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     const controller = new AbortController();
@@ -301,7 +309,18 @@ export async function generateText(
         body: JSON.stringify(request.body),
         signal: controller.signal,
       });
-      const payload = await response.json().catch(() => ({}));
+      const responseText =
+        typeof response.text === 'function'
+          ? await response.text()
+          : JSON.stringify(await response.json().catch(() => ({})));
+      if (Buffer.byteLength(responseText, 'utf8') > MAX_RESPONSE_BYTES)
+        throw new ProviderError('AI 服务响应过大', 502, 'AI_RESPONSE_TOO_LARGE');
+      let payload = {};
+      try {
+        payload = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        throw new ProviderError('AI 服务返回了无效响应', 502, 'AI_INVALID_RESPONSE');
+      }
       if (!response.ok) {
         if (retryable(response.status) && attempt < retries) {
           await new Promise((resolve) => setTimeout(resolve, retryDelay(response, attempt)));
@@ -331,6 +350,9 @@ export async function generateText(
         model: requestedModel,
         usage,
         stopReason: payload?.stop_reason || payload?.choices?.[0]?.finish_reason || null,
+        durationMs: Date.now() - startedAt,
+        upstreamRequestId:
+          response.headers?.get?.('x-request-id') || response.headers?.get?.('request-id') || null,
       };
     } catch (error) {
       if (error instanceof ProviderError) throw error;

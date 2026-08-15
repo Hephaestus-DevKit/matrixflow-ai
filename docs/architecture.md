@@ -47,7 +47,7 @@ Page → apiClient → Appwrite Function execution
 - 拓扑排序拒绝循环依赖、自连接和悬空引用。
 - 条件值经过显式类型转换，`false`、`0` 不会被当作非空字符串处理。
 - true/false 出边会真实控制后续节点；未激活节点记为 `SKIPPED`。
-- AI 调用有输入长度、5–60 秒可配置 Provider 超时、最多两次有界重试、月度额度和分钟级速率限制。协议适配层分别处理 Anthropic Messages 与 OpenAI Chat Completions，并统一返回文本、停止原因和 token 用量。
+- AI 调用有输入长度、512 KB 响应上限、5–60 秒可配置 Provider 超时、最多两次有界重试、月度额度和分钟级速率限制。协议适配层分别处理 Anthropic Messages 与 OpenAI Chat Completions，并统一返回文本、停止原因、token 用量、耗时和上游请求 ID。
 - 邮件与 Webhook 在安全连接器配置前明确失败。
 
 ## 数据与索引

@@ -130,6 +130,53 @@ test('sends OpenAI-compatible payload and retries transient failures', async () 
   }
 });
 
+test('propagates a safe request id and rejects oversized upstream responses', async () => {
+  const originalFetch = globalThis.fetch;
+  let requestOptions;
+  globalThis.fetch = async (_url, options) => {
+    requestOptions = options;
+    return {
+      ok: true,
+      status: 200,
+      headers: { get: (name) => (name === 'x-request-id' ? 'upstream-123' : null) },
+      text: async () =>
+        JSON.stringify({
+          choices: [{ message: { content: 'ok' } }],
+          usage: { prompt_tokens: 1, completion_tokens: 1 },
+        }),
+    };
+  };
+  try {
+    const result = await generateText(
+      { prompt: 'hello', requestId: 'request-123' },
+      { OPENAI_API_KEY: 'secret', MATRIXFLOW_AI_MAX_RETRIES: '0' },
+    );
+    assert.equal(requestOptions.headers['X-Client-Request-Id'], 'request-123');
+    assert.equal(result.upstreamRequestId, 'upstream-123');
+    assert.equal(typeof result.durationMs, 'number');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  globalThis.fetch = async () => ({
+    ok: true,
+    status: 200,
+    text: async () => `{"choices":[{"message":{"content":"${'x'.repeat(512 * 1024)}"}}]}`,
+  });
+  try {
+    await assert.rejects(
+      () =>
+        generateText(
+          { prompt: 'hello' },
+          { OPENAI_API_KEY: 'secret', MATRIXFLOW_AI_MAX_RETRIES: '0' },
+        ),
+      (error) => error.code === 'AI_RESPONSE_TOO_LARGE',
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('bounds system instructions before network access', async () => {
   await assert.rejects(
     () => generateText({ system: 'x'.repeat(16_001), prompt: 'hello' }, { GLM_API_KEY: 'test' }),
