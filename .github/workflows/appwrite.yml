@@ -38,6 +38,14 @@ jobs:
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Appwrite deployment skipped::MATRIXFLOW_DEPLOY_KEY is not configured; no production Function or Schema changes were applied by this run."
+            {
+              echo "### Appwrite deployment skipped"
+              echo
+              echo "The `MATRIXFLOW_DEPLOY_KEY` repository secret is not configured. This run did not change Appwrite Schema or Function state."
+              echo
+              echo "Configure a short-lived least-privilege key, run the workflow again, and verify the active deployment before treating the release as fully published."
+            } >> "$GITHUB_STEP_SUMMARY"
             echo "MATRIXFLOW_DEPLOY_KEY is not configured; Appwrite deployment will be skipped safely."
           fi
           if [[ -n "$TEST_EMAIL" && -n "$TEST_PASSWORD" ]]; then

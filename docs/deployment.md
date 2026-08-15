@@ -77,6 +77,8 @@ MATRIXFLOW_BILLING_WEBHOOK_SECRET=<secret>
 
 自动部署由 `.github/workflows/appwrite.yml` 提供。仓库 Secret `MATRIXFLOW_DEPLOY_KEY` 存在时，主分支的后端或基础设施变更会依次执行测试、Schema 更新、Function 部署和可选 smoke test；没有 Secret 时任务安全跳过。
 
+如果 Secret 缺失，工作流会在运行摘要和警告中明确标记“未修改 Appwrite”，不能把绿色的跳过任务当作后端已发布。配置短期最小权限 key 后，应重新运行工作流，并在 Appwrite Console 核对 active deployment ID。
+
 ## Web 发布
 
 设置公开变量：
