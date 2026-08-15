@@ -45,9 +45,10 @@ MATRIXFLOW_AI_PROVIDER=openai-compatible
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MAX_TOKENS_FIELD=max_completion_tokens
 ```
 
-`OPENAI_BASE_URL` 支持任意遵循 Chat Completions 请求/响应结构的网关；GLM 保留独立变量以兼容既有环境。`ANTHROPIC_API_KEY`、`OPENAI_API_KEY` 和 `GLM_API_KEY` 必须标记为 Secret，其他模型、端点和限流变量可以是普通变量。密钥永远不要放到 Web 环境变量或仓库。
+`OPENAI_BASE_URL` 支持任意遵循 Chat Completions 请求/响应结构的网关；官方 OpenAI 新模型默认使用 `max_completion_tokens`，旧版兼容网关可切换为 `max_tokens`。GLM 保留独立变量以兼容既有环境。`ANTHROPIC_API_KEY`、`OPENAI_API_KEY` 和 `GLM_API_KEY` 必须标记为 Secret，其他模型、端点和限流变量可以是普通变量。密钥永远不要放到 Web 环境变量或仓库。
 
 自动部署由 `.github/workflows/appwrite.yml` 提供。仓库 Secret `MATRIXFLOW_DEPLOY_KEY` 存在时，主分支的后端或基础设施变更会依次执行测试、Schema 更新、Function 部署和可选 smoke test；没有 Secret 时任务安全跳过。
 

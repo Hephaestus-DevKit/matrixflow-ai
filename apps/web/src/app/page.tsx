@@ -113,8 +113,8 @@ export default function LandingPage() {
                       <p className="text-[0.6875rem] text-muted-foreground">从知识到可审核内容</p>
                     </div>
                   </div>
-                  <span className="rounded-full border border-success/20 bg-success/10 px-2.5 py-1 text-[0.6875rem] font-bold text-success">
-                    数据服务已连接
+                  <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[0.6875rem] font-bold text-primary">
+                    Appwrite 原生数据层
                   </span>
                 </div>
                 <div className="space-y-3 p-4 sm:p-5">

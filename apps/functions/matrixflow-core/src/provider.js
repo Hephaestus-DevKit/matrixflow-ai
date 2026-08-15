@@ -99,6 +99,9 @@ export function configuredProvider(env = process.env) {
       endpoint: `${normalizedBaseUrl(envValue(env, 'OPENAI_BASE_URL', 'OPENAI_API_BASE'), 'https://api.openai.com/v1')}/chat/completions`,
       apiKey: openAiKey,
       model: envValue(env, 'OPENAI_MODEL') || 'gpt-4o-mini',
+      maxTokensField:
+        envValue(env, 'OPENAI_MAX_TOKENS_FIELD') ||
+        (requested === 'openai-compatible' ? 'max_tokens' : 'max_completion_tokens'),
       organization: envValue(env, 'OPENAI_ORGANIZATION', 'OPENAI_ORG_ID'),
       project: envValue(env, 'OPENAI_PROJECT'),
     };
@@ -134,6 +137,7 @@ export function configuredProvider(env = process.env) {
       endpoint: `${normalizedBaseUrl(envValue(env, 'OPENAI_BASE_URL', 'OPENAI_API_BASE'), 'https://api.openai.com/v1')}/chat/completions`,
       apiKey: openAiKey,
       model: envValue(env, 'OPENAI_MODEL') || 'gpt-4o-mini',
+      maxTokensField: envValue(env, 'OPENAI_MAX_TOKENS_FIELD') || 'max_completion_tokens',
       organization: envValue(env, 'OPENAI_ORGANIZATION', 'OPENAI_ORG_ID'),
       project: envValue(env, 'OPENAI_PROJECT'),
     };
@@ -214,6 +218,10 @@ function requestFor(provider, { systemText, prompt, temperature, maxTokens, topP
   };
   if (provider.organization) headers['OpenAI-Organization'] = provider.organization;
   if (provider.project) headers['OpenAI-Project'] = provider.project;
+  const tokenLimit =
+    provider.maxTokensField === 'max_completion_tokens'
+      ? { max_completion_tokens: maxTokens }
+      : { max_tokens: maxTokens };
   return {
     headers,
     body: {
@@ -223,7 +231,7 @@ function requestFor(provider, { systemText, prompt, temperature, maxTokens, topP
         { role: 'user', content: prompt },
       ],
       temperature,
-      max_tokens: maxTokens,
+      ...tokenLimit,
       ...(topP === undefined ? {} : { top_p: topP }),
     },
   };

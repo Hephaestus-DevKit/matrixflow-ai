@@ -36,6 +36,19 @@ test('resolves native Anthropic Messages protocol explicitly', () => {
   );
 });
 
+test('uses modern token limit field for first-party OpenAI and legacy field for gateways', () => {
+  assert.equal(
+    configuredProvider({ MATRIXFLOW_AI_PROVIDER: 'openai', OPENAI_API_KEY: 'secret' })
+      .maxTokensField,
+    'max_completion_tokens',
+  );
+  assert.equal(
+    configuredProvider({ MATRIXFLOW_AI_PROVIDER: 'openai-compatible', OPENAI_API_KEY: 'secret' })
+      .maxTokensField,
+    'max_tokens',
+  );
+});
+
 test('sends Anthropic headers and normalizes content and usage', async () => {
   const originalFetch = globalThis.fetch;
   let request;

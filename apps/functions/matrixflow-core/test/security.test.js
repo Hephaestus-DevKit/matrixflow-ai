@@ -1,7 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parse, schemas } from '../src/schemas.js';
-import { requestBody, requireAdmin, requireCapability, rowPermissions } from '../src/runtime.js';
+import {
+  getOwned,
+  requestBody,
+  requireAdmin,
+  requireCapability,
+  rowPermissions,
+} from '../src/runtime.js';
 
 test('agent updates reject mass-assignment fields', () => {
   assert.throws(
@@ -39,5 +45,20 @@ test('pre-parsed request bodies keep the same size guard', () => {
   assert.throws(
     () => requestBody({ bodyJson: { prompt: 'x'.repeat(128 * 1024) } }),
     (error) => error.code === 'BODY_TOO_LARGE',
+  );
+});
+
+test('missing tenant rows return a stable 404 instead of leaking Appwrite errors', async () => {
+  await assert.rejects(
+    () =>
+      getOwned(
+        {
+          tables: { getRow: async () => Promise.reject({ code: 404, message: 'internal detail' }) },
+        },
+        'agents',
+        'missing',
+        'team-1',
+      ),
+    (error) => error.code === 'RESOURCE_NOT_FOUND' && error.status === 404,
   );
 });

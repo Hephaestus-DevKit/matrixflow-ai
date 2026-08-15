@@ -144,7 +144,15 @@ export function requireAdmin(membership) {
 }
 
 export async function getOwned(services, tableId, rowId, teamId, field = 'organizationId') {
-  const row = decodeRow(await services.tables.getRow({ databaseId: DATABASE_ID, tableId, rowId }));
+  let rawRow;
+  try {
+    rawRow = await services.tables.getRow({ databaseId: DATABASE_ID, tableId, rowId });
+  } catch (error) {
+    const status = Number(error?.status || error?.code);
+    if (status === 404) throw new HttpError('资源不存在', 404, 'RESOURCE_NOT_FOUND');
+    throw error;
+  }
+  const row = decodeRow(rawRow);
   if (row[field] !== teamId) throw new HttpError('无权访问该资源', 403, 'FORBIDDEN');
   return row;
 }

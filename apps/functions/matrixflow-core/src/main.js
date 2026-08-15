@@ -486,24 +486,42 @@ export default async ({ req, res, log, error: logError }) => {
     );
     return res.json({ data, meta: { requestId } }, 200);
   } catch (caught) {
-    const status = Number(caught?.status || 500);
+    const numericCode = Number(caught?.code);
+    const status = Number(
+      caught?.status || (numericCode >= 400 && numericCode < 600 ? numericCode : 500),
+    );
+    const expectedError = caught instanceof HttpError || caught?.name === 'ProviderError';
+    const errorCode =
+      typeof caught?.code === 'string'
+        ? caught.code
+        : status === 401
+          ? 'UNAUTHENTICATED'
+          : status === 403
+            ? 'FORBIDDEN'
+            : status === 404
+              ? 'NOT_FOUND'
+              : status === 429
+                ? 'RATE_LIMITED'
+                : 'INTERNAL_ERROR';
     logError?.(
       JSON.stringify({
         requestId,
         path: req.path,
         status,
-        code: caught?.code || 'INTERNAL_ERROR',
+        code: errorCode,
         durationMs: Date.now() - startedAt,
       }),
     );
     const message =
-      status >= 500 && !caught?.code ? '核心服务暂时不可用' : String(caught?.message || '请求失败');
+      status >= 500 && !expectedError
+        ? '核心服务暂时不可用'
+        : String(caught?.message || '请求失败');
     return res.json(
       {
         error: {
-          code: caught?.code || 'INTERNAL_ERROR',
+          code: errorCode,
           message,
-          details: caught?.details,
+          details: expectedError ? caught?.details : undefined,
           requestId,
         },
       },

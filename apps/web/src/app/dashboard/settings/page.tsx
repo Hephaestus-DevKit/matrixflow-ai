@@ -56,6 +56,8 @@ export default function SettingsPage() {
     protocol?: string;
     model?: string;
   } | null>(null);
+  const [aiStatusLoading, setAiStatusLoading] = useState(true);
+  const [aiStatusError, setAiStatusError] = useState(false);
   const membership = user?.memberships.find((item) => item.organizationId === organizationId);
   const canInvite = membership?.role === 'owner' || membership?.role === 'admin';
 
@@ -75,15 +77,22 @@ export default function SettingsPage() {
 
   useEffect(() => {
     let active = true;
+    setAiStatusLoading(true);
+    setAiStatusError(false);
     void apiClient
       .get<{ ai: { ready: boolean; provider?: string; protocol?: string; model?: string } }>(
         '/health',
       )
       .then((health) => {
-        if (active) setAiStatus(health.ai);
+        if (!active) return;
+        setAiStatus(health.ai);
+        setAiStatusLoading(false);
       })
       .catch(() => {
-        if (active) setAiStatus(null);
+        if (!active) return;
+        setAiStatus(null);
+        setAiStatusError(true);
+        setAiStatusLoading(false);
       });
     return () => {
       active = false;
@@ -441,9 +450,17 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </div>
-              {aiStatus?.ready ? (
+              {aiStatusLoading ? (
+                <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-bold text-muted-foreground">
+                  检测中
+                </span>
+              ) : aiStatus?.ready ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-[10px] font-bold text-success">
                   <CircleCheck className="h-3 w-3" /> 已连接
+                </span>
+              ) : aiStatusError ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[10px] font-bold text-muted-foreground">
+                  <CircleAlert className="h-3 w-3" /> 状态不可用
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-1 text-[10px] font-bold text-warning">
@@ -466,7 +483,11 @@ export default function SettingsPage() {
                 </div>
               ))}
             </div>
-            {aiStatus?.ready ? (
+            {aiStatusLoading ? (
+              <p className="text-[11px] leading-5 text-muted-foreground">
+                正在检查 Appwrite Function 的 AI 连接状态…
+              </p>
+            ) : aiStatus?.ready ? (
               <p className="text-[11px] leading-5 text-muted-foreground">
                 当前使用 <span className="font-semibold text-foreground">{aiStatus.provider}</span>
                 {aiStatus.protocol ? ` · ${aiStatus.protocol}` : ''}
@@ -476,10 +497,15 @@ export default function SettingsPage() {
               </p>
             ) : (
               <p className="text-[11px] leading-5 text-muted-foreground">
-                管理员配置 <span className="font-semibold text-foreground">ANTHROPIC_API_KEY</span>
-                、<span className="font-semibold text-foreground">OPENAI_API_KEY</span> 或
-                <span className="font-semibold text-foreground">GLM_API_KEY</span>{' '}
-                后，重新部署函数即可启用。
+                {aiStatusError ? '暂时无法读取连接状态，请稍后刷新重试。' : '管理员配置 '}
+                {!aiStatusError && (
+                  <>
+                    <span className="font-semibold text-foreground">ANTHROPIC_API_KEY</span>、
+                    <span className="font-semibold text-foreground">OPENAI_API_KEY</span> 或
+                    <span className="font-semibold text-foreground">GLM_API_KEY</span>{' '}
+                    后，重新部署函数即可启用。
+                  </>
+                )}
               </p>
             )}
           </div>
