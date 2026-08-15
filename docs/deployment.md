@@ -27,8 +27,10 @@ npm audit --omit=dev --prefix apps/functions/matrixflow-core
 
 ```bash
 MATRIXFLOW_DEPLOY_KEY=... pnpm appwrite:provision
-appwrite push functions
+appwrite push functions --function-id matrixflow-core
 ```
+
+日常发布不要加 `--with-variables`：该 CLI 选项会用本地清单替换函数变量，可能清掉 Console 中的 Secret。生产流水线使用幂等部署脚本，只更新受管的非敏感变量并保留模型密钥。
 
 初始化脚本是幂等的，会创建或更新数据库、表权限、列、索引和文件桶。函数发布后，在 Appwrite Console 的 `matrixflow-core` 变量中设置协议与密钥，再部署一个新版本使变量生效：
 
