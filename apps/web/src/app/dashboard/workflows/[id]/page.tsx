@@ -29,6 +29,7 @@ import type {
 } from '@matrixflow/shared';
 import { errorMessage } from '@/lib/errors';
 import { toast } from 'sonner';
+import { useLocale, type Locale } from '@/lib/i18n';
 
 interface EditorNodeData {
   label: string;
@@ -41,44 +42,310 @@ interface EditorEdgeData {
   condition?: WorkflowEdge['condition'];
 }
 
-const NODE_TYPES: Array<{ type: WorkflowNode['type']; label: string; desc: string }> = [
-  { type: 'trigger', label: '手动触发器 (Trigger)', desc: '作为流的起点接收初始参数输入。' },
-  {
-    type: 'ai',
-    label: 'AI 模型节点',
-    desc: '调用项目管理员配置的 AI Provider 生成内容或执行分类。',
+const EDITOR_COPY = {
+  'zh-CN': {
+    workflows: '工作流',
+    editorFallback: '工作流编辑器',
+    loading: '加载中…',
+    currentVersion: (version: number) => `当前版本：v${version}`,
+    editorHint: '拖动节点或连接点，建立可视化流程',
+    delete: '删除',
+    deleteConfirm: '确定删除该工作流、全部版本和运行记录吗？',
+    history: '运行历史',
+    save: '保存配置',
+    saving: '保存中…',
+    run: '运行',
+    running: '正在运行…',
+    runSubmitted: (status: string, runId: string) =>
+      `工作流已提交！运行状态：${status}，运行 ID：${runId}`,
+    saved: '工作流配置已成功保存！',
+    saveFailed: (message: string) => `保存失败：${message}`,
+    deleted: '工作流及其版本和运行记录已删除',
+    deleteFailed: '工作流删除失败',
+    configured: '已配置',
+    unconfigured: '未配置',
+    nodeCached: '节点属性已缓存至画布，请点击右上角“保存配置”提交。',
+    changedAt: (time: string) => `可视化配置修改于 ${time}`,
+    properties: '属性编辑',
+    nodeId: '节点唯一标识 (ID)',
+    promptTemplate: '选择 AI 提示词模板 (Prompt Key)',
+    choosePrompt: '-- 请选择提示词模板 --',
+    recipient: '通知收件人邮箱 (Email Address)',
+    subject: '邮件主题',
+    subjectPlaceholder: '工作流执行结果',
+    body: '邮件正文模板',
+    bodyPlaceholder: '执行结果：{{input}}',
+    webhook: '网络钩子地址 (Webhook URL)',
+    transform: '转换模板内容 (JSON/Txt Template)',
+    field: '比较字段路径',
+    operator: '比较操作符',
+    value: '期望值',
+    conditionHint: '条件节点的第一条出边标记为 true，第二条出边标记为 false。',
+    triggerHint: '手动触发器不需要额外配置。下一个连接节点会自动接收初始输入。',
+    deleteNode: '删除节点',
+    apply: '应用更改',
+    addNode: '添加节点到画布',
+    helpTitle: '如何配置及连接？',
+    helpOne: '选择节点后，在此面板配置它的属性参数。',
+    helpTwo: '拖动节点两侧的连接点，连接下一个节点以建立 DAG 流程。',
+    footer: 'MatrixFlow AI · 可靠的跨境电商自动化核心引擎',
+    nodes: {
+      trigger: '手动触发器 (Trigger)',
+      triggerDesc: '作为流程起点接收初始参数。',
+      ai: 'AI 模型节点',
+      aiDesc: '调用已配置的 AI Provider 生成内容或执行分类。',
+      transform: '数据转换节点 (Transform)',
+      transformDesc: '将上游节点输出格式化为目标数据。',
+      condition: '条件分支节点 (Condition)',
+      conditionDesc: '根据条件表达式路由到不同输出路径。',
+    },
+    prompts: {
+      product_title: '商品标题 (product_title)',
+      product_listing: 'Listing 页面 (product_listing)',
+      product_faq: '商品 FAQ 问答 (product_faq)',
+      tiktok_script: 'TikTok 带货脚本 (tiktok_script)',
+      instagram_caption: 'Instagram 种草图文 (instagram_caption)',
+      facebook_ad: 'Facebook 广告投放 (facebook_ad)',
+      email_marketing: 'EDM 邮件营销 (email_marketing)',
+      seo_blog: 'SEO 博客文章 (seo_blog)',
+      customer_service_reply: '智能客服回复 (customer_service_reply)',
+      negative_review_reply: '差评应对公关 (negative_review_reply)',
+      multilingual_translate: '多语言翻译 (multilingual_translate)',
+      brand_voice_rewrite: '品牌语气润色 (brand_voice_rewrite)',
+    },
   },
-  {
-    type: 'transform',
-    label: '数据转换节点 (Transform)',
-    desc: '对上游节点的输出结果进行数据格式化。',
+  'zh-TW': {
+    workflows: '工作流',
+    editorFallback: '工作流編輯器',
+    loading: '載入中…',
+    currentVersion: (version: number) => `目前版本：v${version}`,
+    editorHint: '拖曳節點或連接點，建立視覺化流程',
+    delete: '刪除',
+    deleteConfirm: '確定刪除此工作流、全部版本與執行記錄嗎？',
+    history: '執行歷史',
+    save: '儲存設定',
+    saving: '儲存中…',
+    run: '執行',
+    running: '執行中…',
+    runSubmitted: (status: string, runId: string) =>
+      `工作流已提交！執行狀態：${status}，執行 ID：${runId}`,
+    saved: '工作流設定已成功儲存！',
+    saveFailed: (message: string) => `儲存失敗：${message}`,
+    deleted: '工作流及其版本與執行記錄已刪除',
+    deleteFailed: '工作流刪除失敗',
+    configured: '已設定',
+    unconfigured: '未設定',
+    nodeCached: '節點屬性已暫存至畫布，請點擊右上角「儲存設定」提交。',
+    changedAt: (time: string) => `視覺化設定修改於 ${time}`,
+    properties: '屬性編輯',
+    nodeId: '節點唯一識別碼 (ID)',
+    promptTemplate: '選擇 AI 提示詞範本 (Prompt Key)',
+    choosePrompt: '-- 請選擇提示詞範本 --',
+    recipient: '通知收件人電子郵件 (Email Address)',
+    subject: '郵件主旨',
+    subjectPlaceholder: '工作流執行結果',
+    body: '郵件內容範本',
+    bodyPlaceholder: '執行結果：{{input}}',
+    webhook: '網路鉤子位址 (Webhook URL)',
+    transform: '轉換範本內容 (JSON/Txt Template)',
+    field: '比較欄位路徑',
+    operator: '比較運算子',
+    value: '期望值',
+    conditionHint: '條件節點的第一條出邊標記為 true，第二條出邊標記為 false。',
+    triggerHint: '手動觸發器不需要額外設定。下一個連接節點會自動接收初始輸入。',
+    deleteNode: '刪除節點',
+    apply: '套用變更',
+    addNode: '新增節點至畫布',
+    helpTitle: '如何設定及連接？',
+    helpOne: '選擇節點後，在此面板設定它的屬性參數。',
+    helpTwo: '拖曳節點兩側的連接點，連接下一個節點以建立 DAG 流程。',
+    footer: 'MatrixFlow AI · 可靠的跨境電商自動化核心引擎',
+    nodes: {
+      trigger: '手動觸發器 (Trigger)',
+      triggerDesc: '作為流程起點接收初始參數。',
+      ai: 'AI 模型節點',
+      aiDesc: '呼叫已設定的 AI Provider 產生內容或執行分類。',
+      transform: '資料轉換節點 (Transform)',
+      transformDesc: '將上游節點輸出格式化為目標資料。',
+      condition: '條件分支節點 (Condition)',
+      conditionDesc: '依據條件運算式路由至不同輸出路徑。',
+    },
+    prompts: {
+      product_title: '商品標題 (product_title)',
+      product_listing: 'Listing 頁面 (product_listing)',
+      product_faq: '商品 FAQ 問答 (product_faq)',
+      tiktok_script: 'TikTok 帶貨腳本 (tiktok_script)',
+      instagram_caption: 'Instagram 種草圖文 (instagram_caption)',
+      facebook_ad: 'Facebook 廣告投放 (facebook_ad)',
+      email_marketing: 'EDM 電子郵件行銷 (email_marketing)',
+      seo_blog: 'SEO 部落格文章 (seo_blog)',
+      customer_service_reply: '智慧客服回覆 (customer_service_reply)',
+      negative_review_reply: '差評應對公關 (negative_review_reply)',
+      multilingual_translate: '多語言翻譯 (multilingual_translate)',
+      brand_voice_rewrite: '品牌語氣潤飾 (brand_voice_rewrite)',
+    },
   },
-  {
-    type: 'condition',
-    label: '条件分支节点 (Condition)',
-    desc: '根据条件表达式路由到不同输出路径。',
+  en: {
+    workflows: 'Workflows',
+    editorFallback: 'Workflow editor',
+    loading: 'Loading…',
+    currentVersion: (version: number) => `Current version: v${version}`,
+    editorHint: 'Drag nodes or handles to build a visual flow',
+    delete: 'Delete',
+    deleteConfirm: 'Delete this workflow, all versions, and run history?',
+    history: 'Run history',
+    save: 'Save config',
+    saving: 'Saving…',
+    run: 'Run',
+    running: 'Running…',
+    runSubmitted: (status: string, runId: string) =>
+      `Workflow submitted. Status: ${status}; run ID: ${runId}`,
+    saved: 'Workflow configuration saved.',
+    saveFailed: (message: string) => `Save failed: ${message}`,
+    deleted: 'Workflow, versions, and run history deleted',
+    deleteFailed: 'Could not delete workflow',
+    configured: 'Configured',
+    unconfigured: 'Not configured',
+    nodeCached: 'Node properties are staged on the canvas. Click “Save config” to commit them.',
+    changedAt: (time: string) => `Visual configuration updated at ${time}`,
+    properties: 'Edit properties',
+    nodeId: 'Node identifier (ID)',
+    promptTemplate: 'AI prompt template (Prompt Key)',
+    choosePrompt: '-- Choose a prompt template --',
+    recipient: 'Notification recipient (Email Address)',
+    subject: 'Email subject',
+    subjectPlaceholder: 'Workflow execution result',
+    body: 'Email body template',
+    bodyPlaceholder: 'Execution result: {{input}}',
+    webhook: 'Webhook URL',
+    transform: 'Transform template (JSON/Txt Template)',
+    field: 'Comparison field path',
+    operator: 'Comparison operator',
+    value: 'Expected value',
+    conditionHint: 'The first outgoing edge is true; the second outgoing edge is false.',
+    triggerHint:
+      'Manual triggers need no extra configuration. The next connected node receives the initial input.',
+    deleteNode: 'Delete node',
+    apply: 'Apply changes',
+    addNode: 'Add a node to the canvas',
+    helpTitle: 'How do I configure and connect nodes?',
+    helpOne: 'Select a node and configure its properties in this panel.',
+    helpTwo: 'Drag a handle from either side of a node to connect the next step in the DAG.',
+    footer: 'MatrixFlow AI · A reliable automation engine for cross-border commerce',
+    nodes: {
+      trigger: 'Manual trigger (Trigger)',
+      triggerDesc: 'Receives the initial payload at the start of the flow.',
+      ai: 'AI model node',
+      aiDesc: 'Calls the configured AI provider to generate or classify content.',
+      transform: 'Data transform node (Transform)',
+      transformDesc: 'Formats upstream output into the target data shape.',
+      condition: 'Conditional branch node (Condition)',
+      conditionDesc: 'Routes execution using a condition expression.',
+    },
+    prompts: {
+      product_title: 'Product title (product_title)',
+      product_listing: 'Product listing (product_listing)',
+      product_faq: 'Product FAQ answers (product_faq)',
+      tiktok_script: 'TikTok commerce script (tiktok_script)',
+      instagram_caption: 'Instagram caption (instagram_caption)',
+      facebook_ad: 'Facebook ad (facebook_ad)',
+      email_marketing: 'EDM email marketing (email_marketing)',
+      seo_blog: 'SEO blog post (seo_blog)',
+      customer_service_reply: 'Customer support reply (customer_service_reply)',
+      negative_review_reply: 'Negative review response (negative_review_reply)',
+      multilingual_translate: 'Multilingual translation (multilingual_translate)',
+      brand_voice_rewrite: 'Brand voice rewrite (brand_voice_rewrite)',
+    },
   },
-];
+} satisfies Record<
+  Locale,
+  {
+    workflows: string;
+    editorFallback: string;
+    loading: string;
+    currentVersion: (version: number) => string;
+    editorHint: string;
+    delete: string;
+    deleteConfirm: string;
+    history: string;
+    save: string;
+    saving: string;
+    run: string;
+    running: string;
+    runSubmitted: (status: string, runId: string) => string;
+    saved: string;
+    saveFailed: (message: string) => string;
+    deleted: string;
+    deleteFailed: string;
+    configured: string;
+    unconfigured: string;
+    nodeCached: string;
+    changedAt: (time: string) => string;
+    properties: string;
+    nodeId: string;
+    promptTemplate: string;
+    choosePrompt: string;
+    recipient: string;
+    subject: string;
+    subjectPlaceholder: string;
+    body: string;
+    bodyPlaceholder: string;
+    webhook: string;
+    transform: string;
+    field: string;
+    operator: string;
+    value: string;
+    conditionHint: string;
+    triggerHint: string;
+    deleteNode: string;
+    apply: string;
+    addNode: string;
+    helpTitle: string;
+    helpOne: string;
+    helpTwo: string;
+    footer: string;
+    nodes: Record<
+      | 'trigger'
+      | 'ai'
+      | 'transform'
+      | 'condition'
+      | 'triggerDesc'
+      | 'aiDesc'
+      | 'transformDesc'
+      | 'conditionDesc',
+      string
+    >;
+    prompts: Record<string, string>;
+  }
+>;
 
-const PROMPT_OPTIONS = [
-  { key: 'product_title', label: '商品标题 (product_title)' },
-  { key: 'product_listing', label: 'Listing 页面 (product_listing)' },
-  { key: 'product_faq', label: '商品 FAQ 问答 (product_faq)' },
-  { key: 'tiktok_script', label: 'TikTok 带货脚本 (tiktok_script)' },
-  { key: 'instagram_caption', label: 'Instagram 种草图文 (instagram_caption)' },
-  { key: 'facebook_ad', label: 'Facebook 广告投放 (facebook_ad)' },
-  { key: 'email_marketing', label: 'EDM 邮件营销 (email_marketing)' },
-  { key: 'seo_blog', label: 'SEO 博客文章 (seo_blog)' },
-  { key: 'customer_service_reply', label: '智能客服回复 (customer_service_reply)' },
-  { key: 'negative_review_reply', label: '差评应对公关 (negative_review_reply)' },
-  { key: 'multilingual_translate', label: '多语言翻译 (multilingual_translate)' },
-  { key: 'brand_voice_rewrite', label: '品牌语气润色 (brand_voice_rewrite)' },
-];
+const PROMPT_KEYS = [
+  'product_title',
+  'product_listing',
+  'product_faq',
+  'tiktok_script',
+  'instagram_caption',
+  'facebook_ad',
+  'email_marketing',
+  'seo_blog',
+  'customer_service_reply',
+  'negative_review_reply',
+  'multilingual_translate',
+  'brand_voice_rewrite',
+] as const;
 
 export default function WorkflowEditorPage() {
   const { id } = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { locale } = useLocale();
+  const copy = EDITOR_COPY[locale];
+  const nodeTypes: Array<{ type: WorkflowNode['type']; label: string; desc: string }> = [
+    { type: 'trigger', label: copy.nodes.trigger, desc: copy.nodes.triggerDesc },
+    { type: 'ai', label: copy.nodes.ai, desc: copy.nodes.aiDesc },
+    { type: 'transform', label: copy.nodes.transform, desc: copy.nodes.transformDesc },
+    { type: 'condition', label: copy.nodes.condition, desc: copy.nodes.conditionDesc },
+  ];
   const [mounted, setMounted] = useState(false);
 
   // ReactFlow Nodes and Edges State
@@ -112,7 +379,7 @@ export default function WorkflowEditorPage() {
             y: node.position?.y ?? Math.random() * 300 + 100,
           },
           data: {
-            label: `${node.type.toUpperCase()}: ${configLabel(node.config)}`,
+            label: `${node.type.toUpperCase()}: ${configLabel(node.config) || copy.unconfigured}`,
             rawNode: node,
           },
         })) ?? [];
@@ -134,7 +401,7 @@ export default function WorkflowEditorPage() {
       setNodes(initialNodes);
       setEdges(initialEdges);
     }
-  }, [wf, setNodes, setEdges]);
+  }, [copy.unconfigured, wf, setNodes, setEdges]);
 
   // Connect two nodes
   const onConnect = useCallback(
@@ -168,8 +435,7 @@ export default function WorkflowEditorPage() {
   // Trigger executing the workflow run
   const runMutation = useMutation({
     mutationFn: () => apiClient.post<WorkflowRunAccepted>(`/workflows/${id}/run`, {}),
-    onSuccess: (result) =>
-      alert(`工作流已提交！运行状态: ${result.status}，运行 ID: ${result.runId}`),
+    onSuccess: (result) => alert(copy.runSubmitted(result.status, result.runId)),
   });
 
   // Save new workflow DSL version back to database
@@ -178,19 +444,19 @@ export default function WorkflowEditorPage() {
       apiClient.post(`/workflows/${id}/versions`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wf', id] });
-      alert('工作流配置已成功保存！');
+      alert(copy.saved);
     },
     onError: (error: unknown) => {
-      alert(`保存失败: ${errorMessage(error)}`);
+      alert(copy.saveFailed(errorMessage(error)));
     },
   });
   const deleteMutation = useMutation({
     mutationFn: () => apiClient.del(`/workflows/${id}`),
     onSuccess: () => {
-      toast.success('工作流及其版本和运行记录已删除');
+      toast.success(copy.deleted);
       router.push('/dashboard/workflows');
     },
-    onError: (error: unknown) => toast.error(errorMessage(error, '工作流删除失败')),
+    onError: (error: unknown) => toast.error(errorMessage(error, copy.deleteFailed)),
   });
 
   // When node is clicked, show editor pane
@@ -212,7 +478,7 @@ export default function WorkflowEditorPage() {
       type: 'default',
       position: { x: 250, y: 150 },
       data: {
-        label: `${type.toUpperCase()}: 未配置`,
+        label: `${type.toUpperCase()}: ${copy.unconfigured}`,
         rawNode: {
           id: newId,
           type,
@@ -243,7 +509,7 @@ export default function WorkflowEditorPage() {
       nds.map((n) => {
         if (n.id === selectedNode.id) {
           const updatedRaw = { ...n.data.rawNode, config: editConfig };
-          const labelText = configLabel(editConfig) || '已配置';
+          const labelText = configLabel(editConfig) || copy.configured;
           return {
             ...n,
             data: {
@@ -256,7 +522,7 @@ export default function WorkflowEditorPage() {
         return n;
       }),
     );
-    alert('节点属性配置已缓存至画布，别忘了点击右上角的“保存配置”提交哦！');
+    alert(copy.nodeCached);
   };
 
   // Compile and save workflow version
@@ -279,7 +545,7 @@ export default function WorkflowEditorPage() {
 
     saveMutation.mutate({
       dsl: { nodes: dslNodes, edges: dslEdges },
-      changeNote: `可视化配置修改于 ${new Date().toLocaleTimeString()}`,
+      changeNote: copy.changedAt(new Date().toLocaleTimeString()),
     });
   };
 
@@ -287,10 +553,10 @@ export default function WorkflowEditorPage() {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between border-b border-border/40 pb-5">
-          <h1 className="text-xl font-bold tracking-tight">工作流</h1>
+          <h1 className="text-xl font-bold tracking-tight">{copy.workflows}</h1>
         </div>
         <div className="h-[600px] rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground text-sm">
-          加载中...
+          {copy.loading}
         </div>
       </div>
     );
@@ -308,9 +574,9 @@ export default function WorkflowEditorPage() {
             <ArrowLeft className="h-4 w-4" />
           </button>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">{wf?.name ?? '工作流编辑器'}</h1>
+            <h1 className="text-xl font-bold tracking-tight">{wf?.name ?? copy.editorFallback}</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              当前版本: v{wf?.currentVersion ?? 1} · 拖动节点或接头进行可视化连接
+              {copy.currentVersion(wf?.currentVersion ?? 1)} · {copy.editorHint}
             </p>
           </div>
         </div>
@@ -321,12 +587,11 @@ export default function WorkflowEditorPage() {
             variant="ghost"
             className="text-destructive"
             onClick={() => {
-              if (window.confirm('确定删除该工作流、全部版本和运行记录吗？'))
-                deleteMutation.mutate();
+              if (window.confirm(copy.deleteConfirm)) deleteMutation.mutate();
             }}
             disabled={deleteMutation.isPending}
           >
-            <Trash2 className="h-3.5 w-3.5" /> 删除
+            <Trash2 className="h-3.5 w-3.5" /> {copy.delete}
           </Button>
           <Button
             variant="outline"
@@ -334,7 +599,7 @@ export default function WorkflowEditorPage() {
             className="text-xs"
             onClick={() => router.push(`/dashboard/workflows/${id}/runs`)}
           >
-            运行历史
+            {copy.history}
           </Button>
           <Button
             variant="outline"
@@ -343,7 +608,7 @@ export default function WorkflowEditorPage() {
             onClick={handleSaveWorkflow}
             disabled={saveMutation.isPending}
           >
-            <Save className="h-3.5 w-3.5" /> 保存配置
+            <Save className="h-3.5 w-3.5" /> {saveMutation.isPending ? copy.saving : copy.save}
           </Button>
           <Button
             size="sm"
@@ -352,7 +617,7 @@ export default function WorkflowEditorPage() {
             disabled={runMutation.isPending}
           >
             <Play className="h-3.5 w-3.5 fill-current" />{' '}
-            {runMutation.isPending ? '正在运行...' : '运行'}
+            {runMutation.isPending ? copy.running : copy.run}
           </Button>
         </div>
       </div>
@@ -388,7 +653,7 @@ export default function WorkflowEditorPage() {
             <div className="space-y-5">
               <div className="flex items-center justify-between border-b border-border pb-3">
                 <h3 className="text-sm font-bold flex items-center gap-1.5 text-primary">
-                  <Settings2 className="h-4 w-4" /> 属性编辑
+                  <Settings2 className="h-4 w-4" /> {copy.properties}
                 </h3>
                 <span className="rounded bg-muted px-2 py-0.5 text-3xs font-semibold text-muted-foreground uppercase">
                   {selectedNode.data?.rawNode?.type}
@@ -396,25 +661,25 @@ export default function WorkflowEditorPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">节点唯一标识 (ID)</Label>
+                <Label className="text-xs text-muted-foreground">{copy.nodeId}</Label>
                 <Input value={selectedNode.id} disabled className="bg-muted/40 font-mono text-xs" />
               </div>
 
               {/* Node specific configs */}
               {selectedNode.data?.rawNode?.type === 'ai' && (
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">选择 AI 提示词模板 (Prompt Key)</Label>
+                  <Label className="text-xs font-semibold">{copy.promptTemplate}</Label>
                   <select
                     value={configText(editConfig, 'promptKey')}
                     onChange={(e) => setEditConfig({ ...editConfig, promptKey: e.target.value })}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border-border/80 text-foreground"
                   >
                     <option value="" disabled>
-                      -- 请选择提示词模板 --
+                      {copy.choosePrompt}
                     </option>
-                    {PROMPT_OPTIONS.map((o) => (
-                      <option key={o.key} value={o.key}>
-                        {o.label}
+                    {PROMPT_KEYS.map((key) => (
+                      <option key={key} value={key}>
+                        {copy.prompts[key]}
                       </option>
                     ))}
                   </select>
@@ -423,7 +688,7 @@ export default function WorkflowEditorPage() {
 
               {selectedNode.data?.rawNode?.type === 'email' && (
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">通知收件人邮箱 (Email Address)</Label>
+                  <Label className="text-xs font-semibold">{copy.recipient}</Label>
                   <Input
                     type="email"
                     value={configText(editConfig, 'to')}
@@ -431,18 +696,18 @@ export default function WorkflowEditorPage() {
                     placeholder="e.g. boss@company.com"
                     className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
                   />
-                  <Label className="text-xs font-semibold">邮件主题</Label>
+                  <Label className="text-xs font-semibold">{copy.subject}</Label>
                   <Input
                     value={configText(editConfig, 'subject')}
                     onChange={(e) => setEditConfig({ ...editConfig, subject: e.target.value })}
-                    placeholder="工作流执行结果"
+                    placeholder={copy.subjectPlaceholder}
                     className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
                   />
-                  <Label className="text-xs font-semibold">邮件正文模板</Label>
+                  <Label className="text-xs font-semibold">{copy.body}</Label>
                   <textarea
                     value={configText(editConfig, 'body')}
                     onChange={(e) => setEditConfig({ ...editConfig, body: e.target.value })}
-                    placeholder="执行结果：{{input}}"
+                    placeholder={copy.bodyPlaceholder}
                     rows={4}
                     className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   />
@@ -451,7 +716,7 @@ export default function WorkflowEditorPage() {
 
               {selectedNode.data?.rawNode?.type === 'webhook' && (
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">网络钩子地址 (Webhook URL)</Label>
+                  <Label className="text-xs font-semibold">{copy.webhook}</Label>
                   <Input
                     type="url"
                     value={configText(editConfig, 'url')}
@@ -464,7 +729,7 @@ export default function WorkflowEditorPage() {
 
               {selectedNode.data?.rawNode?.type === 'transform' && (
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">转换模板内容 (JSON/Txt Template)</Label>
+                  <Label className="text-xs font-semibold">{copy.transform}</Label>
                   <textarea
                     value={configText(editConfig, 'template')}
                     onChange={(e) => setEditConfig({ ...editConfig, template: e.target.value })}
@@ -477,14 +742,14 @@ export default function WorkflowEditorPage() {
 
               {selectedNode.data?.rawNode?.type === 'condition' && (
                 <div className="space-y-3">
-                  <Label className="text-xs font-semibold">比较字段路径</Label>
+                  <Label className="text-xs font-semibold">{copy.field}</Label>
                   <Input
                     value={configText(editConfig, 'field')}
                     onChange={(e) => setEditConfig({ ...editConfig, field: e.target.value })}
                     placeholder="e.g. score"
                     className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
                   />
-                  <Label className="text-xs font-semibold">比较操作符</Label>
+                  <Label className="text-xs font-semibold">{copy.operator}</Label>
                   <select
                     value={configText(editConfig, 'operator') || 'eq'}
                     onChange={(e) => setEditConfig({ ...editConfig, operator: e.target.value })}
@@ -498,23 +763,19 @@ export default function WorkflowEditorPage() {
                       ),
                     )}
                   </select>
-                  <Label className="text-xs font-semibold">期望值</Label>
+                  <Label className="text-xs font-semibold">{copy.value}</Label>
                   <Input
                     value={configText(editConfig, 'value')}
                     onChange={(e) => setEditConfig({ ...editConfig, value: e.target.value })}
                     placeholder="e.g. 0.8"
                     className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
                   />
-                  <p className="text-[10px] text-muted-foreground">
-                    条件节点的第一条出边标记为 true，第二条出边标记为 false。
-                  </p>
+                  <p className="text-[10px] text-muted-foreground">{copy.conditionHint}</p>
                 </div>
               )}
 
               {selectedNode.data?.rawNode?.type === 'trigger' && (
-                <p className="text-xs text-muted-foreground leading-normal">
-                  手动触发器节点不需要额外属性配置。连接该节点的下一个节点将自动接收到初始输入负载。
-                </p>
+                <p className="text-xs text-muted-foreground leading-normal">{copy.triggerHint}</p>
               )}
 
               <div className="flex gap-2 pt-3 border-t border-border/60">
@@ -524,10 +785,10 @@ export default function WorkflowEditorPage() {
                   className="grow text-xs gap-1"
                   onClick={deleteNode}
                 >
-                  <Trash2 className="h-3.5 w-3.5" /> 删除节点
+                  <Trash2 className="h-3.5 w-3.5" /> {copy.deleteNode}
                 </Button>
                 <Button size="sm" className="grow text-xs" onClick={handleSaveNodeConfig}>
-                  应用更改
+                  {copy.apply}
                 </Button>
               </div>
             </div>
@@ -536,12 +797,12 @@ export default function WorkflowEditorPage() {
             <div className="space-y-5">
               <div className="border-b border-border pb-3">
                 <h3 className="text-sm font-bold flex items-center gap-1.5 text-foreground">
-                  <Plus className="h-4 w-4 text-primary" /> 添加节点到画布
+                  <Plus className="h-4 w-4 text-primary" /> {copy.addNode}
                 </h3>
               </div>
 
               <div className="space-y-3.5">
-                {NODE_TYPES.map((nt) => (
+                {nodeTypes.map((nt) => (
                   <button
                     key={nt.type}
                     onClick={() => addNode(nt.type)}
@@ -561,19 +822,17 @@ export default function WorkflowEditorPage() {
               <div className="rounded-lg bg-muted/30 p-3 text-3xs text-muted-foreground leading-relaxed flex gap-1.5 border border-border/40">
                 <HelpCircle className="h-4 w-4 shrink-0 text-primary/70" />
                 <div>
-                  <span className="font-bold text-foreground block mb-0.5">如何配置及连接？</span>
-                  1. 选择左侧节点可在本面板配置其专有属性参数。
+                  <span className="font-bold text-foreground block mb-0.5">{copy.helpTitle}</span>
+                  1. {copy.helpOne}
                   <br />
-                  2. 拖动节点右侧/左侧的连接点连接下一个节点以建立 DAG 工作流逻辑。
+                  2. {copy.helpTwo}
                 </div>
               </div>
             </div>
           )}
 
           <div className="pt-4 border-t border-border mt-6 shrink-0">
-            <p className="text-[10px] text-muted-foreground text-center">
-              MatrixFlow AI · 可靠的跨境电商自动化核心引擎
-            </p>
+            <p className="text-[10px] text-muted-foreground text-center">{copy.footer}</p>
           </div>
         </div>
       </div>
