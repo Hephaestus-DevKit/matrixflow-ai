@@ -167,6 +167,7 @@ export default function ContentFactoryPage() {
       output: 'AI 输出：',
       deleted: '内容项目已删除',
       deleteFailed: '内容项目删除失败',
+      deleteProject: '删除内容项目',
     },
     'zh-TW': {
       title: '內容工廠',
@@ -189,6 +190,7 @@ export default function ContentFactoryPage() {
       output: 'AI 輸出：',
       deleted: '內容專案已刪除',
       deleteFailed: '內容專案刪除失敗',
+      deleteProject: '刪除內容專案',
     },
     en: {
       title: 'Content factory',
@@ -211,6 +213,7 @@ export default function ContentFactoryPage() {
       output: 'AI output:',
       deleted: 'Content project deleted',
       deleteFailed: 'Could not delete the content project',
+      deleteProject: 'Delete content project',
     },
   }[locale];
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -422,7 +425,7 @@ export default function ContentFactoryPage() {
               </button>
               <button
                 type="button"
-                aria-label={`删除内容项目 ${project.name}`}
+                aria-label={`${copy.deleteProject} ${project.name}`}
                 onClick={() => void deleteProject(project.id)}
                 className="border-l border-current/10 px-2 hover:bg-destructive/10 hover:text-destructive"
               >
