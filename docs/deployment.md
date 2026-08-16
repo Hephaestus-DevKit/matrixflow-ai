@@ -100,7 +100,10 @@ Appwrite Web Platform 同时登记生产域名和 `localhost`。向 `main` 推�
 2. Appwrite Team 成员关系；
 3. 客户端业务表创建被拒绝，Function 写入可被本团队读取；
 4. `matrixflow-core` 的 `/health`；
-5. 测试数据删除。
+5. Provider 已配置时执行一次真实、低 token 的 Agent 调用，并校验 Provider、协议、模型与非空输出；
+6. 无论验证成功或失败都清理测试 Agent 和当前会话。
+
+CI 中的生产部署 smoke 会设置 `MATRIXFLOW_REQUIRE_AI_SMOKE=true`：如果 Provider 未配置或真实调用失败，发布任务必须失败。手动诊断未配置 Provider 的环境时可以不设置该变量，此时脚本仍验证认证、租户边界和 Function，并明确报告 AI smoke 被跳过。
 
 随后人工验证注册、登录、组织切换、知识库上传和工作流 true/false 分支。未配置 AI key 时应收到明确的 503 配置错误；这属于预期失败关闭。
 

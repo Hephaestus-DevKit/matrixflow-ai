@@ -10,7 +10,7 @@ import {
   rowPermissions,
   enforceResourceLimit,
 } from '../src/runtime.js';
-import { splitTextIntoChunks } from '../src/features.js';
+import { deleteAgent, splitTextIntoChunks } from '../src/features.js';
 import { billingSignature, isValidBillingSignature } from '../src/billing.js';
 import { estimateCostUsd } from '../src/provider.js';
 
@@ -65,6 +65,45 @@ test('owners can access admin routes', () => {
 test('tenant rows expose read-only permissions to browser clients', () => {
   assert.deepEqual(rowPermissions('team-1', 'agents'), ['read("team:team-1")']);
   assert.deepEqual(rowPermissions('team-1', 'audit_logs'), []);
+});
+
+test('deleting an agent removes tenant-owned run history before the parent row', async () => {
+  const deleted = [];
+  const created = [];
+  const services = {
+    tables: {
+      listRows: async ({ tableId }) =>
+        tableId === 'agent_runs'
+          ? {
+              total: 2,
+              rows: [
+                { $id: 'run-1', organizationId: 'team-1', agentId: 'agent-1' },
+                { $id: 'run-2', organizationId: 'team-1', agentId: 'agent-1' },
+              ],
+            }
+          : { total: 0, rows: [] },
+      getRow: async ({ tableId, rowId }) => ({
+        $id: rowId,
+        organizationId: 'team-1',
+        ...(tableId === 'agents' ? { name: 'Smoke agent' } : {}),
+      }),
+      deleteRow: async ({ tableId, rowId }) => {
+        deleted.push(`${tableId}:${rowId}`);
+      },
+      createRow: async (input) => {
+        created.push(input);
+        return { $id: input.rowId, ...input.data };
+      },
+    },
+  };
+
+  const result = await deleteAgent(services, { teamId: 'team-1', userId: 'user-1' }, 'agent-1');
+
+  assert.deepEqual(result, { deleted: true, deletedRuns: 2 });
+  assert.deepEqual(deleted.slice(0, 2).sort(), ['agent_runs:run-1', 'agent_runs:run-2']);
+  assert.equal(deleted[2], 'agents:agent-1');
+  assert.equal(created[0].tableId, 'audit_logs');
+  assert.equal(JSON.parse(created[0].data.metadata).deletedRuns, 2);
 });
 
 test('knowledge chunks stay below the Appwrite row byte limit', () => {
