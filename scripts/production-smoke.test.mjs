@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateProductionPage } from './production-smoke.mjs';
+import { validateLocalePage, validateProductionPage } from './production-smoke.mjs';
 
 const canonicalOrigin = 'https://matrixflow-ai.vercel.app';
 const route = { path: '/pricing', marker: '从可验证的免费版本开始' };
@@ -48,4 +48,28 @@ test('fails fast on redirects or non-success responses', () => {
     validateProductionPage({ route, status: 307, headers: {}, body: '', canonicalOrigin }),
     ['/pricing: expected 200, received 307'],
   );
+});
+
+test('requires the selected locale in server-rendered content and metadata', () => {
+  assert.deepEqual(
+    validateLocalePage({
+      locale: 'en',
+      marker: 'Built for cross-border commerce · AI workforce OS',
+      title: 'MatrixFlow AI — AI Workforce OS',
+      status: 200,
+      body: '<html lang="en"><head><title>MatrixFlow AI — AI Workforce OS</title></head><body>Built for cross-border commerce · AI workforce OS</body></html>',
+    }),
+    [],
+  );
+
+  const failures = validateLocalePage({
+    locale: 'zh-TW',
+    marker: '跨境電商專屬 · AI 員工作業系統',
+    title: 'MatrixFlow AI — AI 員工作業系統',
+    status: 200,
+    body: '<html lang="zh-CN"><head><title>MatrixFlow AI</title></head><body>MatrixFlow</body></html>',
+  });
+  assert.ok(failures.some((failure) => failure.includes('document language')));
+  assert.ok(failures.some((failure) => failure.includes('content marker')));
+  assert.ok(failures.some((failure) => failure.includes('localized title')));
 });

@@ -1,5 +1,17 @@
 import { expect, test } from '@playwright/test';
 
+test('server-renders the persisted locale before hydration', async ({ context }) => {
+  await context.addCookies([
+    { name: 'matrixflow-locale', value: 'en', domain: '127.0.0.1', path: '/' },
+  ]);
+  const response = await context.request.get('/');
+  const body = await response.text();
+  expect(response.status()).toBe(200);
+  expect(body).toMatch(/<html\b[^>]*\blang=["']en["']/i);
+  expect(body).toContain('Built for cross-border commerce · AI workforce OS');
+  expect(body).toContain('<title>MatrixFlow AI — AI Workforce OS</title>');
+});
+
 test('switches among all three locales and persists the choice', async ({ page }) => {
   await page.goto('/');
   const locale = page.locator('header select');

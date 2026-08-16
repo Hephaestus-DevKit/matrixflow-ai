@@ -45,6 +45,7 @@ CRM 客户列表使用显式分页：`GET /crm/customers?limit=50&offset=0` 返�
 | 用途               | 方法   | 路径                    |
 | ------------------ | ------ | ----------------------- |
 | 健康检查           | GET    | `/health`               |
+| 管理健康诊断       | GET    | `/admin/health`         |
 | API Key 列表       | GET    | `/api-keys`             |
 | API Key 创建       | POST   | `/api-keys`             |
 | API Key 撤销       | DELETE | `/api-keys/:id`         |
@@ -56,6 +57,8 @@ CRM 客户列表使用显式分页：`GET /crm/customers?limit=50&offset=0` 返�
 | 创建托管结账       | POST   | `/billing/checkout`     |
 
 `/account` 删除需要管理员权限，并在请求体中精确提交 `confirmation: <team-id>`；安全审计、订阅、发票、交易和计费事件按保留策略保留，接口会返回逐表删除清单。
+
+`/admin/health` 仅允许 owner/admin 会话访问，返回发布版本、Function/Provider/异步 Worker/计费就绪状态和不含密钥的 AI 协议信息；API Key 即使拥有业务作用域也不能调用管理员接口。
 
 Stripe 供应商回调使用服务端地址 `/billing/stripe-webhook`，由 Stripe 签名验证后再进入内部账单事件流程；它不接受浏览器请求，也不应暴露在前端代码中。
 

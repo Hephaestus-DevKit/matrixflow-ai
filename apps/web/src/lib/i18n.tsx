@@ -130,8 +130,13 @@ const messages = {
     'auth.backHome': '返回首页',
     'auth.welcomeBack': '欢迎回来',
     'auth.loginDescription': '验证身份后继续管理你的 AI 员工与团队业务。',
+    'auth.loginFailed': '登录失败，请检查账号状态后重试',
+    'auth.mfaFailed': '验证码错误或已失效，请重新登录',
+    'auth.otpSendFailed': '验证码发送失败，请稍后重试',
+    'auth.otpVerifyFailed': '验证码错误或已失效',
     'auth.registerTitle': '创建你的 AI 团队',
     'auth.registerDescription': '填写基础资料，邮箱验证完成后即可进入工作台。',
+    'auth.registerFailed': '注册失败，请稍后重试',
     'auth.verifyDescription': '输入邮件中的 6 位验证码，完成账号绑定与首次登录。',
     'auth.passwordLogin': '密码登录',
     'auth.otpLogin': '邮箱验证码',
@@ -207,6 +212,8 @@ const messages = {
     'dashboard.billingDescription': '订阅和额度',
     'dashboard.settings': '设置',
     'dashboard.settingsDescription': '账号与组织',
+    'dashboard.admin': '管理中心',
+    'dashboard.adminDescription': '运行健康与安全状态',
     'dashboard.openNavigation': '打开导航',
     'dashboard.closeNavigation': '关闭导航',
     'dashboard.logout': '退出',
@@ -352,8 +359,13 @@ const messages = {
     'auth.backHome': '返回首頁',
     'auth.welcomeBack': '歡迎回來',
     'auth.loginDescription': '驗證身分後繼續管理你的 AI 員工與團隊業務。',
+    'auth.loginFailed': '登入失敗，請檢查帳號狀態後再試',
+    'auth.mfaFailed': '驗證碼錯誤或已失效，請重新登入',
+    'auth.otpSendFailed': '驗證碼傳送失敗，請稍後再試',
+    'auth.otpVerifyFailed': '驗證碼錯誤或已失效',
     'auth.registerTitle': '建立你的 AI 團隊',
     'auth.registerDescription': '填寫基本資料，完成電子郵件驗證後即可進入工作台。',
+    'auth.registerFailed': '註冊失敗，請稍後再試',
     'auth.verifyDescription': '輸入郵件中的 6 位驗證碼，完成帳號綁定與首次登入。',
     'auth.passwordLogin': '密碼登入',
     'auth.otpLogin': '電子郵件驗證碼',
@@ -429,6 +441,8 @@ const messages = {
     'dashboard.billingDescription': '訂閱與額度',
     'dashboard.settings': '設定',
     'dashboard.settingsDescription': '帳號與組織',
+    'dashboard.admin': '管理中心',
+    'dashboard.adminDescription': '執行健康與安全狀態',
     'dashboard.openNavigation': '開啟導覽',
     'dashboard.closeNavigation': '關閉導覽',
     'dashboard.logout': '登出',
@@ -576,8 +590,13 @@ const messages = {
     'auth.welcomeBack': 'Welcome back',
     'auth.loginDescription':
       'Verify your identity to manage your AI workforce and team operations.',
+    'auth.loginFailed': 'Sign-in failed. Check your account status and try again.',
+    'auth.mfaFailed': 'That code is invalid or expired. Sign in again.',
+    'auth.otpSendFailed': 'The verification code could not be sent. Try again shortly.',
+    'auth.otpVerifyFailed': 'That verification code is invalid or expired.',
     'auth.registerTitle': 'Create your AI team',
     'auth.registerDescription': 'Add your details, verify your email, and enter the workspace.',
+    'auth.registerFailed': 'Registration failed. Try again shortly.',
     'auth.verifyDescription':
       'Enter the 6-digit code from your email to finish setting up your account.',
     'auth.passwordLogin': 'Password',
@@ -656,6 +675,8 @@ const messages = {
     'dashboard.billingDescription': 'Subscription and quota',
     'dashboard.settings': 'Settings',
     'dashboard.settingsDescription': 'Account and organization',
+    'dashboard.admin': 'Administration',
+    'dashboard.adminDescription': 'Runtime health and security status',
     'dashboard.openNavigation': 'Open navigation',
     'dashboard.closeNavigation': 'Close navigation',
     'dashboard.logout': 'Log out',
@@ -716,8 +737,14 @@ function isLocale(value: string | null): value is Locale {
   return value === 'zh-CN' || value === 'zh-TW' || value === 'en';
 }
 
-export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('zh-CN');
+export function LocaleProvider({
+  children,
+  initialLocale = 'zh-CN',
+}: {
+  children: ReactNode;
+  initialLocale?: Locale;
+}) {
+  const [locale, setLocaleState] = useState<Locale>(initialLocale);
   const pathname = usePathname();
   const titleRef = useRef('');
 

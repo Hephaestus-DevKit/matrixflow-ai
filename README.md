@@ -21,6 +21,7 @@
 - 全站简体中文、繁體中文与 English 三语切换；语言选择会在刷新和认证页面间保持。
 - Appwrite 原生升级申请闭环：定价页保留套餐意向，注册后直达计费页，团队成员可提交 Pro/Team 申请并由服务端去重、审计与后续结算适配器承接。
 - Appwrite 配置即代码、幂等资源更新、独立后端部署流水线、云函数安全测试和真实 smoke test。
+- 管理员只读运行健康面板展示 Function、Provider、异步 Worker 与计费依赖状态，不向浏览器暴露密钥。
 - 统一错误边界、请求体与分页上限、租户归属不可变、Provider 端点规范化和生产级可观测请求 ID。
 - 写入请求默认使用幂等键，上传、索引、资源创建在网络重试时不会重复落库；Free 预览会在服务端执行 AI 调用、AI 员工、内容项目、知识库和工作流额度。
 - 套餐目录与权益由 Function 服务端统一判定；订阅状态、计费事件采用 Appwrite 表保存，并提供带 HMAC 签名校验和事件去重的 `/billing/webhook` 适配入口。没有配置支付供应商时仍保持 Free 预览，不会伪造扣款。
@@ -111,6 +112,8 @@ pnpm audit --prod --audit-level=high
 npm audit --omit=dev --prefix apps/functions/matrixflow-core
 pnpm smoke:production
 ```
+
+生产公开 smoke 会分别携带简体中文、繁體中文与 English 的持久化语言 Cookie，校验服务端首屏的 `<html lang>`、标题和页面主体，避免只在 hydration 后看起来正确。
 
 ## Appwrite 部署
 

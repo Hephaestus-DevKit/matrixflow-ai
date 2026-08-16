@@ -64,6 +64,22 @@ try {
   if (requireAiSmoke && !aiReady) {
     throw new Error('Production AI smoke is required, but /health reports no configured provider');
   }
+  const adminHealth = await execute('/admin/health', {}, ExecutionMethod.GET);
+  if (adminHealth.responseStatusCode !== 200) {
+    throw new Error(`Admin health check failed with ${adminHealth.responseStatusCode}`);
+  }
+  const adminHealthPayload = JSON.parse(adminHealth.responseBody)?.data;
+  if (
+    !['ok', 'degraded', 'failed'].includes(adminHealthPayload?.status) ||
+    !adminHealthPayload?.checks ||
+    typeof adminHealthPayload?.release !== 'string'
+  ) {
+    throw new Error('Admin health response did not return a safe readiness snapshot');
+  }
+  const serializedHealth = JSON.stringify(adminHealthPayload);
+  if (/["'][^"']*(?:api[_-]?key|secret|token|password)[^"']*["']\s*:/i.test(serializedHealth)) {
+    throw new Error('Admin health response leaked a secret-shaped field');
+  }
 
   let directCreateWasDenied = false;
   try {

@@ -8,6 +8,7 @@ import {
   LineChart,
   MessageSquare,
   Settings,
+  ShieldCheck,
   Store,
   type LucideIcon,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ export interface DashboardNavigationItem {
   description: string;
   labelKey: MessageKey;
   descriptionKey: MessageKey;
+  requiresPermission?: string;
 }
 
 export interface DashboardNavigationGroup {
@@ -119,6 +121,15 @@ export const DASHBOARD_NAVIGATION: DashboardNavigationGroup[] = [
         description: '账号与组织',
         labelKey: 'dashboard.settings',
         descriptionKey: 'dashboard.settingsDescription',
+      },
+      {
+        href: '/dashboard/admin',
+        icon: ShieldCheck,
+        label: '管理中心',
+        description: '运行健康与安全状态',
+        labelKey: 'dashboard.admin',
+        descriptionKey: 'dashboard.adminDescription',
+        requiresPermission: 'admin.manage',
       },
     ],
   },

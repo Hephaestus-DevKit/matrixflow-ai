@@ -19,6 +19,8 @@ MatrixFlow 当前的定位是“生产可用 Beta / 候选版”：核心数据�
 - GitHub CI、CodeQL、依赖安全审计、Vercel 生产构建和 Appwrite Schema 即代码。
 - Chromium 浏览器 E2E 自动验证三语切换持久化、英文认证页和 390px 移动端无横向溢出。
 - 生产公开面每小时由 GitHub Actions smoke 监测，首页安全响应头异常会直接告警。
+- 简体中文、繁體中文与 English 会从持久化 Cookie 直接服务端渲染；生产 smoke 校验三语首屏语言、标题和主体，不依赖 hydration 后修正。
+- owner/admin 可在管理中心读取不含密钥的发布版本与依赖健康状态；普通成员和 API Key 均由 Function 拒绝。
 - 主分支保护要求当前 CI 与 CodeQL 通过，并启用线性历史和会话解决。
 - 生产运行的 SLO、告警、事件等级、发布证据与恢复演练标准已在 `docs/operations.md` 定义。
 

@@ -30,7 +30,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale} suppressHydrationWarning data-scroll-behavior="smooth">
       <body className="min-h-screen bg-background font-sans antialiased">
-        <Providers>
+        <Providers initialLocale={locale}>
           <SkipLink />
           {children}
           <Toaster richColors position="top-right" />

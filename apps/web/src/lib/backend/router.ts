@@ -163,6 +163,7 @@ async function routeGet(path: string) {
   if (path === '/api-keys') return executeCore('/api-keys', {}, ExecutionMethod.GET);
   if (path === '/jobs') return executeCore('/jobs', {}, ExecutionMethod.GET);
   if (path.startsWith('/jobs/')) return executeCore(path, {}, ExecutionMethod.GET);
+  if (path === '/admin/health') return executeCore('/admin/health', {}, ExecutionMethod.GET);
   if (path.startsWith('/admin/'))
     throw new BackendError('管理模块正在安全重构中', 503, 'ADMIN_FEATURE_DISABLED');
   throw new BackendError('未找到请求的资源', 404, 'ROUTE_NOT_FOUND');
