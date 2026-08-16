@@ -76,8 +76,10 @@ test('keeps the complete public journey inside the 320px minimum width in every 
   await page.setViewportSize({ width: 320, height: 800 });
 
   for (const locale of ['zh-CN', 'zh-TW', 'en']) {
+    await page
+      .context()
+      .addCookies([{ name: 'matrixflow-locale', value: locale, domain: '127.0.0.1', path: '/' }]);
     await page.goto('/');
-    await page.locator('header select').selectOption(locale);
     await expect(page.locator('html')).toHaveAttribute('lang', locale);
 
     for (const path of ['/', '/pricing', '/login', '/register']) {

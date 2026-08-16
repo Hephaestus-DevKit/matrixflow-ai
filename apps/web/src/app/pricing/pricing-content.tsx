@@ -162,7 +162,11 @@ export function PricingContent() {
                   </li>
                 ))}
               </ul>
-              <Button asChild className="mt-8 w-full" variant={available ? 'default' : 'outline'}>
+              <Button
+                asChild
+                className="mt-8 h-auto min-h-10 w-full whitespace-normal px-3 py-2 text-center leading-5"
+                variant={available ? 'default' : 'outline'}
+              >
                 <Link href={available ? '/register' : `/register?plan=${plan.name.toLowerCase()}`}>
                   {available ? copy.start : copy.waitlistAction}
                 </Link>
