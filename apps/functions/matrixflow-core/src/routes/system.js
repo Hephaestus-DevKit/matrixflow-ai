@@ -15,6 +15,20 @@ export async function handleSystemRoute({
   ai,
   readinessSnapshot,
 }) {
+  if (method === 'GET' && path === '/admin/health') {
+    requireAdmin(membership);
+    const readiness = readinessSnapshot();
+    return {
+      status: readiness.status,
+      service: 'matrixflow-core',
+      release: process.env.MATRIXFLOW_RELEASE || 'production',
+      checks: readiness.checks,
+      ai: readiness.ai,
+      requestId: context.requestId,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   if (method === 'GET' && path === '/health') {
     const plan = await getTeamPlan(services, context.teamId);
     const readiness = readinessSnapshot();

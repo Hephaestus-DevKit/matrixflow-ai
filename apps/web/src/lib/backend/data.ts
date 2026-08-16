@@ -72,24 +72,28 @@ function teamPermissions(organizationId: string) {
   return [Permission.read(Role.team(organizationId))];
 }
 
-async function scopedUploadFileId(organizationId: string, idempotencyKey: string) {
-  const input = new TextEncoder().encode(`matrixflow-upload:${organizationId}:${idempotencyKey}`);
+async function scopedUploadFileId(
+  organizationId: string,
+  idempotencyKey: string,
+  file: File,
+): Promise<string | undefined> {
   const subtle = globalThis.crypto?.subtle;
-  if (subtle) {
-    const digest = await subtle.digest('SHA-256', input);
-    const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0'))
-      .join('')
-      .slice(0, 32);
-    // Appwrite file IDs are limited to 36 characters; the tenant-scoped
-    // digest keeps retries stable without allowing cross-organization ID
-    // collisions from a reused client idempotency key.
-    return `mf-${hex}`;
-  }
-  // Older embedded browsers may not expose SubtleCrypto. Keep a bounded,
-  // tenant-derived fallback so upload retries remain scoped and valid.
-  const fallback = organizationId.replace(/[^A-Za-z0-9]/g, '').slice(-12);
-  const key = idempotencyKey.replace(/[^A-Za-z0-9]/g, '').slice(0, 20);
-  return `mf-${fallback}-${key}`.slice(0, 36);
+  if (!subtle) return undefined;
+  const contentDigest = await subtle.digest('SHA-256', await file.arrayBuffer());
+  const contentHex = Array.from(new Uint8Array(contentDigest), (byte) =>
+    byte.toString(16).padStart(2, '0'),
+  ).join('');
+  const identity = new TextEncoder().encode(
+    `matrixflow-upload:${organizationId}:${idempotencyKey}:${contentHex}:${file.name}:${file.type}`,
+  );
+  const digest = await subtle.digest('SHA-256', identity);
+  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 32);
+  // Appwrite file IDs are limited to 36 characters. Include the file content
+  // and metadata in the tenant-scoped digest so reusing an idempotency key
+  // with a different upload cannot silently attach the old object.
+  return `mf-${hex}`;
 }
 
 function assertOwned(row: Data, organizationId: string, field = 'organizationId') {
@@ -210,7 +214,7 @@ export async function uploadKnowledgeFile(
   const organizationId = getOrganizationContext();
   const permissions = teamPermissions(organizationId);
   const deterministicFileId = options.idempotencyKey
-    ? await scopedUploadFileId(organizationId, options.idempotencyKey)
+    ? await scopedUploadFileId(organizationId, options.idempotencyKey, file)
     : undefined;
   const fileId =
     deterministicFileId && deterministicFileId.length >= 8 ? deterministicFileId : ID.unique();
@@ -232,8 +236,12 @@ export async function uploadKnowledgeFile(
           bucketId: KNOWLEDGE_BUCKET_ID,
           fileId: deterministicFileId,
         });
-        if (Number(existing.sizeOriginal) !== file.size)
-          throw new BackendError('同一幂等键对应的文件大小不一致', 409, 'UPLOAD_RETRY_CONFLICT');
+        if (
+          Number(existing.sizeOriginal) !== file.size ||
+          (existing.name && existing.name !== file.name) ||
+          (existing.mimeType && file.type && existing.mimeType !== file.type)
+        )
+          throw new BackendError('同一幂等键对应的文件内容不一致', 409, 'UPLOAD_RETRY_CONFLICT');
         uploaded = existing;
       } catch (retryError) {
         if (retryError instanceof BackendError) throw retryError;

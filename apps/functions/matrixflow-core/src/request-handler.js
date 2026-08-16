@@ -42,6 +42,19 @@ function bearerToken(headers) {
   return matched?.[1]?.trim() || '';
 }
 
+function assertJsonContentType(req, method) {
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return;
+  const contentType = singleHeader(req.headers, 'content-type');
+  // Appwrite may omit the header when it has already parsed bodyJson. Keep
+  // that compatibility path, but reject an explicitly non-JSON payload
+  // before any tenant or business work starts.
+  if (
+    contentType &&
+    !/^(?:application\/json|application\/[^;]+\+json)(?:\s*;|$)/i.test(contentType)
+  )
+    throw new HttpError('请求内容类型必须是 JSON', 415, 'UNSUPPORTED_MEDIA_TYPE');
+}
+
 function safeStatus(caught) {
   const numericCode = Number(caught?.code);
   const candidate = Number(
@@ -81,6 +94,8 @@ export function createRequestHandler({ handleRoute, readinessSnapshot, dependenc
     try {
       if (!SUPPORTED_METHODS.has(method))
         throw new HttpError('不支持的请求方法', 405, 'METHOD_NOT_ALLOWED');
+
+      assertJsonContentType(req, method);
 
       if (path === '/healthz' && method === 'GET')
         return res.json(

@@ -48,7 +48,7 @@ export default function RegisterPage() {
       setStep('otp');
       setCountdown(60);
     } catch (cause) {
-      setError(authErrorMessage(cause, '注册失败，请稍后重试', locale));
+      setError(authErrorMessage(cause, t('auth.registerFailed'), locale));
     }
   }
 
@@ -60,7 +60,7 @@ export default function RegisterPage() {
       await verifyOtp(userId, otpCode.trim(), name.trim());
       router.replace(getPostRegistrationPath());
     } catch (cause) {
-      setError(authErrorMessage(cause, '验证码不正确或已失效', locale));
+      setError(authErrorMessage(cause, t('auth.otpVerifyFailed'), locale));
     }
   }
 

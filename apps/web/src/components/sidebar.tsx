@@ -11,7 +11,7 @@ import { useLocale } from '@/lib/i18n';
 
 export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
-  const { user, organizationId } = useAuth();
+  const { user, organizationId, hasPerm } = useAuth();
   const membership = user?.memberships.find((item) => item.organizationId === organizationId);
   const { t } = useLocale();
 
@@ -60,43 +60,45 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
               {t(group.labelKey)}
             </p>
             <div className="space-y-1">
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const isActive =
-                  pathname === item.href ||
-                  (item.href !== '/dashboard' && pathname.startsWith(`${item.href}/`));
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onClose}
-                    aria-current={isActive ? 'page' : undefined}
-                    className={cn(
-                      'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                      isActive
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
-                    )}
-                  >
-                    <span
+              {group.items
+                .filter((item) => !item.requiresPermission || hasPerm(item.requiresPermission))
+                .map((item) => {
+                  const Icon = item.icon;
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href !== '/dashboard' && pathname.startsWith(`${item.href}/`));
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onClose}
+                      aria-current={isActive ? 'page' : undefined}
                       className={cn(
-                        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors',
+                        'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                         isActive
-                          ? 'bg-primary text-primary-foreground shadow-glow-sm'
-                          : 'bg-muted/70',
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
                       )}
                     >
-                      <Icon className="h-4 w-4" aria-hidden="true" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate leading-4">{t(item.labelKey)}</span>
-                      <span className="mt-0.5 block truncate text-[0.6875rem] font-normal text-muted-foreground">
-                        {t(item.descriptionKey)}
+                      <span
+                        className={cn(
+                          'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors',
+                          isActive
+                            ? 'bg-primary text-primary-foreground shadow-glow-sm'
+                            : 'bg-muted/70',
+                        )}
+                      >
+                        <Icon className="h-4 w-4" aria-hidden="true" />
                       </span>
-                    </span>
-                  </Link>
-                );
-              })}
+                      <span className="min-w-0">
+                        <span className="block truncate leading-4">{t(item.labelKey)}</span>
+                        <span className="mt-0.5 block truncate text-[0.6875rem] font-normal text-muted-foreground">
+                          {t(item.descriptionKey)}
+                        </span>
+                      </span>
+                    </Link>
+                  );
+                })}
             </div>
           </div>
         ))}

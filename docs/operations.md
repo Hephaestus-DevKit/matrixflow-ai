@@ -18,7 +18,7 @@
 
 ## 必须告警
 
-- 生产公开 smoke 连续两次失败，或安全响应头、canonical、默认语言和路由主体标记异常。
+- 生产公开 smoke 连续两次失败，或安全响应头、canonical、三语服务端首屏语言/标题/主体标记异常。
 - Function 5xx 比例 5 分钟内超过 2%，或 p95 延迟连续 10 分钟超标。
 - Anthropic/OpenAI-compatible Provider 连续失败、429 激增、凭据无效或预算接近上限。
 - Appwrite 数据库、Storage、Functions 或认证服务不可用。

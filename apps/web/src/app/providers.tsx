@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { ThemeProvider } from 'next-themes';
 import { ApiError } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-store';
-import { LocaleProvider } from '@/lib/i18n';
+import { LocaleProvider, type Locale } from '@/lib/i18n';
 
 function OrganizationCacheBoundary({ queryClient }: { queryClient: QueryClient }) {
   const organizationId = useAuth((state) => state.organizationId);
@@ -19,7 +19,13 @@ function OrganizationCacheBoundary({ queryClient }: { queryClient: QueryClient }
   return null;
 }
 
-export function Providers({ children }: { children: ReactNode }) {
+export function Providers({
+  children,
+  initialLocale,
+}: {
+  children: ReactNode;
+  initialLocale: Locale;
+}) {
   const [qc] = useState(
     () =>
       new QueryClient({
@@ -42,7 +48,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={qc}>
       <OrganizationCacheBoundary queryClient={qc} />
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-        <LocaleProvider>{children}</LocaleProvider>
+        <LocaleProvider initialLocale={initialLocale}>{children}</LocaleProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

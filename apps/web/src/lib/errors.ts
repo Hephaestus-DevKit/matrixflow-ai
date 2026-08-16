@@ -113,6 +113,7 @@ const ERROR_COPY_BY_CODE: Record<string, keyof (typeof GENERIC_ERROR_COPY)['en']
   ADMIN_FEATURE_DISABLED: 'adminDisabled',
   PAYMENTS_DISABLED: 'paymentsDisabled',
   METHOD_NOT_ALLOWED: 'invalidRequest',
+  UNSUPPORTED_MEDIA_TYPE: 'invalidRequest',
   INVALID_REQUEST: 'invalidRequest',
   FILE_REQUIRED: 'invalidRequest',
   FILE_TOO_LARGE: 'tooLarge',

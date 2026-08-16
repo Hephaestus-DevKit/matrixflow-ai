@@ -21,7 +21,8 @@ async function handleRoute({ services, context, membership, path, method, body }
     path === '/account/export' ||
     path === '/account' ||
     segments[0] === 'api-keys' ||
-    segments[0] === 'jobs';
+    segments[0] === 'jobs' ||
+    segments[0] === 'admin';
 
   if (systemRoute) {
     const result = await handleSystemRoute({

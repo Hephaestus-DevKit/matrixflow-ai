@@ -60,7 +60,7 @@ export default function LoginPage() {
         setStep('mfa');
         return;
       }
-      setError(authErrorMessage(cause, '登录失败，请检查账号状态', locale));
+      setError(authErrorMessage(cause, t('auth.loginFailed'), locale));
     }
   }
 
@@ -84,7 +84,7 @@ export default function LoginPage() {
       await completeMfa(mfaCode.trim());
       router.replace('/dashboard');
     } catch (cause) {
-      setError(authErrorMessage(cause, '验证码错误或已失效，请重新登录', locale));
+      setError(authErrorMessage(cause, t('auth.mfaFailed'), locale));
     }
   }
 
@@ -98,7 +98,7 @@ export default function LoginPage() {
       setStep('otp');
       setCountdown(60);
     } catch (cause) {
-      setError(authErrorMessage(cause, '验证码发送失败，请稍后重试', locale));
+      setError(authErrorMessage(cause, t('auth.otpSendFailed'), locale));
     }
   }
 
@@ -115,7 +115,7 @@ export default function LoginPage() {
         setStep('mfa');
         return;
       }
-      setError(authErrorMessage(cause, '验证码错误或已失效', locale));
+      setError(authErrorMessage(cause, t('auth.otpVerifyFailed'), locale));
     }
   }
 

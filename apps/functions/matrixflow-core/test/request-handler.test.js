@@ -122,3 +122,23 @@ test('conflicting organization and idempotency headers fail before business exec
   assert.equal(idempotencyResponse.calls[0].payload.error.code, 'IDEMPOTENCY_KEY_MISMATCH');
   assert.equal(routed, false);
 });
+
+test('rejects an explicitly non-JSON request before authentication or routing', async () => {
+  let routed = false;
+  const handler = createRequestHandler({
+    readinessSnapshot: () => ({ ready: true, status: 'ok', checks: {} }),
+    handleRoute: async () => {
+      routed = true;
+      return {};
+    },
+    dependencies: baseDependencies(),
+  });
+  const { response, calls } = responseRecorder();
+  await handler({
+    req: request({ value: 1 }, { 'content-type': 'text/plain' }),
+    res: response,
+  });
+  assert.equal(calls[0].status, 415);
+  assert.equal(calls[0].payload.error.code, 'UNSUPPORTED_MEDIA_TYPE');
+  assert.equal(routed, false);
+});

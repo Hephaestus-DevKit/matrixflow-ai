@@ -9,6 +9,24 @@ const ROUTES = [
   { path: '/terms', marker: '服务条款' },
 ];
 
+const LOCALE_PROBES = [
+  {
+    locale: 'zh-CN',
+    marker: '跨境电商专属 · AI 员工操作系统',
+    title: 'MatrixFlow AI — AI 员工操作系统',
+  },
+  {
+    locale: 'zh-TW',
+    marker: '跨境電商專屬 · AI 員工作業系統',
+    title: 'MatrixFlow AI — AI 員工作業系統',
+  },
+  {
+    locale: 'en',
+    marker: 'Built for cross-border commerce · AI workforce OS',
+    title: 'MatrixFlow AI — AI Workforce OS',
+  },
+];
+
 function headerValue(headers, name) {
   if (typeof headers?.get === 'function') return headers.get(name) || '';
   const entry = Object.entries(headers || {}).find(([key]) => key.toLowerCase() === name);
@@ -88,6 +106,22 @@ export function validateProductionPage({ route, status, headers, body, canonical
   return failures;
 }
 
+export function validateLocalePage({ locale, marker, title, status, body }) {
+  const failures = [];
+  if (status !== 200) {
+    failures.push(`locale ${locale}: expected 200, received ${status}`);
+    return failures;
+  }
+  const escapedLocale = locale.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (!new RegExp(`<html\\b[^>]*\\blang=["']${escapedLocale}["']`, 'i').test(body))
+    failures.push(`locale ${locale}: server-rendered document language is incorrect`);
+  if (!body.includes(marker))
+    failures.push(`locale ${locale}: server-rendered localized content marker is missing`);
+  if (!body.includes(`<title>${title}</title>`))
+    failures.push(`locale ${locale}: server-rendered localized title is missing`);
+  return failures;
+}
+
 export async function runProductionSmoke({
   baseUrl = process.env.MATRIXFLOW_PRODUCTION_URL || 'https://matrixflow-ai.vercel.app',
   canonicalOrigin = process.env.MATRIXFLOW_CANONICAL_URL || 'https://matrixflow-ai.vercel.app',
@@ -116,6 +150,31 @@ export async function runProductionSmoke({
       process.stdout.write(`ok ${route.path} (${response.status})\n`);
     } catch (error) {
       failures.push(`${route.path}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  for (const probe of LOCALE_PROBES) {
+    try {
+      const response = await fetch(`${normalizedBaseUrl}/`, {
+        headers: {
+          'user-agent': 'matrixflow-production-smoke/2.0',
+          cookie: `matrixflow-locale=${probe.locale}`,
+        },
+        redirect: 'manual',
+      });
+      const body = await response.text();
+      failures.push(
+        ...validateLocalePage({
+          ...probe,
+          status: response.status,
+          body,
+        }),
+      );
+      process.stdout.write(`ok / [${probe.locale}] (${response.status})\n`);
+    } catch (error) {
+      failures.push(
+        `locale ${probe.locale}: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
