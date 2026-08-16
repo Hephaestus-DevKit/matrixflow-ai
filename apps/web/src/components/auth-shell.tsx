@@ -33,7 +33,10 @@ export function AuthShell({ title, description, children, footer, step }: AuthSh
 
       <section className="relative hidden min-h-screen overflow-hidden border-r border-border/70 p-12 lg:flex lg:flex-col lg:justify-between xl:p-16">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.25)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.25)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
-        <Link href="/" className="relative flex w-fit items-center gap-3">
+        <Link
+          href="/"
+          className="relative flex w-fit items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
           <span className="brand-mark h-11 w-11 text-base">M</span>
           <span>
             <span className="block text-sm font-black tracking-tight">MatrixFlow AI</span>
@@ -83,7 +86,7 @@ export function AuthShell({ title, description, children, footer, step }: AuthSh
         </div>
         <Link
           href="/"
-          className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
+          className="absolute left-3 top-5 inline-flex h-10 items-center gap-2 rounded-lg px-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:left-5 lg:hidden"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> {t('auth.backHome')}
         </Link>

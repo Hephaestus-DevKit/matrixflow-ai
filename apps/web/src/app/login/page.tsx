@@ -133,7 +133,10 @@ export default function LoginPage() {
       footer={
         <>
           {t('auth.noAccount')}{' '}
-          <Link href="/register" className="font-bold text-primary hover:underline">
+          <Link
+            href="/register"
+            className="rounded-sm font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
             {t('auth.freeRegister')}
           </Link>
         </>
@@ -155,13 +158,13 @@ export default function LoginPage() {
             aria-pressed={loginMode === mode}
             onClick={() => changeMode(mode)}
             className={cn(
-              'flex h-9 items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all',
+              'flex h-10 items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
               loginMode === mode
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            <Icon className="h-3.5 w-3.5" /> {label}
+            <Icon className="h-3.5 w-3.5" aria-hidden="true" /> {label}
           </button>
         ))}
       </div>
@@ -177,7 +180,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => void changeMfaMode(mfaMode === 'totp' ? 'recoverycode' : 'totp')}
-                className="text-2xs font-semibold text-primary hover:underline"
+                className="rounded-sm text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {mfaMode === 'totp' ? t('auth.useRecoveryCode') : t('auth.useAuthenticator')}
               </button>
@@ -232,15 +235,12 @@ export default function LoginPage() {
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="login-password">{t('auth.password')}</Label>
-              <button
-                type="button"
-                onClick={() => {
-                  window.location.href = '/recover';
-                }}
-                className="text-2xs font-semibold text-primary hover:underline"
+              <Link
+                href="/recover"
+                className="rounded-sm text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {t('auth.passwordHelp')}
-              </button>
+              </Link>
             </div>
             <div className="relative">
               <Input
@@ -257,7 +257,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setShowPassword((visible) => !visible)}
                 aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
-                className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-xl text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -310,7 +310,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setStep('info')}
-                className="text-2xs font-semibold text-primary hover:underline"
+                className="rounded-sm text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {t('auth.changeEmail')}
               </button>
@@ -335,14 +335,14 @@ export default function LoginPage() {
             )}
             {loading ? t('auth.loadingVerify') : t('auth.verifyAndEnter')}
           </Button>
-          <div className="text-center text-2xs text-muted-foreground">
+          <div className="text-center text-xs text-muted-foreground">
             {countdown > 0 ? (
               `${countdown} ${t('auth.secondsRemaining')}`
             ) : (
               <button
                 type="button"
                 onClick={() => handleSendOtp()}
-                className="font-bold text-primary hover:underline"
+                className="rounded-sm font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {t('auth.resend')}
               </button>

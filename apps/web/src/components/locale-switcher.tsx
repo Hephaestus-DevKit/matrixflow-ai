@@ -10,8 +10,8 @@ export function LocaleSwitcher({ compact = false }: { compact?: boolean }) {
     <label
       className={
         compact
-          ? 'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-border/70 bg-background/70 px-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground sm:px-2'
-          : 'inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border border-border/70 bg-background/70 px-3 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground'
+          ? 'inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-border/70 bg-background/70 px-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 sm:px-2'
+          : 'inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border border-border/70 bg-background/70 px-3 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2'
       }
     >
       <Languages className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />

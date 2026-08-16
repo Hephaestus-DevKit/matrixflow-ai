@@ -77,7 +77,7 @@ export default function LandingPage() {
                 <Button
                   asChild
                   size="lg"
-                  className="gap-2 text-sm font-semibold shadow-glow transition-shadow duration-200 hover:shadow-glow-lg"
+                  className="w-48 gap-2 text-sm font-semibold shadow-glow transition-shadow duration-200 hover:shadow-glow-lg sm:w-auto"
                 >
                   <Link href="/register">
                     <LocalizedText id="public.registerLong" />{' '}
@@ -88,7 +88,7 @@ export default function LandingPage() {
                   asChild
                   variant="outline"
                   size="lg"
-                  className="border-border text-sm font-semibold transition-colors hover:bg-muted/50"
+                  className="w-48 border-border text-sm font-semibold transition-colors hover:bg-muted/50 sm:w-auto"
                 >
                   <Link href="#capabilities">
                     <LocalizedText id="public.capabilities" />
@@ -114,8 +114,8 @@ export default function LandingPage() {
             <div className="relative mx-auto w-full max-w-xl overflow-x-clip">
               <div className="absolute -inset-8 -z-10 rounded-[3rem] bg-primary/15 blur-3xl" />
               <div className="overflow-hidden rounded-[1.75rem] border border-border/75 bg-card/80 shadow-[0_32px_100px_-42px_hsl(var(--primary)/0.65)] backdrop-blur-xl">
-                <div className="flex items-center justify-between border-b border-border/70 px-5 py-4">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col items-start gap-3 border-b border-border/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                  <div className="flex min-w-0 items-center gap-2">
                     <span className="brand-mark h-8 w-8 rounded-lg text-xs" aria-hidden="true">
                       M
                     </span>
@@ -137,7 +137,7 @@ export default function LandingPage() {
                     const Icon = item.icon;
                     return (
                       <div key={item.step}>
-                        <div className="flex items-center gap-4 rounded-2xl border border-border/70 bg-background/65 p-4">
+                        <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background/65 p-3.5 sm:gap-4 sm:p-4">
                           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                             <Icon className="h-5 w-5" aria-hidden="true" />
                           </span>
@@ -148,7 +148,7 @@ export default function LandingPage() {
                             <p className="mt-0.5 text-sm font-bold">
                               <LocalizedText id={item.title} />
                             </p>
-                            <p className="mt-1 truncate text-xs text-muted-foreground">
+                            <p className="mt-1 text-xs leading-5 text-muted-foreground">
                               <LocalizedText id={item.description} />
                             </p>
                           </div>
@@ -169,13 +169,13 @@ export default function LandingPage() {
                     );
                   })}
                 </div>
-                <div className="grid grid-cols-3 border-t border-border/70 bg-muted/20 px-5 py-4 text-center">
+                <div className="grid grid-cols-3 divide-x divide-border/70 border-t border-border/70 bg-muted/20 px-2 py-4 text-center sm:px-5">
                   {[
                     ['12', 'public.preview.formats'],
                     ['public.preview.team', 'public.preview.boundaries'],
                     ['public.preview.fullPath', 'public.preview.runs'],
                   ].map(([value, label]) => (
-                    <div key={label}>
+                    <div key={label} className="px-2">
                       <p className="text-sm font-black">
                         {value === '12' ? value : <LocalizedText id={value as MessageKey} />}
                       </p>
@@ -237,17 +237,14 @@ export default function LandingPage() {
                   title: 'public.feature.marketplace.title',
                   desc: 'public.feature.marketplace.description',
                 },
-              ].map((f, idx) => {
+              ].map((f) => {
                 const IconComponent = f.icon;
                 return (
-                  <div
-                    key={idx}
-                    className="group rounded-xl border border-border/60 bg-card p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-md"
-                  >
-                    <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/5 text-primary group-hover:bg-primary/10 transition-colors">
-                      <IconComponent className="h-5 w-5" />
+                  <div key={f.title} className="surface-card p-6">
+                    <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <IconComponent className="h-5 w-5" aria-hidden="true" />
                     </div>
-                    <h3 className="mb-2 font-semibold text-foreground group-hover:text-primary transition-colors text-base">
+                    <h3 className="mb-2 text-base font-semibold text-foreground">
                       <LocalizedText id={f.title as MessageKey} />
                     </h3>
                     <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">

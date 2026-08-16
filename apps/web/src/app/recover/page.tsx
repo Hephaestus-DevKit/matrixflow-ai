@@ -67,7 +67,10 @@ export default function RecoverPage() {
       description={t('auth.recoveryDescription')}
       step={isReset ? t('auth.recoverySubmit') : t('auth.passwordHelp')}
       footer={
-        <Link href="/login" className="font-bold text-primary hover:underline">
+        <Link
+          href="/login"
+          className="rounded-sm font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           {t('auth.recoveryBack')}
         </Link>
       }
