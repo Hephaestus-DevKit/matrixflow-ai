@@ -1,4 +1,4 @@
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { Query } from 'node-appwrite';
 import { HttpError, TABLES, createRow, getOwned, listRows, updateOwned } from './runtime.js';
 
@@ -11,8 +11,20 @@ export const API_KEY_SCOPES = Object.freeze([
   'billing.read',
 ]);
 
+const DEVELOPMENT_API_KEY_PEPPER = 'matrixflow-development-only';
+
+function apiKeyPepper() {
+  const configured = String(process.env.MATRIXFLOW_API_KEY_PEPPER || '').trim();
+  if (configured.length >= 32) return configured;
+  const production =
+    String(process.env.NODE_ENV || '').toLowerCase() === 'production' ||
+    String(process.env.MATRIXFLOW_RELEASE || '').toLowerCase() === 'production';
+  if (production) throw new HttpError('API Key 安全密钥尚未配置', 503, 'API_KEY_NOT_CONFIGURED');
+  return DEVELOPMENT_API_KEY_PEPPER;
+}
+
 function hashKey(value) {
-  return createHash('sha256').update(value, 'utf8').digest('hex');
+  return createHmac('sha256', apiKeyPepper()).update(value, 'utf8').digest('hex');
 }
 
 function safeMetadata(row) {

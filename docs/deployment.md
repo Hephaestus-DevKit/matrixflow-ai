@@ -76,6 +76,7 @@ STRIPE_WEBHOOK_SECRET=<Stripe webhook signing secret>
 MATRIXFLOW_ALLOW_TEST_BILLING=false
 
 # 异步任务与连接器（均为 Function Secret/运营配置）
+MATRIXFLOW_API_KEY_PEPPER=<random-32-plus-character-secret>
 MATRIXFLOW_WORKER_SECRET=<random-32-plus-character-secret>
 MATRIXFLOW_CONNECTOR_ALLOWLIST=api.example.com,*.trusted.example
 MATRIXFLOW_REQUIRE_ASYNC=true

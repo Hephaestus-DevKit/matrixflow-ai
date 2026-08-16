@@ -7,13 +7,16 @@ import {
   resolveApiKey,
   validateApiKeySecret,
 } from '../src/api-keys.js';
-import { createHash } from 'node:crypto';
+import { createHmac } from 'node:crypto';
 
 test('generated API keys are high entropy and never return the hash as the secret', () => {
   const generated = generateApiKey();
   assert.match(generated.secret, /^mf_live_[A-Za-z0-9_-]{43}$/);
   assert.equal(generated.keyPrefix, generated.secret.slice(0, 17));
-  assert.equal(generated.keyHash, createHash('sha256').update(generated.secret).digest('hex'));
+  assert.equal(
+    generated.keyHash,
+    createHmac('sha256', 'matrixflow-development-only').update(generated.secret).digest('hex'),
+  );
   assert.throws(
     () => validateApiKeySecret('mf_live_short'),
     (error) => error.code === 'API_KEY_INVALID',

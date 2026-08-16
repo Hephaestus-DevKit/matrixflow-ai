@@ -15,6 +15,7 @@ test('strict audit requires provider, worker, billing, alerting, backup, and dep
       MATRIXFLOW_AI_PROVIDER: 'anthropic',
       ANTHROPIC_API_KEY: 'secret',
       MATRIXFLOW_WORKER_SECRET: 'x'.repeat(40),
+      MATRIXFLOW_API_KEY_PEPPER: 'p'.repeat(40),
       MATRIXFLOW_BILLING_PROVIDER: 'stripe',
       MATRIXFLOW_BILLING_WEBHOOK_SECRET: 'billing-secret',
       STRIPE_SECRET_KEY: 'sk_live_secret',

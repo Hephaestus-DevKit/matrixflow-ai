@@ -42,6 +42,17 @@ export function auditConfig(env = process.env, { strict = false } = {}) {
     detail: workerReady ? 'secret configured' : 'MATRIXFLOW_WORKER_SECRET missing or too short',
   });
 
+  const apiKeyPepperReady =
+    present(env.MATRIXFLOW_API_KEY_PEPPER) && env.MATRIXFLOW_API_KEY_PEPPER.length >= 32;
+  checks.push({
+    name: 'api-key-pepper',
+    required: strict,
+    ok: apiKeyPepperReady,
+    detail: apiKeyPepperReady
+      ? 'API Key HMAC pepper configured'
+      : 'MATRIXFLOW_API_KEY_PEPPER missing or too short',
+  });
+
   const billingConfigured = present(env.MATRIXFLOW_BILLING_PROVIDER);
   const stripeReady =
     env.MATRIXFLOW_BILLING_PROVIDER !== 'stripe' ||
