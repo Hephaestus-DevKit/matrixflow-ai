@@ -15,6 +15,7 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
+  allowedDevOrigins: ['127.0.0.1', 'localhost'],
   // ESLint is a standalone zero-warning CI gate; avoid running it again inside next build.
   eslint: { ignoreDuringBuilds: true },
   images: {

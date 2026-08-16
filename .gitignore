@@ -55,3 +55,6 @@ packages/workflow-engine/
 infra/docker/
 
 .vercel
+playwright-report/
+test-results/
+blob-report/
