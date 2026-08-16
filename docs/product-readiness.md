@@ -12,6 +12,7 @@ MatrixFlow 当前的定位是“生产可用 Beta / 候选版”：核心数据�
 - Agent、DAG 工作流、知识库解析/检索、运行重试、成本遥测和计费权益基础。
 - 简体中文、繁體中文、English 三语，以及响应式移动端布局。
 - GitHub CI、CodeQL、依赖安全审计、Vercel 生产构建和 Appwrite Schema 即代码。
+- Chromium 浏览器 E2E 自动验证三语切换持久化、英文认证页和 390px 移动端无横向溢出。
 - 生产公开面每小时由 GitHub Actions smoke 监测，首页安全响应头异常会直接告警。
 - 主分支保护要求当前 CI 与 CodeQL 通过，并启用线性历史和会话解决。
 - 生产运行的 SLO、告警、事件等级、发布证据与恢复演练标准已在 `docs/operations.md` 定义。
@@ -39,6 +40,7 @@ MatrixFlow 当前的定位是“生产可用 Beta / 候选版”：核心数据�
 pnpm verify
 pnpm function:check
 pnpm function:test
+pnpm test:e2e
 pnpm audit --prod --audit-level=high
 npm audit --omit=dev --prefix apps/functions/matrixflow-core
 pnpm smoke:production

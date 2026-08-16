@@ -44,7 +44,7 @@
 3. Appwrite active deployment ID，且与本次发布源码一致；
 4. Schema 变更结果与向后兼容说明；
 5. 真实账户 smoke：认证、团队隔离、浏览器禁写、Function 写入、真实 Provider 调用和清理；
-6. 生产公开 smoke，以及关键登录后路径的人工或自动化验收；
+6. 生产公开 smoke、Chromium 浏览器 E2E，以及关键登录后路径的人工或自动化验收；
 7. 明确的上一版本回滚点。
 
 ## 备份与恢复
