@@ -111,10 +111,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div
-              className="relative mx-auto w-full max-w-xl overflow-x-clip"
-              aria-label="MatrixFlow product workflow preview"
-            >
+            <div className="relative mx-auto w-full max-w-xl overflow-x-clip">
               <div className="absolute -inset-8 -z-10 rounded-[3rem] bg-primary/15 blur-3xl" />
               <div className="overflow-hidden rounded-[1.75rem] border border-border/75 bg-card/80 shadow-[0_32px_100px_-42px_hsl(var(--primary)/0.65)] backdrop-blur-xl">
                 <div className="flex items-center justify-between border-b border-border/70 px-5 py-4">

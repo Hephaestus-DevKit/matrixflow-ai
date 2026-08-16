@@ -168,6 +168,11 @@ export default function ContentFactoryPage() {
       deleted: '内容项目已删除',
       deleteFailed: '内容项目删除失败',
       deleteProject: '删除内容项目',
+      generatePartial: (completed: number, failed: number) =>
+        `已完成 ${completed} 项，${failed} 项生成失败`,
+      generateComplete: '12 类内容已全部生成',
+      deleteConfirm: '确定删除该内容项目及其全部生成结果吗？',
+      emptyProjectDescription: '选择上方已有项目或新建一个项目以启动 AI 员工的批量内容处理工厂。',
     },
     'zh-TW': {
       title: '內容工廠',
@@ -191,6 +196,11 @@ export default function ContentFactoryPage() {
       deleted: '內容專案已刪除',
       deleteFailed: '內容專案刪除失敗',
       deleteProject: '刪除內容專案',
+      generatePartial: (completed: number, failed: number) =>
+        `已完成 ${completed} 項，${failed} 項生成失敗`,
+      generateComplete: '12 類內容已全部生成',
+      deleteConfirm: '確定刪除此內容專案及其全部生成結果嗎？',
+      emptyProjectDescription: '選擇上方已有專案或建立一個專案，以啟動 AI 員工的批次內容處理工廠。',
     },
     en: {
       title: 'Content factory',
@@ -214,6 +224,12 @@ export default function ContentFactoryPage() {
       deleted: 'Content project deleted',
       deleteFailed: 'Could not delete the content project',
       deleteProject: 'Delete content project',
+      generatePartial: (completed: number, failed: number) =>
+        `${completed} completed, ${failed} failed`,
+      generateComplete: 'All 12 content formats generated',
+      deleteConfirm: 'Delete this content project and all generated results?',
+      emptyProjectDescription:
+        'Select an existing project or create one to start batch processing with AI workers.',
     },
   }[locale];
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -276,22 +292,8 @@ export default function ContentFactoryPage() {
         { language: 'en' },
       );
       await refetchItems();
-      if (result.failed)
-        toast.warning(
-          locale === 'en'
-            ? `${result.completed} completed, ${result.failed} failed`
-            : locale === 'zh-TW'
-              ? `已完成 ${result.completed} 項，${result.failed} 項生成失敗`
-              : `已完成 ${result.completed} 项，${result.failed} 项生成失败`,
-        );
-      else
-        toast.success(
-          locale === 'en'
-            ? 'All 12 content formats generated'
-            : locale === 'zh-TW'
-              ? '12 類內容已全部生成'
-              : '12 类内容已全部生成',
-        );
+      if (result.failed) toast.warning(copy.generatePartial(result.completed, result.failed));
+      else toast.success(copy.generateComplete);
     } catch (error: unknown) {
       toast.error(errorMessage(error));
     } finally {
@@ -321,16 +323,7 @@ export default function ContentFactoryPage() {
   }
 
   async function deleteProject(id: string) {
-    if (
-      !window.confirm(
-        locale === 'en'
-          ? 'Delete this content project and all generated results?'
-          : locale === 'zh-TW'
-            ? '確定刪除此內容專案及其全部生成結果嗎？'
-            : '确定删除该内容项目及其全部生成结果吗？',
-      )
-    )
-      return;
+    if (!window.confirm(copy.deleteConfirm)) return;
     try {
       await apiClient.del(`/content/projects/${id}`);
       if (projectId === id) setProjectId(null);
@@ -446,11 +439,7 @@ export default function ContentFactoryPage() {
           <Factory className="h-10 w-10 text-muted-foreground/60 mb-3 animate-pulse-slow" />
           <p className="text-sm font-semibold text-foreground">{copy.choose}</p>
           <p className="mt-1 text-xs text-muted-foreground max-w-[280px]">
-            {locale === 'en'
-              ? 'Select an existing project or create one to start batch processing with AI workers.'
-              : locale === 'zh-TW'
-                ? '選擇上方已有專案或建立一個專案，以啟動 AI 員工的批次內容處理工廠。'
-                : '选择上方已有项目或新建一个项目以启动 AI 员工的批量内容处理工厂。'}
+            {copy.emptyProjectDescription}
           </p>
         </div>
       )}
