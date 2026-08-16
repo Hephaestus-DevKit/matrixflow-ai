@@ -9,10 +9,14 @@ import {
   requireTeamMember,
   rowPermissions,
   enforceResourceLimit,
+  enforceRequestRateLimit,
+  reservePlanResourceLimit,
+  reserveUsageCounter,
 } from '../src/runtime.js';
-import { deleteAgent, splitTextIntoChunks } from '../src/features.js';
+import { chunkBelongsToCurrentIndex, deleteAgent, splitTextIntoChunks } from '../src/features.js';
 import { billingSignature, isValidBillingSignature } from '../src/billing.js';
 import { estimateCostUsd } from '../src/provider.js';
+import { subscriptionEntitled } from '../src/billing.js';
 
 test('agent updates reject mass-assignment fields', () => {
   assert.throws(
@@ -65,6 +69,71 @@ test('owners can access admin routes', () => {
 test('tenant rows expose read-only permissions to browser clients', () => {
   assert.deepEqual(rowPermissions('team-1', 'agents'), ['read("team:team-1")']);
   assert.deepEqual(rowPermissions('team-1', 'audit_logs'), []);
+  assert.deepEqual(rowPermissions('team-1', 'usage_counters'), []);
+});
+
+test('AI quota reservations use atomic increments and enforce the database maximum', async () => {
+  let increments = 0;
+  const services = {
+    tables: {
+      createRow: async () => {
+        throw { status: 409 };
+      },
+      incrementRowColumn: async ({ value, max }) => {
+        increments += 1;
+        assert.equal(value, 2);
+        assert.equal(max, 10);
+        return { $id: 'counter-1', organizationId: 'team-1', used: 8, limit: 10 };
+      },
+    },
+  };
+  const reserved = await reserveUsageCounter(services, 'team-1', {
+    bucket: 'month:2026-08',
+    amount: 2,
+    limit: 10,
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    code: 'AI_MONTHLY_QUOTA_EXCEEDED',
+    message: 'quota reached',
+  });
+  assert.equal(reserved.used, 8);
+  assert.equal(increments, 1);
+
+  services.tables.incrementRowColumn = async () => {
+    throw { status: 409, message: 'maximum value exceeded' };
+  };
+  await assert.rejects(
+    () =>
+      reserveUsageCounter(services, 'team-1', {
+        bucket: 'month:2026-08',
+        amount: 2,
+        limit: 10,
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        code: 'AI_MONTHLY_QUOTA_EXCEEDED',
+        message: 'quota reached',
+      }),
+    (error) => error.code === 'AI_MONTHLY_QUOTA_EXCEEDED' && error.status === 429,
+  );
+});
+
+test('ordinary API requests receive a tenant and principal scoped atomic limit', async () => {
+  const created = [];
+  const services = {
+    tables: {
+      createRow: async (input) => {
+        created.push(input);
+        return { $id: input.rowId, ...input.data };
+      },
+      listRows: async () => ({ total: 0, rows: [] }),
+      deleteRow: async () => undefined,
+    },
+  };
+  const result = await enforceRequestRateLimit(services, 'team-rate', 'user:user-1', {
+    MATRIXFLOW_REQUESTS_PER_MINUTE: '60',
+  });
+  assert.equal(result.limit, 60);
+  assert.equal(result.used, 1);
+  assert.equal(created[0].tableId, 'usage_counters');
+  assert.match(created[0].data.bucket, /^request:[a-f0-9]{16}:/);
 });
 
 test('deleting an agent removes tenant-owned run history before the parent row', async () => {
@@ -112,6 +181,19 @@ test('knowledge chunks stay below the Appwrite row byte limit', () => {
   assert.ok(chunks.length > 1);
   assert.ok(chunks.every((chunk) => Buffer.byteLength(chunk.content, 'utf8') <= 24_000));
   assert.ok(chunks.every((chunk) => chunk.content.length > 0));
+});
+
+test('knowledge retrieval only reads the document current index version', () => {
+  assert.equal(
+    chunkBelongsToCurrentIndex({ indexVersion: 'version-2' }, { indexVersion: 'version-2' }),
+    true,
+  );
+  assert.equal(
+    chunkBelongsToCurrentIndex({ indexVersion: 'version-1' }, { indexVersion: 'version-2' }),
+    false,
+  );
+  assert.equal(chunkBelongsToCurrentIndex({}, {}), true);
+  assert.equal(chunkBelongsToCurrentIndex({ indexVersion: 'version-1' }, {}), false);
 });
 
 test('pre-parsed request bodies keep the same size guard', () => {
@@ -190,6 +272,48 @@ test('plan limits fail before creating another resource', async () => {
   );
 });
 
+test('plan resource reservations reject a concurrent create at the atomic maximum', async () => {
+  let counterUsed = 0;
+  let counterCreated = false;
+  const services = {
+    tables: {
+      listRows: async ({ tableId }) => {
+        if (tableId === 'subscriptions') return { total: 0, rows: [] };
+        return { total: 0, rows: [] };
+      },
+      createRow: async ({ tableId, data }) => {
+        if (tableId !== 'usage_counters') return { $id: 'resource-1', ...data };
+        if (counterCreated) throw { code: 409 };
+        counterCreated = true;
+        counterUsed = Number(data.used);
+        return { $id: 'counter-1', ...data };
+      },
+      incrementRowColumn: async ({ max }) => {
+        if (counterUsed + 1 > max) throw { code: 409, message: 'maximum' };
+        counterUsed += 1;
+        return { $id: 'counter-1', used: counterUsed };
+      },
+    },
+  };
+  const previousLimit = process.env.MATRIXFLOW_WORKFLOW_LIMIT;
+  process.env.MATRIXFLOW_WORKFLOW_LIMIT = '1';
+  let results;
+  try {
+    results = await Promise.allSettled([
+      reservePlanResourceLimit(services, 'team-1', 'workflowLimit', 1, '工作流'),
+      reservePlanResourceLimit(services, 'team-1', 'workflowLimit', 1, '工作流'),
+    ]);
+  } finally {
+    if (previousLimit === undefined) delete process.env.MATRIXFLOW_WORKFLOW_LIMIT;
+    else process.env.MATRIXFLOW_WORKFLOW_LIMIT = previousLimit;
+  }
+  assert.equal(results.filter((result) => result.status === 'fulfilled').length, 1);
+  assert.equal(
+    results.find((result) => result.status === 'rejected').reason.code,
+    'PLAN_LIMIT_EXCEEDED',
+  );
+});
+
 test('billing webhook signatures are exact and timing-safe', () => {
   const body = '{"eventId":"evt_1"}';
   const signature = billingSignature(body, 'test-secret');
@@ -211,12 +335,22 @@ test('billing webhook payloads are bounded to known subscription states', () => 
   });
   assert.equal(parsed.seats, 1);
   assert.throws(
-    () => parse(schemas.billingWebhook, { ...parsed, status: 'past_due' }),
+    () => parse(schemas.billingWebhook, { ...parsed, status: 'not-a-status' }),
     (error) => error.code === 'VALIDATION_ERROR',
   );
   assert.throws(
     () => parse(schemas.billingWebhook, { ...parsed, organizationId: 'other', secret: 'leak' }),
     (error) => error.code === 'VALIDATION_ERROR',
+  );
+});
+
+test('billing entitlement distinguishes active/trialing from delinquent subscriptions', () => {
+  assert.equal(subscriptionEntitled({ status: 'active' }), true);
+  assert.equal(subscriptionEntitled({ status: 'trialing' }), true);
+  assert.equal(subscriptionEntitled({ status: 'past_due' }), false);
+  assert.equal(
+    subscriptionEntitled({ status: 'active', currentPeriodEnd: '2020-01-01T00:00:00.000Z' }),
+    false,
   );
 });
 
@@ -237,6 +371,7 @@ test('run retry metadata is bounded and strict', () => {
   assert.deepEqual(parse(schemas.agentRun, { input: {}, retryCount: 2 }), {
     input: {},
     retryCount: 2,
+    mode: 'sync',
   });
   assert.throws(
     () => parse(schemas.workflowRun, { input: {}, retryCount: 11 }),

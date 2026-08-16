@@ -14,7 +14,7 @@ export default function NotFound() {
           <Compass className="h-7 w-7" />
         </span>
         <p className="mt-5 text-xs font-bold uppercase tracking-[0.18em] text-primary">
-          404 · Not found
+          {t('common.notFoundLabel')}
         </p>
         <h1 className="mt-2 text-2xl font-bold tracking-tight">{t('common.pageNotFound')}</h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">

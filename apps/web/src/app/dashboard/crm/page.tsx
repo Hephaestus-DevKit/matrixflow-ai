@@ -37,6 +37,8 @@ const COPY: Record<
     intent: string;
     inviteError: string;
     customerCreated: string;
+    previous: string;
+    next: string;
   }
 > = {
   'zh-CN': {
@@ -59,6 +61,8 @@ const COPY: Record<
     intent: '意向分',
     inviteError: '无法创建客户',
     customerCreated: '客户已创建',
+    previous: '上一页',
+    next: '下一页',
   },
   'zh-TW': {
     eyebrow: '客戶洞察',
@@ -80,6 +84,8 @@ const COPY: Record<
     intent: '意向分',
     inviteError: '無法建立客戶',
     customerCreated: '客戶已建立',
+    previous: '上一頁',
+    next: '下一頁',
   },
   en: {
     eyebrow: 'Customer insights',
@@ -103,6 +109,8 @@ const COPY: Record<
     intent: 'Intent',
     inviteError: 'Could not create customer',
     customerCreated: 'Customer created',
+    previous: 'Previous',
+    next: 'Next',
   },
 };
 
@@ -113,17 +121,35 @@ export default function CrmPage() {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [customerOffset, setCustomerOffset] = useState(0);
+  const [leadOffset, setLeadOffset] = useState(0);
   const customersQuery = useQuery({
-    queryKey: ['customers'],
-    queryFn: () => apiClient.get<CustomerSummary[]>('/crm/customers'),
+    queryKey: ['customers', customerOffset],
+    queryFn: () =>
+      apiClient.get<{
+        data: CustomerSummary[];
+        total: number;
+        limit: number;
+        offset: number;
+        nextOffset: number | null;
+      }>(`/crm/customers?limit=50&offset=${customerOffset}`),
   });
   const leadsQuery = useQuery({
-    queryKey: ['leads'],
-    queryFn: () => apiClient.get<LeadSummary[]>('/crm/leads'),
+    queryKey: ['leads', leadOffset],
+    queryFn: () =>
+      apiClient.get<{
+        data: LeadSummary[];
+        total: number;
+        limit: number;
+        offset: number;
+        nextOffset: number | null;
+      }>(`/crm/leads?limit=50&offset=${leadOffset}`),
   });
 
-  const customers = customersQuery.data;
-  const leads = leadsQuery.data;
+  const customerPage = customersQuery.data;
+  const customers = customerPage?.data ?? [];
+  const leadPage = leadsQuery.data;
+  const leads = leadPage?.data ?? [];
   const isLoading = customersQuery.isLoading || leadsQuery.isLoading;
   const isError = customersQuery.isError || leadsQuery.isError;
   const createCustomer = useMutation({
@@ -232,6 +258,66 @@ export default function CrmPage() {
                 </Link>
               ))}
             </div>
+            {leadPage && leadPage.total > leadPage.limit && (
+              <div className="flex items-center justify-between gap-2 pt-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={leadOffset === 0 || leadsQuery.isFetching}
+                  onClick={() => setLeadOffset((offset) => Math.max(0, offset - leadPage.limit))}
+                >
+                  {copy.previous}
+                </Button>
+                <span className="text-[11px] text-muted-foreground">
+                  {leadOffset + 1}–{Math.min(leadOffset + leads.length, leadPage.total)} /{' '}
+                  {leadPage.total}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={leadPage.nextOffset === null || leadsQuery.isFetching}
+                  onClick={() => {
+                    if (leadPage.nextOffset !== null) setLeadOffset(leadPage.nextOffset);
+                  }}
+                >
+                  {copy.next}
+                </Button>
+              </div>
+            )}
+            {customerPage && customerPage.total > customerPage.limit && (
+              <div className="flex items-center justify-between gap-2 pt-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={customerOffset === 0 || customersQuery.isFetching}
+                  onClick={() =>
+                    setCustomerOffset((offset) => Math.max(0, offset - customerPage.limit))
+                  }
+                >
+                  {copy.previous}
+                </Button>
+                <span className="text-[11px] text-muted-foreground">
+                  {customerOffset + 1}–
+                  {Math.min(customerOffset + customers.length, customerPage.total)} /{' '}
+                  {customerPage.total}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={customerPage.nextOffset === null || customersQuery.isFetching}
+                  onClick={() => {
+                    if (customerPage.nextOffset !== null)
+                      setCustomerOffset(customerPage.nextOffset);
+                  }}
+                >
+                  {copy.next}
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Sales Leads */}

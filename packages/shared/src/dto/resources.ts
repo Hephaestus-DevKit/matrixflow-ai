@@ -51,6 +51,7 @@ export interface UsageSummary {
     periodStart: string;
     periodEnd: string;
     plan: string;
+    reservedAiCalls: number;
     limits: { aiCallsPerMonth: number; aiCallsPerMinute: number };
     byProvider: Record<string, number>;
     byModel: Record<string, number>;

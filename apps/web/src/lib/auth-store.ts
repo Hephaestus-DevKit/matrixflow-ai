@@ -47,6 +47,26 @@ interface MfaRequiredError extends Error {
   challengeId: string;
 }
 
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 4_000;
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => {
+          const timeout = new Error('AUTH_BOOTSTRAP_TIMEOUT') as Error & { code: string };
+          timeout.code = 'AUTH_BOOTSTRAP_TIMEOUT';
+          reject(timeout);
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function isExistingAccount(error: unknown): boolean {
   const candidate = error as AppwriteErrorLike;
   return candidate.code === 409 || candidate.type === 'user_already_exists';
@@ -213,7 +233,7 @@ export const useAuth = create<AuthState>()(
 
       fetchMe: async () => {
         try {
-          const me = await getCurrentIdentity();
+          const me = await withTimeout(getCurrentIdentity(), AUTH_BOOTSTRAP_TIMEOUT_MS);
           const persisted = get().organizationId;
           const orgId = me.memberships.some((membership) => membership.organizationId === persisted)
             ? persisted
@@ -260,7 +280,9 @@ export const useAuth = create<AuthState>()(
     }),
     {
       name: 'matrixflow-auth',
-      partialize: (state) => ({ user: state.user, organizationId: state.organizationId }),
+      // The Appwrite session is the source of truth. Persisting a full user
+      // object can briefly render stale identity data after a session expires.
+      partialize: (state) => ({ organizationId: state.organizationId }),
     },
   ),
 );

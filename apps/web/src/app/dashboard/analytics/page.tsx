@@ -125,7 +125,8 @@ export default function AnalyticsPage() {
             <p className="mt-1 text-lg font-bold">
               {Math.max(
                 0,
-                usage.meta.limits.aiCallsPerMonth - (usage.ai_call ?? 0),
+                usage.meta.limits.aiCallsPerMonth -
+                  Number(usage.meta.reservedAiCalls ?? usage.ai_call ?? 0),
               ).toLocaleString()}
             </p>
           </div>

@@ -15,10 +15,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     let active = true;
-    // Client-side optimistic check: if user is already cached in state, unblock rendering instantly
-    if (useAuth.getState().user) {
-      setChecking(false);
-    }
     fetchMe()
       .catch(() => undefined)
       .finally(() => {

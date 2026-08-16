@@ -1,8 +1,11 @@
 import { Query } from 'node-appwrite';
+import { randomUUID } from 'node:crypto';
 import mammoth from 'mammoth';
 import { PDFParse } from 'pdf-parse';
 import { edgeAllows, evaluateCondition, interpolate, validateDag } from './dag.js';
 import { generateText } from './provider.js';
+import { validateWebhookConfig } from './connectors.js';
+import { validateKnowledgeFile } from './knowledge-files.js';
 import {
   BUCKET_ID,
   HttpError,
@@ -176,9 +179,10 @@ export async function indexDocument(services, context, body) {
     context.teamId,
   );
   try {
+    const verifiedFile = await validateKnowledgeFile(services, context.teamId, document);
     const file = await services.storage.getFileDownload({
       bucketId: BUCKET_ID,
-      fileId: document.fileId,
+      fileId: verifiedFile.fileId,
     });
     const buffer = Buffer.from(file);
     let text = '';
@@ -203,39 +207,78 @@ export async function indexDocument(services, context, body) {
     const oldChunks = await listRows(services, TABLES.knowledgeChunks, context.teamId, [
       Query.equal('documentId', document.id),
     ]);
-    await Promise.all(
+    const indexVersion = randomUUID();
+    const staged = [];
+    try {
+      for (let offset = 0; offset < chunks.length; offset += 10) {
+        const batch = await Promise.allSettled(
+          chunks.slice(offset, offset + 10).map((chunk, batchIndex) =>
+            createRow(services, TABLES.knowledgeChunks, context.teamId, {
+              knowledgeBaseId: document.knowledgeBaseId,
+              documentId: document.id,
+              indexVersion,
+              chunkIndex: offset + batchIndex,
+              content: chunk.content,
+              charStart: chunk.charStart,
+              charEnd: chunk.charEnd,
+              status: 'STAGING',
+            }),
+          ),
+        );
+        staged.push(
+          ...batch.filter((result) => result.status === 'fulfilled').map((result) => result.value),
+        );
+        const failed = batch.find((result) => result.status === 'rejected');
+        if (failed) throw failed.reason;
+      }
+      await Promise.all(
+        staged.map((chunk) =>
+          updateOwned(services, TABLES.knowledgeChunks, chunk.id, context.teamId, {
+            status: 'READY',
+          }),
+        ),
+      );
+    } catch (error) {
+      await Promise.allSettled(
+        staged.map((chunk) =>
+          deleteOwned(services, TABLES.knowledgeChunks, chunk.id, context.teamId),
+        ),
+      );
+      throw error;
+    }
+    let updated;
+    try {
+      updated = await updateOwned(
+        services,
+        TABLES.knowledgeDocuments,
+        document.id,
+        context.teamId,
+        {
+          // Keep only a small preview on the parent row. Full text lives in
+          // bounded chunk rows so Appwrite's byte-size row limit is respected.
+          extractedText: text.slice(0, 2_000),
+          chunkCount: chunks.length,
+          indexVersion,
+          status: 'READY',
+          error: truncated
+            ? `文档过长，已索引前 ${MAX_INDEX_TEXT_CHARS.toLocaleString()} 个字符`
+            : '',
+        },
+      );
+    } catch (error) {
+      await Promise.allSettled(
+        staged.map((chunk) =>
+          deleteOwned(services, TABLES.knowledgeChunks, chunk.id, context.teamId),
+        ),
+      );
+      throw error;
+    }
+    // Readers now select only the version referenced by the document, so old
+    // chunks can be removed after the switch without an availability gap.
+    await Promise.allSettled(
       oldChunks.map((chunk) =>
         deleteOwned(services, TABLES.knowledgeChunks, chunk.id, context.teamId),
       ),
-    );
-    await Promise.all(
-      chunks.map((chunk, chunkIndex) =>
-        createRow(services, TABLES.knowledgeChunks, context.teamId, {
-          knowledgeBaseId: document.knowledgeBaseId,
-          documentId: document.id,
-          chunkIndex,
-          content: chunk.content,
-          charStart: chunk.charStart,
-          charEnd: chunk.charEnd,
-          status: 'READY',
-        }),
-      ),
-    );
-    const updated = await updateOwned(
-      services,
-      TABLES.knowledgeDocuments,
-      document.id,
-      context.teamId,
-      {
-        // Keep only a small preview on the parent row. Full text lives in
-        // bounded chunk rows so Appwrite's byte-size row limit is respected.
-        extractedText: text.slice(0, 2_000),
-        chunkCount: chunks.length,
-        status: 'READY',
-        error: truncated
-          ? `文档过长，已索引前 ${MAX_INDEX_TEXT_CHARS.toLocaleString()} 个字符`
-          : '',
-      },
     );
     await recordAudit(services, context, 'knowledge.indexed', 'knowledge_document', document.id, {
       characters: text.length,
@@ -249,6 +292,13 @@ export async function indexDocument(services, context, body) {
     });
     throw error;
   }
+}
+
+export function chunkBelongsToCurrentIndex(chunk, document) {
+  if (!document) return false;
+  const current = String(document.indexVersion || '');
+  const candidate = String(chunk.indexVersion || '');
+  return current ? candidate === current : candidate === '';
 }
 
 export function splitTextIntoChunks(text, maxBytes = MAX_CHUNK_BYTES) {
@@ -331,15 +381,15 @@ export async function askKnowledgeBase(services, context, body) {
     Query.equal('status', 'READY'),
   ]);
   const terms = searchTerms(body.question);
-  const storedChunks = chunks.map((chunk) => ({
-    document: documents.find((document) => document.id === chunk.documentId) || {
-      id: chunk.documentId,
-      title: 'Knowledge document',
-    },
-    value: String(chunk.content || ''),
-    start: Number(chunk.charStart || 0),
-    chunkId: chunk.id,
-  }));
+  const documentsById = new Map(documents.map((document) => [document.id, document]));
+  const storedChunks = chunks
+    .filter((chunk) => chunkBelongsToCurrentIndex(chunk, documentsById.get(chunk.documentId)))
+    .map((chunk) => ({
+      document: documentsById.get(chunk.documentId),
+      value: String(chunk.content || ''),
+      start: Number(chunk.charStart || 0),
+      chunkId: chunk.id,
+    }));
   const legacyChunks = documents.flatMap((document) => relevantChunks(document, terms));
   const candidates = storedChunks.length ? storedChunks : legacyChunks;
   const ranked = candidates
@@ -436,8 +486,15 @@ export async function runWorkflow(services, context, body) {
         logs.push({ nodeId: node.id, status: 'SKIPPED', at: new Date().toISOString() });
         continue;
       }
-      if (node.type === 'email' || node.type === 'webhook')
-        throw new HttpError(`${node.type} 节点尚未配置安全连接器`, 422, 'CONNECTOR_NOT_CONFIGURED');
+      if (node.type === 'email')
+        throw new HttpError('邮件节点尚未配置安全邮件连接器', 422, 'CONNECTOR_NOT_CONFIGURED');
+      if (node.type === 'webhook') {
+        // Validate the destination even while the network adapter is closed.
+        // This prevents unsafe workflow definitions from reaching production
+        // when the connector is enabled later.
+        validateWebhookConfig(config);
+        throw new HttpError('Webhook 节点尚未启用发送适配器', 422, 'CONNECTOR_NOT_CONFIGURED');
+      }
       let output = values.input;
       if (node.type === 'ai') {
         const generated = await generateText({

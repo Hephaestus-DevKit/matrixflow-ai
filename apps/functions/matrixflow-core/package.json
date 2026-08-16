@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "check": "node --check src/main.js && node --check src/runtime.js && node --check src/schemas.js && node --check src/features.js && node --check src/dag.js && node --check src/provider.js && node --check src/plans.js && node --check src/billing.js && node --check scripts/provision.mjs && node --check scripts/deploy.mjs && node --check scripts/smoke.mjs"
+    "check": "node --check src/main.js && node --check src/http.js && node --check src/request-handler.js && node --check src/readiness.js && node --check src/routes/system.js && node --check src/routes/billing.js && node --check src/routes/agents.js && node --check src/routes/content.js && node --check src/routes/knowledge.js && node --check src/routes/workflows.js && node --check src/routes/crm.js && node --check src/runtime.js && node --check src/schemas.js && node --check src/features.js && node --check src/connectors.js && node --check src/network.js && node --check src/account.js && node --check src/api-keys.js && node --check src/idempotency.js && node --check src/jobs.js && node --check src/billing-provider.js && node --check src/billing-events.js && node --check src/knowledge-files.js && node --check src/dag.js && node --check src/provider.js && node --check src/plans.js && node --check src/billing.js && node --check scripts/provision.mjs && node --check scripts/deploy.mjs && node --check scripts/smoke.mjs"
   },
   "dependencies": {
     "mammoth": "1.12.1",

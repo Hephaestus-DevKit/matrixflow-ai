@@ -72,7 +72,7 @@ export default function KbListPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Knowledge & RAG"
+        eyebrow={copy.eyebrow}
         title={copy.title}
         description={copy.description}
         actions={

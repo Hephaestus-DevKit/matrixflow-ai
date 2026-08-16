@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { configuredProvider, generateText } from '../src/provider.js';
+import {
+  configuredProvider,
+  configuredProviders,
+  generateText,
+  validateProviderEndpoint,
+} from '../src/provider.js';
 
 test('fails closed when no provider is configured', () => {
   assert.throws(
@@ -11,6 +16,49 @@ test('fails closed when no provider is configured', () => {
 
 test('prefers GLM when both providers are configured', () => {
   assert.equal(configuredProvider({ GLM_API_KEY: 'one', OPENAI_API_KEY: 'two' }).name, 'glm');
+});
+
+test('auto mode exposes an ordered failover pool without exposing secrets', () => {
+  const providers = configuredProviders({
+    GLM_API_KEY: 'glm-secret',
+    ANTHROPIC_API_KEY: 'anthropic-secret',
+    OPENAI_API_KEY: 'openai-secret',
+  });
+  assert.deepEqual(
+    providers.map(({ name, apiKey }) => ({ name, hasKey: Boolean(apiKey) })),
+    [
+      { name: 'glm', hasKey: true },
+      { name: 'anthropic', hasKey: true },
+      { name: 'openai', hasKey: true },
+    ],
+  );
+});
+
+test('provider endpoints reject unsafe production configuration', () => {
+  assert.throws(
+    () => validateProviderEndpoint('http://api.example.com/v1', { NODE_ENV: 'production' }),
+    (error) => error.code === 'AI_PROVIDER_ENDPOINT_INSECURE',
+  );
+  assert.throws(
+    () => validateProviderEndpoint('https://127.0.0.1/v1', { NODE_ENV: 'production' }),
+    (error) => error.code === 'AI_PROVIDER_ENDPOINT_PRIVATE',
+  );
+  assert.throws(
+    () => validateProviderEndpoint('https://[fe80::1]/v1', { NODE_ENV: 'production' }),
+    (error) => error.code === 'AI_PROVIDER_ENDPOINT_PRIVATE',
+  );
+  assert.throws(
+    () => validateProviderEndpoint('https://api.example.com/v1?token=secret', {}),
+    (error) => error.code === 'AI_PROVIDER_ENDPOINT_INVALID',
+  );
+  assert.equal(
+    validateProviderEndpoint('http://localhost:8080/v1', {
+      NODE_ENV: 'development',
+      MATRIXFLOW_ALLOW_INSECURE_PROVIDER: 'true',
+      MATRIXFLOW_ALLOW_PRIVATE_PROVIDER: 'true',
+    }),
+    'http://localhost:8080/v1',
+  );
 });
 
 test('resolves native Anthropic Messages protocol explicitly', () => {
@@ -33,6 +81,17 @@ test('resolves native Anthropic Messages protocol explicitly', () => {
       model: 'claude-test',
       endpoint: 'https://proxy.example/v1/messages',
     },
+  );
+});
+
+test('preserves a full Anthropic Messages endpoint supplied by a gateway', () => {
+  assert.equal(
+    configuredProvider({
+      MATRIXFLOW_AI_PROVIDER: 'anthropic',
+      ANTHROPIC_API_KEY: 'secret',
+      ANTHROPIC_BASE_URL: 'https://gateway.example/v1/messages/',
+    }).endpoint,
+    'https://gateway.example/v1/messages',
   );
 });
 
@@ -136,6 +195,48 @@ test('sends OpenAI-compatible payload and retries transient failures', async () 
     assert.equal(body.model, 'compatible-model');
     assert.equal(body.max_tokens, 99);
     assert.deepEqual(result.usage, { inputTokens: 3, outputTokens: 4 });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('auto mode fails over to Anthropic after a transient GLM outage', async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options });
+    if (String(url).includes('openai.example'))
+      return { ok: false, status: 503, headers: { get: () => null }, text: async () => '{}' };
+    return {
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      text: async () =>
+        JSON.stringify({
+          content: [{ type: 'text', text: 'fallback ok' }],
+          usage: { input_tokens: 2, output_tokens: 3 },
+        }),
+    };
+  };
+  try {
+    const result = await generateText(
+      { prompt: 'hello', requestId: 'fallback-test' },
+      {
+        MATRIXFLOW_AI_PROVIDER: 'auto',
+        MATRIXFLOW_AI_MAX_RETRIES: '0',
+        GLM_API_KEY: 'glm-secret',
+        GLM_ENDPOINT: 'https://openai.example/v1/chat/completions',
+        GLM_MODEL: 'glm-test',
+        ANTHROPIC_API_KEY: 'anthropic-secret',
+        ANTHROPIC_BASE_URL: 'https://anthropic.example',
+        ANTHROPIC_MODEL: 'claude-test',
+      },
+    );
+    assert.equal(result.content, 'fallback ok');
+    assert.equal(result.provider, 'anthropic');
+    assert.equal(result.fallbackUsed, true);
+    assert.deepEqual(result.attemptedProviders, ['glm', 'anthropic']);
+    assert.equal(calls.length, 2);
   } finally {
     globalThis.fetch = originalFetch;
   }

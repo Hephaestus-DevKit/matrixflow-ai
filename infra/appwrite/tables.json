@@ -369,6 +369,12 @@
         "min": 0
       },
       {
+        "key": "indexVersion",
+        "type": "varchar",
+        "size": 36,
+        "required": false
+      },
+      {
         "key": "error",
         "type": "text",
         "required": false
@@ -414,6 +420,12 @@
         "type": "varchar",
         "size": 36,
         "required": true
+      },
+      {
+        "key": "indexVersion",
+        "type": "varchar",
+        "size": 36,
+        "required": false
       },
       {
         "key": "chunkIndex",
@@ -711,8 +723,7 @@
         "key": "email",
         "type": "varchar",
         "size": 320,
-        "required": false,
-        "format": "email"
+        "required": false
       },
       {
         "key": "phone",
@@ -1114,6 +1125,127 @@
     ]
   },
   {
+    "$id": "usage_counters",
+    "databaseId": "matrixflow",
+    "name": "Atomic usage counters",
+    "$permissions": [],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "bucket",
+        "type": "varchar",
+        "size": 64,
+        "required": true
+      },
+      {
+        "key": "used",
+        "type": "integer",
+        "required": true,
+        "min": 0,
+        "max": 1000000000
+      },
+      {
+        "key": "limit",
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "max": 1000000000
+      },
+      {
+        "key": "expiresAt",
+        "type": "datetime",
+        "required": true
+      }
+    ],
+    "indexes": [
+      {
+        "key": "usage_counters_org_bucket_unique",
+        "type": "unique",
+        "columns": ["organizationId", "bucket"],
+        "orders": ["ASC", "ASC"]
+      },
+      {
+        "key": "usage_counters_expiry",
+        "type": "key",
+        "columns": ["expiresAt"],
+        "orders": ["ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "usage_aggregates",
+    "databaseId": "matrixflow",
+    "name": "Monthly usage aggregates",
+    "$permissions": [],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "period",
+        "type": "varchar",
+        "size": 7,
+        "required": true
+      },
+      {
+        "key": "metric",
+        "type": "varchar",
+        "size": 32,
+        "required": true
+      },
+      {
+        "key": "dimensionType",
+        "type": "varchar",
+        "size": 16,
+        "required": true
+      },
+      {
+        "key": "dimensionValue",
+        "type": "varchar",
+        "size": 128,
+        "required": true
+      },
+      {
+        "key": "value",
+        "type": "integer",
+        "required": true,
+        "min": 0,
+        "max": 1000000000
+      },
+      {
+        "key": "updatedAt",
+        "type": "datetime",
+        "required": true
+      }
+    ],
+    "indexes": [
+      {
+        "key": "usage_aggregates_unique",
+        "type": "unique",
+        "columns": ["organizationId", "period", "metric", "dimensionType", "dimensionValue"],
+        "orders": ["ASC", "ASC", "ASC", "ASC", "ASC"]
+      },
+      {
+        "key": "usage_aggregates_period",
+        "type": "key",
+        "columns": ["organizationId", "period"],
+        "orders": ["ASC", "DESC"]
+      }
+    ]
+  },
+  {
     "$id": "audit_logs",
     "databaseId": "matrixflow",
     "name": "Audit logs",
@@ -1310,20 +1442,59 @@
     "rowSecurity": true,
     "enabled": true,
     "columns": [
-      { "key": "organizationId", "type": "varchar", "size": 36, "required": true },
-      { "key": "planId", "type": "varchar", "size": 24, "required": true },
-      { "key": "status", "type": "varchar", "size": 24, "required": true },
-      { "key": "provider", "type": "varchar", "size": 40, "required": true },
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "planId",
+        "type": "varchar",
+        "size": 24,
+        "required": true
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 24,
+        "required": true
+      },
+      {
+        "key": "provider",
+        "type": "varchar",
+        "size": 40,
+        "required": true
+      },
       {
         "key": "externalSubscriptionId",
         "type": "varchar",
         "size": 180,
         "required": true
       },
-      { "key": "seats", "type": "integer", "required": true, "min": 1, "max": 500 },
-      { "key": "currentPeriodStart", "type": "datetime", "required": false },
-      { "key": "currentPeriodEnd", "type": "datetime", "required": false },
-      { "key": "metadata", "type": "longtext", "required": false, "default": "{}" }
+      {
+        "key": "seats",
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "max": 500
+      },
+      {
+        "key": "currentPeriodStart",
+        "type": "datetime",
+        "required": false
+      },
+      {
+        "key": "currentPeriodEnd",
+        "type": "datetime",
+        "required": false
+      },
+      {
+        "key": "metadata",
+        "type": "longtext",
+        "required": false,
+        "default": "{}"
+      }
     ],
     "indexes": [
       {
@@ -1354,13 +1525,47 @@
     "rowSecurity": true,
     "enabled": true,
     "columns": [
-      { "key": "organizationId", "type": "varchar", "size": 36, "required": true },
-      { "key": "eventId", "type": "varchar", "size": 180, "required": true },
-      { "key": "provider", "type": "varchar", "size": 40, "required": true },
-      { "key": "type", "type": "varchar", "size": 64, "required": true },
-      { "key": "subscriptionId", "type": "varchar", "size": 180, "required": true },
-      { "key": "payload", "type": "longtext", "required": false, "default": "{}" },
-      { "key": "processedAt", "type": "datetime", "required": true }
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "eventId",
+        "type": "varchar",
+        "size": 180,
+        "required": true
+      },
+      {
+        "key": "provider",
+        "type": "varchar",
+        "size": 40,
+        "required": true
+      },
+      {
+        "key": "type",
+        "type": "varchar",
+        "size": 64,
+        "required": true
+      },
+      {
+        "key": "subscriptionId",
+        "type": "varchar",
+        "size": 180,
+        "required": true
+      },
+      {
+        "key": "payload",
+        "type": "longtext",
+        "required": false,
+        "default": "{}"
+      },
+      {
+        "key": "processedAt",
+        "type": "datetime",
+        "required": true
+      }
     ],
     "indexes": [
       {
@@ -1371,6 +1576,372 @@
       },
       {
         "key": "billing_events_org_time",
+        "type": "key",
+        "columns": ["organizationId", "processedAt"],
+        "orders": ["ASC", "DESC"]
+      }
+    ]
+  },
+  {
+    "$id": "background_jobs",
+    "databaseId": "matrixflow",
+    "name": "Background jobs",
+    "$permissions": [],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "type",
+        "type": "varchar",
+        "size": 64,
+        "required": true
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 24,
+        "required": true
+      },
+      {
+        "key": "payload",
+        "type": "longtext",
+        "required": true
+      },
+      {
+        "key": "result",
+        "type": "longtext",
+        "required": false,
+        "default": "{}"
+      },
+      {
+        "key": "error",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "attempts",
+        "type": "integer",
+        "required": true,
+        "min": 0,
+        "max": 10
+      },
+      {
+        "key": "maxAttempts",
+        "type": "integer",
+        "required": true,
+        "min": 1,
+        "max": 10
+      },
+      {
+        "key": "runAfter",
+        "type": "datetime",
+        "required": true
+      },
+      {
+        "key": "startedAt",
+        "type": "datetime",
+        "required": false
+      },
+      {
+        "key": "heartbeatAt",
+        "type": "datetime",
+        "required": false
+      },
+      {
+        "key": "leaseExpiresAt",
+        "type": "datetime",
+        "required": false
+      },
+      {
+        "key": "leaseToken",
+        "type": "varchar",
+        "size": 64,
+        "required": false
+      },
+      {
+        "key": "completedAt",
+        "type": "datetime",
+        "required": false
+      },
+      {
+        "key": "cancelRequested",
+        "type": "boolean",
+        "required": true
+      },
+      {
+        "key": "createdBy",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      }
+    ],
+    "indexes": [
+      {
+        "key": "background_jobs_org_status",
+        "type": "key",
+        "columns": ["organizationId", "status"],
+        "orders": ["ASC", "ASC"]
+      },
+      {
+        "key": "background_jobs_run_after",
+        "type": "key",
+        "columns": ["status", "runAfter"],
+        "orders": ["ASC", "ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "api_keys",
+    "databaseId": "matrixflow",
+    "name": "API keys",
+    "$permissions": [],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "name",
+        "type": "varchar",
+        "size": 100,
+        "required": true
+      },
+      {
+        "key": "keyPrefix",
+        "type": "varchar",
+        "size": 24,
+        "required": true
+      },
+      {
+        "key": "keyHash",
+        "type": "varchar",
+        "size": 64,
+        "required": true
+      },
+      {
+        "key": "scopes",
+        "type": "longtext",
+        "required": true
+      },
+      {
+        "key": "createdBy",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "lastUsedAt",
+        "type": "datetime",
+        "required": false
+      },
+      {
+        "key": "expiresAt",
+        "type": "datetime",
+        "required": false
+      },
+      {
+        "key": "revokedAt",
+        "type": "datetime",
+        "required": false
+      }
+    ],
+    "indexes": [
+      {
+        "key": "api_keys_prefix_unique",
+        "type": "unique",
+        "columns": ["keyPrefix"],
+        "orders": ["ASC"]
+      },
+      {
+        "key": "api_keys_org",
+        "type": "key",
+        "columns": ["organizationId"],
+        "orders": ["ASC"]
+      }
+    ]
+  },
+  {
+    "$id": "billing_invoices",
+    "databaseId": "matrixflow",
+    "name": "Billing invoices",
+    "$permissions": [],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 36,
+        "required": true
+      },
+      {
+        "key": "provider",
+        "type": "varchar",
+        "size": 40,
+        "required": true
+      },
+      {
+        "key": "externalInvoiceId",
+        "type": "varchar",
+        "size": 180,
+        "required": true
+      },
+      {
+        "key": "subscriptionId",
+        "type": "varchar",
+        "size": 180,
+        "required": true
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 24,
+        "required": true
+      },
+      {
+        "key": "amountCents",
+        "type": "integer",
+        "required": true,
+        "min": 0,
+        "max": 100000000
+      },
+      {
+        "key": "currency",
+        "type": "varchar",
+        "size": 3,
+        "required": true
+      },
+      {
+        "key": "hostedUrl",
+        "type": "varchar",
+        "size": 2000,
+        "required": false
+      },
+      {
+        "key": "issuedAt",
+        "type": "datetime",
+        "required": false
+      },
+      {
+        "key": "dueAt",
+        "type": "datetime",
+        "required": false
+      },
+      {
+        "key": "paidAt",
+        "type": "datetime",
+        "required": false
+      },
+      {
+        "key": "metadata",
+        "type": "longtext",
+        "required": false,
+        "default": "{}"
+      }
+    ],
+    "indexes": [
+      {
+        "key": "billing_invoices_external_unique",
+        "type": "unique",
+        "columns": ["externalInvoiceId"],
+        "orders": ["ASC"]
+      },
+      {
+        "key": "billing_invoices_org_time",
+        "type": "key",
+        "columns": ["organizationId", "issuedAt"],
+        "orders": ["ASC", "DESC"]
+      }
+    ]
+  },
+  {
+    "$id": "billing_transactions",
+    "databaseId": "matrixflow",
+    "name": "Billing transactions",
+    "$permissions": [],
+    "rowSecurity": true,
+    "enabled": true,
+    "columns": [
+      {
+        "key": "organizationId",
+        "type": "varchar",
+        "size": 255,
+        "required": true
+      },
+      {
+        "key": "provider",
+        "type": "varchar",
+        "size": 40,
+        "required": true
+      },
+      {
+        "key": "externalTransactionId",
+        "type": "varchar",
+        "size": 180,
+        "required": true
+      },
+      {
+        "key": "subscriptionId",
+        "type": "varchar",
+        "size": 180,
+        "required": true
+      },
+      {
+        "key": "type",
+        "type": "varchar",
+        "size": 24,
+        "required": true
+      },
+      {
+        "key": "status",
+        "type": "varchar",
+        "size": 24,
+        "required": true
+      },
+      {
+        "key": "amountCents",
+        "type": "integer",
+        "required": true,
+        "min": 0,
+        "max": 100000000
+      },
+      {
+        "key": "currency",
+        "type": "varchar",
+        "size": 3,
+        "required": true
+      },
+      {
+        "key": "processedAt",
+        "type": "datetime",
+        "required": true
+      },
+      {
+        "key": "metadata",
+        "type": "longtext",
+        "required": false,
+        "default": "{}"
+      }
+    ],
+    "indexes": [
+      {
+        "key": "billing_transactions_external_unique",
+        "type": "unique",
+        "columns": ["externalTransactionId"],
+        "orders": ["ASC"]
+      },
+      {
+        "key": "billing_transactions_org_time",
         "type": "key",
         "columns": ["organizationId", "processedAt"],
         "orders": ["ASC", "DESC"]

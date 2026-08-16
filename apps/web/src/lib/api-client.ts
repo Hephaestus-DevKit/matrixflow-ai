@@ -14,6 +14,11 @@ export class ApiError extends Error {
   }
 }
 
+export interface RequestOptions {
+  /** Reuse this value when retrying an operation after an unknown network outcome. */
+  idempotencyKey?: string;
+}
+
 function normalizeError(error: unknown): never {
   if (error instanceof ApiError) throw error;
   if (error instanceof BackendError)
@@ -38,12 +43,14 @@ async function call<T>(
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   path: string,
   body?: unknown,
+  options: RequestOptions = {},
 ) {
   try {
     const idempotencyKey =
       method === 'GET'
         ? undefined
-        : `mf-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`}`;
+        : options.idempotencyKey ||
+          `mf-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`}`;
     return (await routeBackend(method, path, body, { idempotencyKey })) as T;
   } catch (error) {
     normalizeError(error);
@@ -58,13 +65,19 @@ export { clearOrganizationContext };
 
 export const apiClient = {
   get: <T = unknown>(path: string) => call<T>('GET', path),
-  post: <T = unknown>(path: string, body: unknown) => call<T>('POST', path, body),
-  put: <T = unknown>(path: string, body: unknown) => call<T>('PUT', path, body),
-  patch: <T = unknown>(path: string, body: unknown) => call<T>('PATCH', path, body),
-  del: <T = unknown>(path: string) => call<T>('DELETE', path),
-  upload: async <T = unknown>(path: string, body: FormData) => {
+  post: <T = unknown>(path: string, body: unknown, options?: RequestOptions) =>
+    call<T>('POST', path, body, options),
+  put: <T = unknown>(path: string, body: unknown, options?: RequestOptions) =>
+    call<T>('PUT', path, body, options),
+  patch: <T = unknown>(path: string, body: unknown, options?: RequestOptions) =>
+    call<T>('PATCH', path, body, options),
+  del: <T = unknown>(path: string, body?: unknown, options?: RequestOptions) =>
+    call<T>('DELETE', path, body, options),
+  upload: async <T = unknown>(path: string, body: FormData, options: RequestOptions = {}) => {
     try {
-      const idempotencyKey = `mf-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`}`;
+      const idempotencyKey =
+        options.idempotencyKey ||
+        `mf-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`}`;
       return (await routeUpload(path, body, { idempotencyKey })) as T;
     } catch (error) {
       normalizeError(error);

@@ -111,6 +111,41 @@ export async function listRows(
   return rows;
 }
 
+export async function listRowsPage(
+  tableId: string,
+  queries: string[] = [],
+  organizationField = 'organizationId',
+  options: { limit?: number; offset?: number } = {},
+) {
+  const organizationId = getOrganizationContext();
+  const limit = Math.min(100, Math.max(1, Math.floor(Number(options.limit || 50))));
+  const offset = Math.max(0, Math.floor(Number(options.offset || 0)));
+  const hasOrdering = queries.some((query) => query.includes('order'));
+  try {
+    const result = await tablesDB.listRows<Row>({
+      databaseId: DATABASE_ID,
+      tableId,
+      queries: [
+        Query.equal(organizationField, organizationId),
+        ...queries,
+        ...(hasOrdering ? [] : [Query.orderDesc('$createdAt')]),
+        Query.limit(limit),
+        Query.offset(offset),
+      ],
+    });
+    const rows = result.rows.map(decodeRow);
+    return {
+      data: rows,
+      total: Number(result.total || 0),
+      limit,
+      offset,
+      nextOffset: offset + rows.length < Number(result.total || 0) ? offset + rows.length : null,
+    };
+  } catch (error) {
+    throw normalizeAppwriteError(error);
+  }
+}
+
 export async function countRows(
   tableId: string,
   queries: string[] = [],
@@ -238,12 +273,14 @@ export async function executeCore<T>(
       body: JSON.stringify({
         ...body,
         organizationId: getOrganizationContext(),
-        ...(options.idempotencyKey ? { __idempotencyKey: options.idempotencyKey } : {}),
       }),
       async: false,
       xpath: path,
       method,
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        ...(options.idempotencyKey ? { 'idempotency-key': options.idempotencyKey } : {}),
+      },
     });
   } catch (error) {
     throw normalizeAppwriteError(error, '核心服务暂时不可用');
