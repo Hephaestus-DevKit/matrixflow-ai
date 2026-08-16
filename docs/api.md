@@ -4,7 +4,7 @@ MatrixFlow 的业务 API 由 Appwrite Function `matrixflow-core` 提供。浏览
 
 ## 认证
 
-创建 API Key：登录工作台后进入“设置 → 企业设置与安全 → API 访问”。只有组织 owner/admin 可以创建和撤销 Key。完整密钥只返回一次，服务端只保存 SHA-256 哈希。
+创建 API Key：登录工作台后进入“设置 → 企业设置与安全 → API 访问”。只有组织 owner/admin 可以创建和撤销 Key。完整密钥只返回一次，服务端使用生产 pepper 保护的 PBKDF2-HMAC-SHA256（120,000 次迭代）保存派生值；生产缺少 `MATRIXFLOW_API_KEY_PEPPER` 时会安全拒绝 API Key 操作。
 
 ```http
 Authorization: Bearer mf_live_<secret>

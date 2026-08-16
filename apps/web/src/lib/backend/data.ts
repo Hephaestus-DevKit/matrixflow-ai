@@ -72,6 +72,26 @@ function teamPermissions(organizationId: string) {
   return [Permission.read(Role.team(organizationId))];
 }
 
+async function scopedUploadFileId(organizationId: string, idempotencyKey: string) {
+  const input = new TextEncoder().encode(`matrixflow-upload:${organizationId}:${idempotencyKey}`);
+  const subtle = globalThis.crypto?.subtle;
+  if (subtle) {
+    const digest = await subtle.digest('SHA-256', input);
+    const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0'))
+      .join('')
+      .slice(0, 32);
+    // Appwrite file IDs are limited to 36 characters; the tenant-scoped
+    // digest keeps retries stable without allowing cross-organization ID
+    // collisions from a reused client idempotency key.
+    return `mf-${hex}`;
+  }
+  // Older embedded browsers may not expose SubtleCrypto. Keep a bounded,
+  // tenant-derived fallback so upload retries remain scoped and valid.
+  const fallback = organizationId.replace(/[^A-Za-z0-9]/g, '').slice(-12);
+  const key = idempotencyKey.replace(/[^A-Za-z0-9]/g, '').slice(0, 20);
+  return `mf-${fallback}-${key}`.slice(0, 36);
+}
+
 function assertOwned(row: Data, organizationId: string, field = 'organizationId') {
   if (row[field] !== organizationId) throw new BackendError('无权访问该团队资源', 403, 'FORBIDDEN');
 }
@@ -190,7 +210,7 @@ export async function uploadKnowledgeFile(
   const organizationId = getOrganizationContext();
   const permissions = teamPermissions(organizationId);
   const deterministicFileId = options.idempotencyKey
-    ? options.idempotencyKey.replace(/[^A-Za-z0-9._-]/g, '').slice(0, 36)
+    ? await scopedUploadFileId(organizationId, options.idempotencyKey)
     : undefined;
   const fileId =
     deterministicFileId && deterministicFileId.length >= 8 ? deterministicFileId : ID.unique();

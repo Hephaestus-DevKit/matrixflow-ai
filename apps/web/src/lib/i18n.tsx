@@ -1,8 +1,19 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import { usePathname } from 'next/navigation';
+import { LOCALE_COOKIE } from './locale-config';
+import { localizedPageTitle, type Locale } from './locale-titles';
 
-export type Locale = 'zh-CN' | 'zh-TW' | 'en';
+export type { Locale } from './locale-titles';
 
 export const LOCALE_OPTIONS: Array<{ value: Locale; label: string }> = [
   { value: 'zh-CN', label: '简体中文' },
@@ -707,16 +718,44 @@ function isLocale(value: string | null): value is Locale {
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('zh-CN');
+  const pathname = usePathname();
+  const titleRef = useRef('');
 
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (isLocale(saved)) setLocaleState(saved);
+    if (isLocale(saved)) {
+      setLocaleState(saved);
+      // Update the document metadata in the same pass as the persisted locale.
+      // This avoids the first render's observer briefly restoring the default
+      // Simplified Chinese title during hydration.
+      const title = localizedPageTitle(window.location.pathname, saved);
+      titleRef.current = title;
+      document.documentElement.lang = saved;
+      document.title = title;
+    }
   }, []);
 
   useEffect(() => {
     document.documentElement.lang = locale;
     window.localStorage.setItem(STORAGE_KEY, locale);
-  }, [locale]);
+    const secureCookie = window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `${LOCALE_COOKIE}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax${secureCookie}`;
+    // `usePathname()` can briefly be null during a direct App Router boot;
+    // the browser pathname is the safe fallback for that first title commit.
+    const currentPathname = pathname ?? window.location.pathname;
+    const title = localizedPageTitle(currentPathname, locale);
+    titleRef.current = title;
+    document.title = title;
+    // Next's route metadata can commit after this provider during client-side
+    // navigation. Keep the title synchronized if that metadata replaces it so
+    // the selected locale is also reflected in the browser tab and screen
+    // reader announcements.
+    const observer = new MutationObserver(() => {
+      if (document.title !== titleRef.current) document.title = titleRef.current;
+    });
+    observer.observe(document.head, { subtree: true, childList: true, characterData: true });
+    return () => observer.disconnect();
+  }, [locale, pathname]);
 
   const value = useMemo<LocaleContextValue>(
     () => ({
