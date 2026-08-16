@@ -53,6 +53,5 @@ packages/db/
 packages/ai-gateway/
 packages/workflow-engine/
 infra/docker/
-/scripts/
 
 .vercel

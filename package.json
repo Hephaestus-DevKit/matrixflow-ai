@@ -13,15 +13,15 @@
     "dev": "corepack pnpm --filter @matrixflow/web dev",
     "lint": "corepack pnpm --filter @matrixflow/shared lint && corepack pnpm --filter @matrixflow/web lint",
     "typecheck": "corepack pnpm --filter @matrixflow/shared typecheck && corepack pnpm --filter @matrixflow/shared build && corepack pnpm --filter @matrixflow/web typecheck",
-    "test": "corepack pnpm --filter @matrixflow/shared test",
+    "test": "corepack pnpm --filter @matrixflow/shared test && node --test scripts/production-smoke.test.mjs",
     "test:coverage": "corepack pnpm --filter @matrixflow/shared test:coverage",
     "verify": "corepack pnpm format:check && corepack pnpm typecheck && corepack pnpm lint && corepack pnpm test && corepack pnpm build",
     "function:check": "npm --prefix apps/functions/matrixflow-core run check",
     "function:test": "npm --prefix apps/functions/matrixflow-core test",
     "appwrite:provision": "node apps/functions/matrixflow-core/scripts/provision.mjs",
     "smoke:production": "node scripts/production-smoke.mjs",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,json,md,yml,yaml}\"",
     "clean": "rimraf apps/web/.next packages/shared/dist node_modules"
   },
   "devDependencies": {

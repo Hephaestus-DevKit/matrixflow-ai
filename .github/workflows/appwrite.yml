@@ -80,4 +80,5 @@ jobs:
         env:
           MATRIXFLOW_TEST_EMAIL: ${{ secrets.MATRIXFLOW_TEST_EMAIL }}
           MATRIXFLOW_TEST_PASSWORD: ${{ secrets.MATRIXFLOW_TEST_PASSWORD }}
+          MATRIXFLOW_REQUIRE_AI_SMOKE: 'true'
         run: node apps/functions/matrixflow-core/scripts/smoke.mjs

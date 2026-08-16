@@ -99,7 +99,7 @@ MATRIXFLOW_DEPLOY_KEY=... pnpm appwrite:provision
 appwrite functions create-deployment --function-id matrixflow-core --code apps/functions/matrixflow-core --activate --entrypoint src/main.js --commands "npm ci --omit=dev"
 ```
 
-部署后应立即撤销临时 key，并运行 `apps/functions/matrixflow-core/scripts/smoke.mjs` 验证登录、团队权限、浏览器禁写、服务端写入和函数健康状态。仓库还提供 `.github/workflows/appwrite.yml`，在配置短期部署密钥后自动同步后端。发布、回滚和配置清单见 [部署手册](docs/deployment.md)。
+部署后应立即撤销临时 key，并运行 `apps/functions/matrixflow-core/scripts/smoke.mjs` 验证登录、团队权限、浏览器禁写、服务端写入、函数健康状态和真实 Provider。仓库还提供 `.github/workflows/appwrite.yml`，在配置短期部署密钥后自动同步后端。发布、回滚和配置清单见 [部署手册](docs/deployment.md)，SLO、告警、事件与恢复标准见 [生产运行基线](docs/operations.md)。
 
 ## 能力边界
 

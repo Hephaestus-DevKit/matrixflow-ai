@@ -13,12 +13,14 @@ MatrixFlow 当前的定位是“生产可用 Beta / 候选版”：核心数据�
 - 简体中文、繁體中文、English 三语，以及响应式移动端布局。
 - GitHub CI、CodeQL、依赖安全审计、Vercel 生产构建和 Appwrite Schema 即代码。
 - 生产公开面每小时由 GitHub Actions smoke 监测，首页安全响应头异常会直接告警。
+- 主分支保护要求当前 CI 与 CodeQL 通过，并启用线性历史和会话解决。
+- 生产运行的 SLO、告警、事件等级、发布证据与恢复演练标准已在 `docs/operations.md` 定义。
 
 ## 发布前必须配置
 
 这些项目不能由代码凭空完成，需要运营方提供真实外部配置：
 
-1. 在 Appwrite Function 中配置至少一个 AI Provider Secret，并用真实模型执行一次端到端 smoke test。
+1. 在 Appwrite Function 中配置至少一个 AI Provider Secret；生产部署流水线会强制执行一次真实、低 token 的 Agent smoke，未配置或调用失败时发布不通过。
 2. 配置短期 `MATRIXFLOW_DEPLOY_KEY` 或由已授权管理员在 Appwrite Console 发布 Function；发布后验证 active deployment。
 3. 如果启用付费，接入真实支付供应商，将供应商事件规范化后以 HMAC 调用 `/billing/webhook`，并测试重复事件、取消、欠费和恢复。
 4. 为生产域名配置监控、错误告警、备份保留和恢复演练记录。

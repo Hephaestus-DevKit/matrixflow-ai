@@ -36,6 +36,20 @@ const CONTENT_TYPES = [
   'brand_voice',
 ];
 
+export async function deleteAgent(services, context, agentId) {
+  const runs = await listRows(services, TABLES.agentRuns, context.teamId, [
+    Query.equal('agentId', agentId),
+  ]);
+  await Promise.all(
+    runs.map((run) => deleteOwned(services, TABLES.agentRuns, run.id, context.teamId)),
+  );
+  const deleted = await deleteOwned(services, TABLES.agents, agentId, context.teamId);
+  await recordAudit(services, context, 'agent.deleted', 'agent', deleted.id, {
+    deletedRuns: runs.length,
+  });
+  return { deleted: true, deletedRuns: runs.length };
+}
+
 export async function generateContent(services, context, body, options = {}) {
   if (!options.quotaChecked) await enforceAiBudget(services, context.teamId);
   const project = await getOwned(services, TABLES.contentProjects, body.projectId, context.teamId);

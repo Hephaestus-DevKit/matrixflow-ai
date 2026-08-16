@@ -4,6 +4,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import {
   askKnowledgeBase,
   crmReply,
+  deleteAgent,
   generateAllContent,
   generateContent,
   indexDocument,
@@ -353,9 +354,7 @@ async function handleRoute({ services, context, membership, path, method, body }
 
   if (method === 'DELETE' && segments[0] === 'agents' && segments[1]) {
     requireCapability(membership, 'agents.manage');
-    const deleted = await deleteOwned(services, TABLES.agents, segments[1], context.teamId);
-    await recordAudit(services, context, 'agent.deleted', 'agent', deleted.id);
-    return { deleted: true };
+    return deleteAgent(services, context, segments[1]);
   }
 
   if (method === 'POST' && segments[0] === 'agents' && segments[2] === 'run') {
