@@ -15,7 +15,7 @@
 - 套餐权益只由 Function 服务端读取 `subscriptions` 判定；计费适配器的 `/billing/webhook` 使用原始请求体 HMAC-SHA256 校验，并通过唯一 `billing_events.eventId` 幂等处理。
 - Stripe 直连回调 `/billing/stripe-webhook` 使用时间戳容忍窗口和 `STRIPE_WEBHOOK_SECRET` 校验原始签名，再转换为内部 HMAC 事件，避免信任客户端传入的订阅状态。
 - 计费状态覆盖试用、正常、逾期、暂停、取消和拒付；发票与支付/退款/拒付交易分别持久化，浏览器只读经过 Function 授权的摘要。
-- API Key 以服务端 pepper 保护的 HMAC 存储，前缀用于索引，完整密钥只在创建响应中出现一次；每个 Key 绑定组织、作用域、过期时间和撤销时间。生产缺少 `MATRIXFLOW_API_KEY_PEPPER` 时，API Key 操作会安全失败。
+- API Key 以服务端 pepper 保护的 PBKDF2-HMAC-SHA256（120,000 次迭代）存储，前缀用于索引，完整密钥只在创建响应中出现一次；每个 Key 绑定组织、作用域、过期时间和撤销时间。生产缺少 `MATRIXFLOW_API_KEY_PEPPER` 时，API Key 操作会安全失败。
 - API Key 请求必须同时提供 `Authorization: Bearer mf_live_...` 与 `X-MatrixFlow-Organization`；作用域不足会被 Function 拒绝，不能冒充 Appwrite 用户或跨租户读取。
 - 长任务写入 `background_jobs`，由 Appwrite 内部异步执行调用；内部路径需要独立 `MATRIXFLOW_WORKER_SECRET`，任务使用条件更新原子领取、租约心跳、过期接管、取消和有界重试。
 - Provider 端点必须使用 HTTPS，生产默认拒绝私网/本地地址、凭据、查询参数和片段；Webhook 仅允许出站白名单域名。

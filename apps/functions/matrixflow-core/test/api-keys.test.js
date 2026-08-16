@@ -7,7 +7,7 @@ import {
   resolveApiKey,
   validateApiKeySecret,
 } from '../src/api-keys.js';
-import { createHmac } from 'node:crypto';
+import { pbkdf2Sync } from 'node:crypto';
 
 test('generated API keys are high entropy and never return the hash as the secret', () => {
   const generated = generateApiKey();
@@ -15,7 +15,9 @@ test('generated API keys are high entropy and never return the hash as the secre
   assert.equal(generated.keyPrefix, generated.secret.slice(0, 17));
   assert.equal(
     generated.keyHash,
-    createHmac('sha256', 'matrixflow-development-only').update(generated.secret).digest('hex'),
+    pbkdf2Sync(generated.secret, 'matrixflow-development-only', 120_000, 32, 'sha256').toString(
+      'hex',
+    ),
   );
   assert.throws(
     () => validateApiKeySecret('mf_live_short'),

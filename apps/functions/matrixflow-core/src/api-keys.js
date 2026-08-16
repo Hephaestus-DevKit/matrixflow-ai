@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { pbkdf2Sync, randomBytes, timingSafeEqual } from 'node:crypto';
 import { Query } from 'node-appwrite';
 import { HttpError, TABLES, createRow, getOwned, listRows, updateOwned } from './runtime.js';
 
@@ -12,6 +12,7 @@ export const API_KEY_SCOPES = Object.freeze([
 ]);
 
 const DEVELOPMENT_API_KEY_PEPPER = 'matrixflow-development-only';
+const API_KEY_KDF_ITERATIONS = 120_000;
 
 function apiKeyPepper() {
   const configured = String(process.env.MATRIXFLOW_API_KEY_PEPPER || '').trim();
@@ -24,7 +25,7 @@ function apiKeyPepper() {
 }
 
 function hashKey(value) {
-  return createHmac('sha256', apiKeyPepper()).update(value, 'utf8').digest('hex');
+  return pbkdf2Sync(value, apiKeyPepper(), API_KEY_KDF_ITERATIONS, 32, 'sha256').toString('hex');
 }
 
 function safeMetadata(row) {
