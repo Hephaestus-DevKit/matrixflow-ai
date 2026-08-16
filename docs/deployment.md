@@ -75,7 +75,7 @@ MATRIXFLOW_BILLING_WEBHOOK_SECRET=<secret>
 
 `OPENAI_BASE_URL` 支持任意遵循 Chat Completions 请求/响应结构的网关；官方 OpenAI 新模型默认使用 `max_completion_tokens`，旧版兼容网关可切换为 `max_tokens`。GLM 保留独立变量以兼容既有环境。`ANTHROPIC_API_KEY`、`OPENAI_API_KEY` 和 `GLM_API_KEY` 必须标记为 Secret，其他模型、端点和限流变量可以是普通变量。密钥永远不要放到 Web 环境变量或仓库。
 
-自动部署由 `.github/workflows/appwrite.yml` 提供。仓库 Secret `MATRIXFLOW_DEPLOY_KEY` 存在时，主分支的后端或基础设施变更会依次执行测试、Schema 更新、Function 部署和可选 smoke test；没有 Secret 时任务安全跳过。
+自动部署由 `.github/workflows/appwrite.yml` 提供。主分支的后端或基础设施变更会依次执行测试、Schema 更新、Function 部署和可选 smoke test；如果仓库 Secret `MATRIXFLOW_DEPLOY_KEY` 缺失，任务会明确失败，不会把未发布的后端代码标记为成功。
 
 如果 Secret 缺失，工作流会在运行摘要和警告中明确标记“未修改 Appwrite”，不能把绿色的跳过任务当作后端已发布。配置短期最小权限 key 后，应重新运行工作流，并在 Appwrite Console 核对 active deployment ID。
 
