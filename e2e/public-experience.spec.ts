@@ -69,3 +69,28 @@ test('does not overflow a narrow mobile viewport', async ({ page }) => {
   await expect(page.locator('header select')).toBeVisible();
   await expect(page.getByRole('link', { name: '免费开始', exact: true })).toBeVisible();
 });
+
+test('keeps the complete public journey inside the 320px minimum width in every locale', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+
+  for (const locale of ['zh-CN', 'zh-TW', 'en']) {
+    await page
+      .context()
+      .addCookies([{ name: 'matrixflow-locale', value: locale, domain: '127.0.0.1', path: '/' }]);
+    await page.goto('/');
+    await expect(page.locator('html')).toHaveAttribute('lang', locale);
+
+    for (const path of ['/', '/pricing', '/login', '/register']) {
+      await page.goto(path);
+      const dimensions = await page.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      }));
+      expect(dimensions.scrollWidth, `${locale} ${path} overflowed`).toBeLessThanOrEqual(
+        dimensions.clientWidth + 1,
+      );
+    }
+  }
+});

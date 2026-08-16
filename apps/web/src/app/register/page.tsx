@@ -72,7 +72,10 @@ export default function RegisterPage() {
       footer={
         <>
           {t('auth.haveAccount')}{' '}
-          <Link href="/login" className="font-bold text-primary hover:underline">
+          <Link
+            href="/login"
+            className="rounded-sm font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
             {t('public.login')}
           </Link>
         </>
@@ -108,7 +111,9 @@ export default function RegisterPage() {
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="register-password">{t('auth.password')}</Label>
-              <span className="text-2xs text-muted-foreground">{t('auth.passwordHint')}</span>
+              <span className="text-right text-xs text-muted-foreground">
+                {t('auth.passwordHint')}
+              </span>
             </div>
             <div className="relative">
               <Input
@@ -126,7 +131,7 @@ export default function RegisterPage() {
                 type="button"
                 onClick={() => setShowPassword((visible) => !visible)}
                 aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
-                className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-xl text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -147,7 +152,7 @@ export default function RegisterPage() {
               <Link
                 href="/terms"
                 target="_blank"
-                className="font-semibold text-primary hover:underline"
+                className="rounded-sm font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {t('public.terms')}
               </Link>{' '}
@@ -155,7 +160,7 @@ export default function RegisterPage() {
               <Link
                 href="/privacy"
                 target="_blank"
-                className="font-semibold text-primary hover:underline"
+                className="rounded-sm font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {t('public.privacy')}
               </Link>
@@ -185,7 +190,7 @@ export default function RegisterPage() {
                   setOtpCode('');
                   setError('');
                 }}
-                className="text-2xs font-semibold text-primary hover:underline"
+                className="rounded-sm text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {t('auth.changeDetails')}
               </button>
@@ -210,14 +215,14 @@ export default function RegisterPage() {
             )}
             {loading ? t('auth.loadingRegisterVerify') : t('auth.verifyAndEnter')}
           </Button>
-          <div className="text-center text-2xs text-muted-foreground">
+          <div className="text-center text-xs text-muted-foreground">
             {countdown > 0 ? (
               `${countdown} ${t('auth.secondsRemaining')}`
             ) : (
               <button
                 type="button"
                 onClick={() => handleRegister()}
-                className="font-bold text-primary hover:underline"
+                className="rounded-sm font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {t('auth.resend')}
               </button>
@@ -226,8 +231,9 @@ export default function RegisterPage() {
         </form>
       )}
 
-      <div className="mt-5 flex items-center justify-center gap-2 border-t border-border/60 pt-5 text-2xs text-muted-foreground">
-        <UserPlus className="h-3.5 w-3.5 text-primary" /> {t('auth.defaultOrg')}
+      <div className="mt-5 flex items-center justify-center gap-2 border-t border-border/60 pt-5 text-xs text-muted-foreground">
+        <UserPlus className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+        {t('auth.defaultOrg')}
       </div>
     </AuthShell>
   );

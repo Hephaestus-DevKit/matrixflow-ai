@@ -10,7 +10,7 @@ export function PublicHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/85 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-3 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-3 sm:px-6">
         <Link
           href="/"
           className="flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg py-1 font-bold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -18,9 +18,12 @@ export function PublicHeader() {
           <span className="brand-mark h-8 w-8 rounded-lg" aria-hidden="true">
             M
           </span>
-          MatrixFlow AI
+          <span className="sr-only min-[360px]:not-sr-only">MatrixFlow AI</span>
         </Link>
-        <nav aria-label={t('public.navLabel')} className="flex items-center gap-0.5 sm:gap-2">
+        <nav
+          aria-label={t('public.navLabel')}
+          className="flex min-w-0 items-center gap-0.5 sm:gap-2"
+        >
           <LocaleSwitcher compact />
           <Button asChild variant="ghost" size="sm" className="hidden h-10 md:inline-flex">
             <Link href="/pricing">{t('public.pricing')}</Link>
