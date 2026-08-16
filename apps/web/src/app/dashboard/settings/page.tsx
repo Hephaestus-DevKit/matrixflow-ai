@@ -25,6 +25,8 @@ import { apiClient } from '@/lib/api-client';
 import { account } from '@/lib/appwrite';
 import { useLocale, type Locale } from '@/lib/i18n';
 import { MfaSecurityCard } from '@/components/settings/mfa-security-card';
+import { ApiAccessCard } from '@/components/settings/api-access-card';
+import { DataGovernanceCard } from '@/components/settings/data-governance-card';
 
 const COPY: Record<
   Locale,
@@ -907,6 +909,9 @@ export default function SettingsPage() {
               </p>
             )}
           </div>
+
+          <ApiAccessCard />
+          <DataGovernanceCard />
 
           {/* Actions */}
           <div className="pt-2 flex justify-start">

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Factory, Sparkles, Plus, Loader2, AlertCircle, Trash2 } from 'lucide-react';
@@ -234,6 +235,8 @@ export default function ContentFactoryPage() {
   }[locale];
   const [projectId, setProjectId] = useState<string | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
+  const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, ContentGenerationView>>({});
   const [isCreating, setIsCreating] = useState(false);
   const [projectName, setProjectName] = useState('');
@@ -323,14 +326,17 @@ export default function ContentFactoryPage() {
   }
 
   async function deleteProject(id: string) {
-    if (!window.confirm(copy.deleteConfirm)) return;
+    setDeletingProjectId(id);
     try {
       await apiClient.del(`/content/projects/${id}`);
       if (projectId === id) setProjectId(null);
       await refetchProjects();
       toast.success(copy.deleted);
+      setDeleteProjectId(null);
     } catch (error) {
       toast.error(errorMessage(error, copy.deleteFailed));
+    } finally {
+      setDeletingProjectId(null);
     }
   }
 
@@ -419,7 +425,7 @@ export default function ContentFactoryPage() {
               <button
                 type="button"
                 aria-label={`${copy.deleteProject} ${project.name}`}
-                onClick={() => void deleteProject(project.id)}
+                onClick={() => setDeleteProjectId(project.id)}
                 className="border-l border-current/10 px-2 hover:bg-destructive/10 hover:text-destructive"
               >
                 <Trash2 className="h-3 w-3" />
@@ -512,6 +518,20 @@ export default function ContentFactoryPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(deleteProjectId)}
+        title={copy.deleteProject}
+        description={copy.deleteConfirm}
+        confirmLabel={copy.deleteProject}
+        cancelLabel={copy.cancel}
+        busy={Boolean(deletingProjectId)}
+        onCancel={() => {
+          if (!deletingProjectId) setDeleteProjectId(null);
+        }}
+        onConfirm={() => {
+          if (deleteProjectId) void deleteProject(deleteProjectId);
+        }}
+      />
     </div>
   );
 }

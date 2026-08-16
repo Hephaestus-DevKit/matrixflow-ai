@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import type { KnowledgeBaseDetail, RagAnswer } from '@matrixflow/shared';
 import { toast } from 'sonner';
@@ -43,6 +44,7 @@ const COPY: Record<
     askPlaceholder: string;
     ask: string;
     references: string;
+    cancel: string;
   }
 > = {
   'zh-CN': {
@@ -73,6 +75,7 @@ const COPY: Record<
     askPlaceholder: '问一个问题…',
     ask: '提问',
     references: '引用资料',
+    cancel: '取消',
   },
   'zh-TW': {
     loading: '載入中…',
@@ -102,6 +105,7 @@ const COPY: Record<
     askPlaceholder: '問一個問題…',
     ask: '提問',
     references: '引用資料',
+    cancel: '取消',
   },
   en: {
     loading: 'Loading…',
@@ -131,6 +135,7 @@ const COPY: Record<
     askPlaceholder: 'Ask a question…',
     ask: 'Ask',
     references: 'Sources',
+    cancel: 'Cancel',
   },
 };
 
@@ -142,6 +147,9 @@ export default function KbDetailPage() {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState<RagAnswer | null>(null);
   const [asking, setAsking] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<'document' | 'kb' | null>(null);
+  const [pendingDocumentId, setPendingDocumentId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const {
     data: kb,
     isLoading,
@@ -164,7 +172,7 @@ export default function KbDetailPage() {
         fd,
       );
       await refetch();
-      if (result.status === 'ERROR') toast.error(result.error || copy.uploadError);
+      if (result.status === 'ERROR') toast.error(copy.uploadError);
       else toast.success(copy.uploadDone);
     } catch (error) {
       toast.error(errorMessage(error, copy.uploadFailed));
@@ -198,24 +206,30 @@ export default function KbDetailPage() {
   }
 
   async function removeDocument(documentId: string) {
-    if (!window.confirm(copy.deleteDocumentConfirm)) return;
+    setDeleting(true);
     try {
       await apiClient.del(`/kb/${id}/documents/${documentId}`);
       await refetch();
       toast.success(copy.documentDeleted);
+      setConfirmAction(null);
     } catch (error) {
       toast.error(errorMessage(error, copy.deleteDocument));
+    } finally {
+      setDeleting(false);
     }
   }
 
   async function removeKnowledgeBase() {
-    if (!window.confirm(copy.deleteKbConfirm)) return;
+    setDeleting(true);
     try {
       await apiClient.del(`/kb/${id}`);
       toast.success(copy.kbDeleted);
       router.push('/dashboard/knowledge');
     } catch (error) {
       toast.error(errorMessage(error, copy.deleteKbFailed));
+    } finally {
+      setDeleting(false);
+      setConfirmAction(null);
     }
   }
 
@@ -234,7 +248,8 @@ export default function KbDetailPage() {
         <Button
           variant="outline"
           className="text-destructive"
-          onClick={() => void removeKnowledgeBase()}
+          onClick={() => setConfirmAction('kb')}
+          disabled={deleting}
         >
           <Trash2 className="h-4 w-4" /> {copy.deleteKb}
         </Button>
@@ -294,7 +309,11 @@ export default function KbDetailPage() {
                 variant="ghost"
                 size="icon"
                 aria-label={copy.deleteDocument}
-                onClick={() => void removeDocument(document.id)}
+                onClick={() => {
+                  setPendingDocumentId(document.id);
+                  setConfirmAction('document');
+                }}
+                disabled={deleting}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -337,6 +356,25 @@ export default function KbDetailPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={confirmAction !== null}
+        title={confirmAction === 'kb' ? copy.deleteKb : copy.deleteDocument}
+        description={confirmAction === 'kb' ? copy.deleteKbConfirm : copy.deleteDocumentConfirm}
+        confirmLabel={confirmAction === 'kb' ? copy.deleteKb : copy.deleteDocument}
+        cancelLabel={copy.cancel}
+        busy={deleting}
+        onCancel={() => {
+          if (!deleting) {
+            setConfirmAction(null);
+            setPendingDocumentId(null);
+          }
+        }}
+        onConfirm={() => {
+          if (confirmAction === 'kb') void removeKnowledgeBase();
+          if (confirmAction === 'document' && pendingDocumentId)
+            void removeDocument(pendingDocumentId);
+        }}
+      />
     </div>
   );
 }

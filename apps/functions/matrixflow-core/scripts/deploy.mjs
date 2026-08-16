@@ -14,14 +14,24 @@ const configuration = {
   functionId,
   name: 'MatrixFlow Core',
   runtime: Runtime.Node22,
-  execute: ['users/verified'],
+  // The function is callable by API-key clients; every protected route still
+  // requires a verified Appwrite session or a scoped MatrixFlow key.
+  execute: ['any'],
   events: [],
   timeout: 120,
   enabled: true,
   logging: true,
   entrypoint: 'src/main.js',
   commands: 'npm ci --omit=dev',
-  scopes: ['teams.read', 'rows.read', 'rows.write', 'buckets.read', 'files.read', 'files.write'],
+  scopes: [
+    'teams.read',
+    'rows.read',
+    'rows.write',
+    'buckets.read',
+    'files.read',
+    'files.write',
+    'executions.write',
+  ],
   deploymentRetention: 5,
 };
 
@@ -38,10 +48,24 @@ for (const [variableKey, value] of [
   ['MATRIXFLOW_AI_PROVIDER', 'auto'],
   ['MATRIXFLOW_AI_TIMEOUT_MS', '25000'],
   ['MATRIXFLOW_AI_MAX_RETRIES', '2'],
+  ['MATRIXFLOW_AI_FALLBACK', 'true'],
+  ['MATRIXFLOW_REQUIRE_PROVIDER', 'false'],
+  ['MATRIXFLOW_REQUIRE_ASYNC', 'false'],
+  ['MATRIXFLOW_REQUIRE_BILLING', 'false'],
+  ['MATRIXFLOW_JOB_LEASE_MS', '90000'],
+  ['MATRIXFLOW_JOB_HEARTBEAT_MS', '15000'],
+  ['MATRIXFLOW_ALLOW_INSECURE_PROVIDER', 'false'],
+  ['MATRIXFLOW_ALLOW_PRIVATE_PROVIDER', 'false'],
   ['MATRIXFLOW_DATABASE_ID', 'matrixflow'],
   ['MATRIXFLOW_KNOWLEDGE_BUCKET_ID', 'knowledge-files'],
   ['MATRIXFLOW_AI_MONTHLY_LIMIT', '100'],
   ['MATRIXFLOW_AI_PER_MINUTE_LIMIT', '20'],
+  ['MATRIXFLOW_REQUESTS_PER_MINUTE', '120'],
+  ['MATRIXFLOW_AGENT_LIMIT', '10'],
+  ['MATRIXFLOW_CONTENT_PROJECT_LIMIT', '10'],
+  ['MATRIXFLOW_KNOWLEDGE_BASE_LIMIT', '5'],
+  ['MATRIXFLOW_WORKFLOW_LIMIT', '3'],
+  ['MATRIXFLOW_RELEASE', process.env.MATRIXFLOW_RELEASE || 'production'],
 ]) {
   const existing = existingVariables.variables.find((variable) => variable.key === variableKey);
   if (existing) {
@@ -74,6 +98,11 @@ const deployment = await functions.createDeployment({
 for (let attempt = 0; attempt < 120; attempt += 1) {
   const current = await functions.getDeployment({ functionId, deploymentId: deployment.$id });
   if (current.status === 'ready') {
+    const functionState = await functions.get({ functionId });
+    if (functionState.deploymentId !== deployment.$id)
+      throw new Error(
+        `Function deployment ${deployment.$id} is ready but not active (active: ${functionState.deploymentId || 'none'})`,
+      );
     process.stdout.write(`deployed function ${functionId} (${deployment.$id})\n`);
     process.exit(0);
   }

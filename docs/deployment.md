@@ -67,6 +67,27 @@ MATRIXFLOW_AI_PRICING_JSON={"openai:gpt-4o-mini":{"inputPer1k":0.00015,"outputPe
 # 计费适配器的 HMAC secret；支付供应商事件先由你的适配层规范化为
 # MatrixFlow billing webhook schema，再请求 /billing/webhook。
 MATRIXFLOW_BILLING_WEBHOOK_SECRET=<secret>
+MATRIXFLOW_BILLING_PROVIDER=stripe
+MATRIXFLOW_PUBLIC_URL=https://matrixflow-ai.vercel.app
+STRIPE_SECRET_KEY=<Appwrite Function secret>
+STRIPE_PRICE_PRO=price_...
+STRIPE_PRICE_TEAM=price_...
+STRIPE_WEBHOOK_SECRET=<Stripe webhook signing secret>
+MATRIXFLOW_ALLOW_TEST_BILLING=false
+
+# 异步任务与连接器（均为 Function Secret/运营配置）
+MATRIXFLOW_API_KEY_PEPPER=<random-32-plus-character-secret>
+MATRIXFLOW_WORKER_SECRET=<random-32-plus-character-secret>
+MATRIXFLOW_CONNECTOR_ALLOWLIST=api.example.com,*.trusted.example
+MATRIXFLOW_REQUIRE_ASYNC=true
+MATRIXFLOW_REQUIRE_BILLING=true
+
+# Strict release evidence (CI/operations only; never expose in the browser):
+MATRIXFLOW_ALERT_WEBHOOK_URL=https://alerts.example.com/matrixflow
+MATRIXFLOW_BACKUP_EVIDENCE_URL=https://ops.example.com/backups/latest
+MATRIXFLOW_BACKUP_LAST_SUCCESS_AT=2026-08-16T00:00:00.000Z
+MATRIXFLOW_RESTORE_EVIDENCE_URL=https://ops.example.com/restores/latest
+MATRIXFLOW_RESTORE_LAST_SUCCESS_AT=2026-08-01T00:00:00.000Z
 ```
 
 计费事件必须使用原始请求体计算 `HMAC-SHA256`，通过
@@ -78,6 +99,15 @@ MATRIXFLOW_BILLING_WEBHOOK_SECRET=<secret>
 自动部署由 `.github/workflows/appwrite.yml` 提供。主分支的后端或基础设施变更会依次执行测试、Schema 更新、Function 部署和可选 smoke test；如果仓库 Secret `MATRIXFLOW_DEPLOY_KEY` 缺失，任务会明确失败，不会把未发布的后端代码标记为成功。
 
 如果 Secret 缺失，工作流会在运行摘要和警告中明确标记“未修改 Appwrite”，不能把绿色的跳过任务当作后端已发布。配置短期最小权限 key 后，应重新运行工作流，并在 Appwrite Console 核对 active deployment ID。
+
+发布前可以先运行配置审计：
+
+```bash
+pnpm readiness:audit
+pnpm readiness:audit:strict
+```
+
+普通审计允许 Free 预览环境缺少外部凭据并显示 WARN；严格审计要求真实 Provider、异步执行器、支付签名、连接器白名单、HTTPS 告警地址、近 26 小时备份、近 92 天恢复演练和短期部署 key 全部存在。严格审计通过只是配置门槛，仍需真实 smoke 和人工验收。
 
 ## Web 发布
 

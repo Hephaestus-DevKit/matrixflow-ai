@@ -20,8 +20,11 @@ export const TABLES = {
   marketplacePurchases: 'marketplace_purchases',
   marketplaceReviews: 'marketplace_reviews',
   usageRecords: 'usage_records',
+  usageAggregates: 'usage_aggregates',
   auditLogs: 'audit_logs',
   billingRequests: 'billing_requests',
   subscriptions: 'subscriptions',
   billingEvents: 'billing_events',
+  backgroundJobs: 'background_jobs',
+  apiKeys: 'api_keys',
 } as const;

@@ -143,7 +143,7 @@ export default function LandingPage() {
                           </span>
                           <div className="min-w-0 flex-1">
                             <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-primary">
-                              Step {item.step}
+                              <LocalizedText id="public.preview.stepLabel" /> {item.step}
                             </p>
                             <p className="mt-0.5 text-sm font-bold">
                               <LocalizedText id={item.title} />

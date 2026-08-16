@@ -26,6 +26,7 @@ jobs:
       MATRIXFLOW_APPWRITE_ENDPOINT: https://sgp.cloud.appwrite.io/v1
       MATRIXFLOW_APPWRITE_PROJECT_ID: 6a43f0af000862e7b0ef
       MATRIXFLOW_FUNCTION_ARCHIVE: ${{ github.workspace }}/matrixflow-core.tar.gz
+      MATRIXFLOW_RELEASE: ${{ github.sha }}
     steps:
       - name: Check deployment credential
         id: credential

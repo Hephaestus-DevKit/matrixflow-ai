@@ -4,6 +4,7 @@ import {
   executeCore,
   getRow,
   listRows,
+  listRowsPage,
   uploadKnowledgeFile,
   BackendError,
 } from './data';
@@ -32,7 +33,7 @@ function summarizeAgent(row: Body) {
 }
 
 async function routeGet(path: string) {
-  const { segments } = parts(path);
+  const { segments, search } = parts(path);
   if (segments[0] === 'agents') {
     if (segments[1]) {
       const [agent, runs] = await Promise.all([
@@ -86,7 +87,11 @@ async function routeGet(path: string) {
     );
   }
   if (segments[0] === 'crm' && segments[1] === 'customers') {
-    if (!segments[2]) return listRows(TABLES.customers);
+    if (!segments[2]) {
+      const limit = Number(search.get('limit') || 50);
+      const offset = Number(search.get('offset') || 0);
+      return listRowsPage(TABLES.customers, [], 'organizationId', { limit, offset });
+    }
     const customer = await getRow(TABLES.customers, segments[2]);
     const conversations = await listRows(TABLES.conversations, [
       Query.equal('customerId', segments[2]),
@@ -111,14 +116,23 @@ async function routeGet(path: string) {
     return { ...customer, tags, notes, conversations: withMessages };
   }
   if (segments[0] === 'crm' && segments[1] === 'leads') {
-    const [leads, customers] = await Promise.all([
-      listRows(TABLES.leads),
-      listRows(TABLES.customers),
-    ]);
-    return leads.map((lead) => ({
-      ...lead,
-      customer: customers.find((customer) => customer.id === lead.customerId) ?? null,
-    }));
+    const limit = Number(search.get('limit') || 50);
+    const offset = Number(search.get('offset') || 0);
+    const page = await listRowsPage(TABLES.leads, [], 'organizationId', { limit, offset });
+    const customers = await Promise.all(
+      page.data.map(async (lead) => {
+        if (!lead.customerId) return null;
+        try {
+          return await getRow(TABLES.customers, String(lead.customerId));
+        } catch {
+          return null;
+        }
+      }),
+    );
+    return {
+      ...page,
+      data: page.data.map((lead, index) => ({ ...lead, customer: customers[index] })),
+    };
   }
   if (segments[0] === 'market' && segments[1] === 'items') {
     if (segments[2]) throw new BackendError('模板市场仍在受控预览中', 404, 'MARKETPLACE_PREVIEW');
@@ -135,11 +149,20 @@ async function routeGet(path: string) {
     }));
   }
   if (path === '/billing/plans') return executeCore('/billing/plans', {}, ExecutionMethod.GET);
+  if (path === '/billing/config') return executeCore('/billing/config', {}, ExecutionMethod.GET);
   if (path === '/billing/current') return executeCore('/billing/current', {}, ExecutionMethod.GET);
   if (path === '/billing/requests')
     return executeCore('/billing/requests', {}, ExecutionMethod.GET);
+  if (path === '/billing/invoices')
+    return executeCore('/billing/invoices', {}, ExecutionMethod.GET);
+  if (path === '/billing/transactions')
+    return executeCore('/billing/transactions', {}, ExecutionMethod.GET);
   if (path === '/billing/usage') return executeCore('/billing/usage', {}, ExecutionMethod.GET);
   if (path === '/health') return executeCore('/health', {}, ExecutionMethod.GET);
+  if (path === '/account/export') return executeCore('/account/export', {}, ExecutionMethod.GET);
+  if (path === '/api-keys') return executeCore('/api-keys', {}, ExecutionMethod.GET);
+  if (path === '/jobs') return executeCore('/jobs', {}, ExecutionMethod.GET);
+  if (path.startsWith('/jobs/')) return executeCore(path, {}, ExecutionMethod.GET);
   if (path.startsWith('/admin/'))
     throw new BackendError('管理模块正在安全重构中', 503, 'ADMIN_FEATURE_DISABLED');
   throw new BackendError('未找到请求的资源', 404, 'ROUTE_NOT_FOUND');

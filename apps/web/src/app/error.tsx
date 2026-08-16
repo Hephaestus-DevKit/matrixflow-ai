@@ -26,7 +26,7 @@ export default function GlobalError({
           <AlertTriangle className="h-7 w-7" />
         </span>
         <p className="mt-5 text-xs font-bold uppercase tracking-[0.18em] text-destructive">
-          Unexpected error
+          {t('common.unexpectedLabel')}
         </p>
         <h1 className="mt-2 text-2xl font-bold tracking-tight">{t('common.unexpectedError')}</h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">

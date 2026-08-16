@@ -5,6 +5,7 @@ import { AuthenticatorType } from 'appwrite';
 import { ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { account } from '@/lib/appwrite';
@@ -138,6 +139,7 @@ export function MfaSecurityCard() {
   const [otp, setOtp] = useState('');
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmAction, setConfirmAction] = useState<'disable' | 'regenerate' | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -204,7 +206,6 @@ export function MfaSecurityCard() {
   }
 
   async function handleDisable() {
-    if (!window.confirm(copy.disable)) return;
     setLoading(true);
     try {
       await account.updateMFA({ mfa: false });
@@ -218,11 +219,11 @@ export function MfaSecurityCard() {
       toast.error(errorMessage(error, copy.failed));
     } finally {
       setLoading(false);
+      setConfirmAction(null);
     }
   }
 
   async function handleRegenerateRecoveryCodes() {
-    if (!window.confirm(copy.regenerateConfirm)) return;
     setLoading(true);
     try {
       const recovery = await account.updateMFARecoveryCodes();
@@ -232,6 +233,7 @@ export function MfaSecurityCard() {
       toast.error(errorMessage(error, copy.failed));
     } finally {
       setLoading(false);
+      setConfirmAction(null);
     }
   }
 
@@ -341,7 +343,7 @@ export function MfaSecurityCard() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => void handleRegenerateRecoveryCodes()}
+            onClick={() => setConfirmAction('regenerate')}
             disabled={loading}
           >
             {loading ? copy.working : copy.regenerate}
@@ -349,7 +351,7 @@ export function MfaSecurityCard() {
           <Button
             type="button"
             variant="ghost"
-            onClick={() => void handleDisable()}
+            onClick={() => setConfirmAction('disable')}
             disabled={loading}
           >
             {copy.disable}
@@ -369,6 +371,21 @@ export function MfaSecurityCard() {
           <p className="mt-2 text-[11px] text-warning">{copy.recoveryWarning}</p>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmAction !== null}
+        title={confirmAction === 'disable' ? copy.disable : copy.regenerate}
+        description={confirmAction === 'disable' ? copy.disable : copy.regenerateConfirm}
+        confirmLabel={confirmAction === 'disable' ? copy.disable : copy.regenerate}
+        cancelLabel={copy.cancel}
+        busy={loading}
+        onCancel={() => {
+          if (!loading) setConfirmAction(null);
+        }}
+        onConfirm={() => {
+          if (confirmAction === 'disable') void handleDisable();
+          if (confirmAction === 'regenerate') void handleRegenerateRecoveryCodes();
+        }}
+      />
     </div>
   );
 }

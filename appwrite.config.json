@@ -4,11 +4,11 @@
   "projectName": "MatrixFlow AI",
   "endpoint": "https://sgp.cloud.appwrite.io/v1",
   "includes": {
-    "tablesDB": "./infra/appwrite/databases.json",
-    "tables": "./infra/appwrite/tables.json",
-    "buckets": "./infra/appwrite/buckets.json",
     "functions": "./infra/appwrite/functions.json",
-    "sites": "./infra/appwrite/sites.json"
+    "sites": "./infra/appwrite/sites.json",
+    "buckets": "./infra/appwrite/buckets.json",
+    "tablesDB": "./infra/appwrite/databases.json",
+    "tables": "./infra/appwrite/tables.json"
   },
   "settings": {
     "services": {

@@ -5,6 +5,7 @@ test('switches among all three locales and persists the choice', async ({ page }
   const locale = page.locator('header select');
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
+  await expect(page).toHaveTitle(/MatrixFlow AI/);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('把跨境运营流程');
 
   await locale.selectOption('zh-TW');
@@ -13,6 +14,7 @@ test('switches among all three locales and persists the choice', async ({ page }
 
   await locale.selectOption('en');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page).toHaveTitle('MatrixFlow AI — AI Workforce OS');
   await expect(page.getByRole('heading', { level: 1 })).toContainText(
     'Put cross-border operations',
   );
@@ -20,6 +22,9 @@ test('switches among all three locales and persists the choice', async ({ page }
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('header select')).toHaveValue('en');
+
+  await page.goto('/pricing');
+  await expect(page).toHaveTitle('Pricing | MatrixFlow AI');
 });
 
 test('keeps authentication screens in the selected language', async ({ page }) => {

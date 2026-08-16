@@ -17,6 +17,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Save, Play, Trash2, ArrowLeft, Settings2, HelpCircle } from 'lucide-react';
@@ -51,6 +52,7 @@ const EDITOR_COPY = {
     currentVersion: (version: number) => `当前版本：v${version}`,
     editorHint: '拖动节点或连接点，建立可视化流程',
     delete: '删除',
+    cancel: '取消',
     deleteConfirm: '确定删除该工作流、全部版本和运行记录吗？',
     history: '运行历史',
     save: '保存配置',
@@ -128,6 +130,7 @@ const EDITOR_COPY = {
     currentVersion: (version: number) => `目前版本：v${version}`,
     editorHint: '拖曳節點或連接點，建立視覺化流程',
     delete: '刪除',
+    cancel: '取消',
     deleteConfirm: '確定刪除此工作流、全部版本與執行記錄嗎？',
     history: '執行歷史',
     save: '儲存設定',
@@ -205,6 +208,7 @@ const EDITOR_COPY = {
     currentVersion: (version: number) => `Current version: v${version}`,
     editorHint: 'Drag nodes or handles to build a visual flow',
     delete: 'Delete',
+    cancel: 'Cancel',
     deleteConfirm: 'Delete this workflow, all versions, and run history?',
     history: 'Run history',
     save: 'Save config',
@@ -285,6 +289,7 @@ const EDITOR_COPY = {
     currentVersion: (version: number) => string;
     editorHint: string;
     delete: string;
+    cancel: string;
     deleteConfirm: string;
     history: string;
     save: string;
@@ -376,6 +381,7 @@ export default function WorkflowEditorPage() {
   const [nodes, setNodes, onNodesChange] = useNodesState<EditorNodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<EditorEdgeData>([]);
   const [selectedNode, setSelectedNode] = useState<EditorNode | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   // Node Editing Form State
   const [editConfig, setEditConfig] = useState<Record<string, unknown>>({});
@@ -478,6 +484,7 @@ export default function WorkflowEditorPage() {
     mutationFn: () => apiClient.del(`/workflows/${id}`),
     onSuccess: () => {
       toast.success(copy.deleted);
+      setDeleteConfirmOpen(false);
       router.push('/dashboard/workflows');
     },
     onError: (error: unknown) => toast.error(errorMessage(error, copy.deleteFailed)),
@@ -612,9 +619,7 @@ export default function WorkflowEditorPage() {
             size="sm"
             variant="ghost"
             className="text-destructive"
-            onClick={() => {
-              if (window.confirm(copy.deleteConfirm)) deleteMutation.mutate();
-            }}
+            onClick={() => setDeleteConfirmOpen(true)}
             disabled={deleteMutation.isPending}
           >
             <Trash2 className="h-3.5 w-3.5" /> {copy.delete}
@@ -862,6 +867,18 @@ export default function WorkflowEditorPage() {
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        title={copy.delete}
+        description={copy.deleteConfirm}
+        confirmLabel={copy.delete}
+        cancelLabel={copy.cancel}
+        busy={deleteMutation.isPending}
+        onCancel={() => {
+          if (!deleteMutation.isPending) setDeleteConfirmOpen(false);
+        }}
+        onConfirm={() => deleteMutation.mutate()}
+      />
     </div>
   );
 }

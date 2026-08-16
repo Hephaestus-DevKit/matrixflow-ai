@@ -5,21 +5,25 @@ import { Toaster } from 'sonner';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { SkipLink } from '@/components/skip-link';
+import { getServerLocale, pageDescription, pageTitle } from '@/lib/server-locale';
 
-export const metadata: Metadata = {
-  metadataBase: new URL('https://matrixflow-ai.vercel.app'),
-  applicationName: 'MatrixFlow AI',
-  title: { default: 'MatrixFlow AI — AI 员工操作系统', template: '%s | MatrixFlow AI' },
-  description: '面向跨境团队的 AI 内容、知识库、AI 员工与可追踪工作流平台。',
-  openGraph: {
-    type: 'website',
-    locale: 'zh_CN',
-    siteName: 'MatrixFlow AI',
-    title: 'MatrixFlow AI — 团队 AI 运营工作台',
-    description: '让内容、知识与工作流在一个安全的团队空间中协作。',
-  },
-  twitter: { card: 'summary_large_image' },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getServerLocale();
+  return {
+    metadataBase: new URL('https://matrixflow-ai.vercel.app'),
+    applicationName: 'MatrixFlow AI',
+    title: { default: pageTitle(locale, 'root'), template: '%s | MatrixFlow AI' },
+    description: pageDescription(locale, 'root'),
+    openGraph: {
+      type: 'website',
+      locale: locale === 'en' ? 'en_US' : locale === 'zh-TW' ? 'zh_TW' : 'zh_CN',
+      siteName: 'MatrixFlow AI',
+      title: pageTitle(locale, 'root'),
+      description: pageDescription(locale, 'root'),
+    },
+    twitter: { card: 'summary_large_image' },
+  };
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

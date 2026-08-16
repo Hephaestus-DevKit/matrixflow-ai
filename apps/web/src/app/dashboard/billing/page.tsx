@@ -19,6 +19,7 @@ import { PageHeader, SectionHeading } from '@/components/ui/page';
 import { useLocale, type Locale } from '@/lib/i18n';
 import { errorMessage } from '@/lib/errors';
 import { toast } from 'sonner';
+import { BillingHistoryCard } from '@/components/billing-history-card';
 
 const COPY: Record<
   Locale,
@@ -41,6 +42,9 @@ const COPY: Record<
     unsubscribed: string;
     month: string;
     requestUpgrade: string;
+    checkout: string;
+    checkoutLoading: string;
+    checkoutFailed: string;
     requesting: string;
     requested: string;
     requestAlready: string;
@@ -81,6 +85,9 @@ const COPY: Record<
     unsubscribed: '尚未订阅',
     month: ' / 月',
     requestUpgrade: '申请升级',
+    checkout: '前往结账',
+    checkoutLoading: '打开结账…',
+    checkoutFailed: '结账暂时不可用，请稍后重试',
     requesting: '提交中…',
     requested: '已提交申请',
     requestAlready: '升级申请已在处理中',
@@ -120,6 +127,9 @@ const COPY: Record<
     unsubscribed: '尚未訂閱',
     month: ' / 月',
     requestUpgrade: '申請升級',
+    checkout: '前往結帳',
+    checkoutLoading: '開啟結帳…',
+    checkoutFailed: '結帳暫時不可用，請稍後再試',
     requesting: '提交中…',
     requested: '已提交申請',
     requestAlready: '升級申請正在處理中',
@@ -161,6 +171,9 @@ const COPY: Record<
     unsubscribed: 'Not subscribed',
     month: ' / month',
     requestUpgrade: 'Request upgrade',
+    checkout: 'Go to checkout',
+    checkoutLoading: 'Opening checkout…',
+    checkoutFailed: 'Checkout is temporarily unavailable. Try again shortly.',
     requesting: 'Submitting…',
     requested: 'Request submitted',
     requestAlready: 'An upgrade request is already in progress',
@@ -224,6 +237,10 @@ export default function BillingPage() {
     queryKey: ['billing-requests'],
     queryFn: () => apiClient.get<BillingRequest[]>('/billing/requests'),
   });
+  const billingConfig = useQuery({
+    queryKey: ['billing-config'],
+    queryFn: () => apiClient.get<{ checkout: boolean }>('/billing/config'),
+  });
   const requestMutation = useMutation({
     mutationFn: (input: { requestedPlan: 'pro' | 'team'; requestedSeats: number; note: string }) =>
       apiClient.post<{ request: BillingRequest; created: boolean }>('/billing/requests', {
@@ -238,6 +255,14 @@ export default function BillingPage() {
       setRequestNote('');
     },
     onError: (error: unknown) => toast.error(errorMessage(error, copy.requestFailed)),
+  });
+  const checkoutMutation = useMutation({
+    mutationFn: (input: { planId: 'pro' | 'team'; seats: number }) =>
+      apiClient.post<{ checkoutUrl: string }>('/billing/checkout', input),
+    onSuccess: (result) => {
+      window.location.assign(result.checkoutUrl);
+    },
+    onError: (error: unknown) => toast.error(errorMessage(error, copy.checkoutFailed)),
   });
   const queries = [plans, current, usage];
   const isLoading = queries.some((query) => query.isLoading);
@@ -316,6 +341,7 @@ export default function BillingPage() {
                 const requestPending = requests.data?.some(
                   (request) => request.requestedPlan === plan.id && request.status === 'PENDING',
                 );
+                const checkoutReady = isRequestable && billingConfig.data?.checkout === true;
                 const isIntent = intentPlan === plan.id;
                 return (
                   <article
@@ -356,22 +382,34 @@ export default function BillingPage() {
                       className="mt-6 w-full"
                       variant={selected ? 'outline' : 'default'}
                       disabled={
-                        selected || !isRequestable || requestPending || requestMutation.isPending
+                        selected ||
+                        !isRequestable ||
+                        (checkoutReady
+                          ? checkoutMutation.isPending
+                          : requestPending || requestMutation.isPending)
                       }
                       onClick={() => {
-                        if (plan.id === 'pro' || plan.id === 'team') openRequestForm(plan.id);
+                        if (plan.id !== 'pro' && plan.id !== 'team') return;
+                        if (checkoutReady) {
+                          checkoutMutation.mutate({ planId: plan.id, seats: plan.seats });
+                        } else openRequestForm(plan.id);
                       }}
                     >
                       {selected
                         ? copy.active
-                        : requestPending
-                          ? copy.requested
-                          : requestMutation.isPending &&
-                              requestMutation.variables?.requestedPlan === plan.id
-                            ? copy.requesting
-                            : isRequestable
-                              ? copy.requestUpgrade
-                              : copy.waitlist}
+                        : checkoutReady
+                          ? checkoutMutation.isPending &&
+                            checkoutMutation.variables?.planId === plan.id
+                            ? copy.checkoutLoading
+                            : copy.checkout
+                          : requestPending
+                            ? copy.requested
+                            : requestMutation.isPending &&
+                                requestMutation.variables?.requestedPlan === plan.id
+                              ? copy.requesting
+                              : isRequestable
+                                ? copy.requestUpgrade
+                                : copy.waitlist}
                     </Button>
                   </article>
                 );
@@ -475,6 +513,7 @@ export default function BillingPage() {
                 </div>
               </section>
             )}
+            <BillingHistoryCard />
           </section>
         </>
       )}

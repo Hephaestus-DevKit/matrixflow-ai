@@ -72,6 +72,26 @@ function teamPermissions(organizationId: string) {
   return [Permission.read(Role.team(organizationId))];
 }
 
+async function scopedUploadFileId(organizationId: string, idempotencyKey: string) {
+  const input = new TextEncoder().encode(`matrixflow-upload:${organizationId}:${idempotencyKey}`);
+  const subtle = globalThis.crypto?.subtle;
+  if (subtle) {
+    const digest = await subtle.digest('SHA-256', input);
+    const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0'))
+      .join('')
+      .slice(0, 32);
+    // Appwrite file IDs are limited to 36 characters; the tenant-scoped
+    // digest keeps retries stable without allowing cross-organization ID
+    // collisions from a reused client idempotency key.
+    return `mf-${hex}`;
+  }
+  // Older embedded browsers may not expose SubtleCrypto. Keep a bounded,
+  // tenant-derived fallback so upload retries remain scoped and valid.
+  const fallback = organizationId.replace(/[^A-Za-z0-9]/g, '').slice(-12);
+  const key = idempotencyKey.replace(/[^A-Za-z0-9]/g, '').slice(0, 20);
+  return `mf-${fallback}-${key}`.slice(0, 36);
+}
+
 function assertOwned(row: Data, organizationId: string, field = 'organizationId') {
   if (row[field] !== organizationId) throw new BackendError('无权访问该团队资源', 403, 'FORBIDDEN');
 }
@@ -109,6 +129,41 @@ export async function listRows(
   if (rows.length >= MAX_LIST_ROWS && total > MAX_LIST_ROWS)
     throw new BackendError('资源数量超过单次可加载上限，请缩小查询范围', 413, 'LIST_TOO_LARGE');
   return rows;
+}
+
+export async function listRowsPage(
+  tableId: string,
+  queries: string[] = [],
+  organizationField = 'organizationId',
+  options: { limit?: number; offset?: number } = {},
+) {
+  const organizationId = getOrganizationContext();
+  const limit = Math.min(100, Math.max(1, Math.floor(Number(options.limit || 50))));
+  const offset = Math.max(0, Math.floor(Number(options.offset || 0)));
+  const hasOrdering = queries.some((query) => query.includes('order'));
+  try {
+    const result = await tablesDB.listRows<Row>({
+      databaseId: DATABASE_ID,
+      tableId,
+      queries: [
+        Query.equal(organizationField, organizationId),
+        ...queries,
+        ...(hasOrdering ? [] : [Query.orderDesc('$createdAt')]),
+        Query.limit(limit),
+        Query.offset(offset),
+      ],
+    });
+    const rows = result.rows.map(decodeRow);
+    return {
+      data: rows,
+      total: Number(result.total || 0),
+      limit,
+      offset,
+      nextOffset: offset + rows.length < Number(result.total || 0) ? offset + rows.length : null,
+    };
+  } catch (error) {
+    throw normalizeAppwriteError(error);
+  }
 }
 
 export async function countRows(
@@ -155,7 +210,7 @@ export async function uploadKnowledgeFile(
   const organizationId = getOrganizationContext();
   const permissions = teamPermissions(organizationId);
   const deterministicFileId = options.idempotencyKey
-    ? options.idempotencyKey.replace(/[^A-Za-z0-9._-]/g, '').slice(0, 36)
+    ? await scopedUploadFileId(organizationId, options.idempotencyKey)
     : undefined;
   const fileId =
     deterministicFileId && deterministicFileId.length >= 8 ? deterministicFileId : ID.unique();
@@ -238,12 +293,14 @@ export async function executeCore<T>(
       body: JSON.stringify({
         ...body,
         organizationId: getOrganizationContext(),
-        ...(options.idempotencyKey ? { __idempotencyKey: options.idempotencyKey } : {}),
       }),
       async: false,
       xpath: path,
       method,
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        ...(options.idempotencyKey ? { 'idempotency-key': options.idempotencyKey } : {}),
+      },
     });
   } catch (error) {
     throw normalizeAppwriteError(error, '核心服务暂时不可用');

@@ -1,8 +1,19 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import { usePathname } from 'next/navigation';
+import { LOCALE_COOKIE } from './locale-config';
+import { localizedPageTitle, type Locale } from './locale-titles';
 
-export type Locale = 'zh-CN' | 'zh-TW' | 'en';
+export type { Locale } from './locale-titles';
 
 export const LOCALE_OPTIONS: Array<{ value: Locale; label: string }> = [
   { value: 'zh-CN', label: '简体中文' },
@@ -23,6 +34,8 @@ const messages = {
     'common.retry': '重新加载',
     'common.pageNotFound': '这个页面不存在',
     'common.pageNotFoundDescription': '链接可能已经失效，或者该资源已被移动。',
+    'common.notFoundLabel': '404 · 页面不存在',
+    'common.unexpectedLabel': '发生意外错误',
     'common.unexpectedError': '页面暂时无法使用',
     'common.unexpectedErrorDescription':
       '系统已保留本次错误信息。您可以重新加载当前页面，或返回首页继续操作。',
@@ -63,6 +76,7 @@ const messages = {
     'public.preview.fullPath': '全链路',
     'public.preview.boundaries': '权限边界',
     'public.preview.runs': '运行记录',
+    'public.preview.stepLabel': '步骤',
     'public.features.title': '一个系统，即是一整支 AI 运营团队',
     'public.features.description':
       '覆盖从素材策划、内容产出、多语言客服到自动化流转的完整跨境出海链路',
@@ -96,7 +110,7 @@ const messages = {
     'auth.highlight.identity': 'Appwrite 托管身份与邮箱验证',
     'auth.highlight.isolation': '组织级权限与数据严格隔离',
     'auth.highlight.session': '会话自动续期与安全退出',
-    'auth.badge': '一支随时在线的智能团队',
+    'auth.badge': '一支可控的智能团队',
     'auth.title': '从身份验证开始，',
     'auth.titleAccent': '安全地驱动每次协作',
     'auth.description': '登录后即可管理 AI 员工、知识库、自动化工作流与团队业务数据。',
@@ -242,6 +256,8 @@ const messages = {
     'common.retry': '重新載入',
     'common.pageNotFound': '這個頁面不存在',
     'common.pageNotFoundDescription': '連結可能已經失效，或者該資源已被移動。',
+    'common.notFoundLabel': '404 · 頁面不存在',
+    'common.unexpectedLabel': '發生意外錯誤',
     'common.unexpectedError': '頁面暫時無法使用',
     'common.unexpectedErrorDescription':
       '系統已保留本次錯誤資訊。您可以重新載入目前頁面，或返回首頁繼續操作。',
@@ -282,6 +298,7 @@ const messages = {
     'public.preview.fullPath': '全鏈路',
     'public.preview.boundaries': '權限邊界',
     'public.preview.runs': '執行記錄',
+    'public.preview.stepLabel': '步驟',
     'public.features.title': '一個系統，就是一整支 AI 營運團隊',
     'public.features.description':
       '涵蓋從素材企劃、內容產出、多語客服到自動化流轉的完整跨境出海鏈路',
@@ -315,7 +332,7 @@ const messages = {
     'auth.highlight.identity': 'Appwrite 託管身分與電子郵件驗證',
     'auth.highlight.isolation': '組織級權限與資料嚴格隔離',
     'auth.highlight.session': '工作階段自動續期與安全登出',
-    'auth.badge': '一支隨時在線的智慧團隊',
+    'auth.badge': '一支可控的智慧團隊',
     'auth.title': '從身分驗證開始，',
     'auth.titleAccent': '安全地驅動每次協作',
     'auth.description': '登入後即可管理 AI 員工、知識庫、自動化工作流與團隊業務資料。',
@@ -461,6 +478,8 @@ const messages = {
     'common.retry': 'Reload',
     'common.pageNotFound': 'This page does not exist',
     'common.pageNotFoundDescription': 'The link may have expired or the resource may have moved.',
+    'common.notFoundLabel': '404 · Page not found',
+    'common.unexpectedLabel': 'Unexpected error',
     'common.unexpectedError': 'This page is temporarily unavailable',
     'common.unexpectedErrorDescription':
       'The error has been recorded. Reload this page or return home to continue.',
@@ -501,6 +520,7 @@ const messages = {
     'public.preview.fullPath': 'End to end',
     'public.preview.boundaries': 'Permission boundaries',
     'public.preview.runs': 'Run history',
+    'public.preview.stepLabel': 'Step',
     'public.features.title': 'One system. A complete AI operations team.',
     'public.features.description':
       'Covering the full path from planning and production to multilingual support and automation.',
@@ -534,7 +554,7 @@ const messages = {
     'auth.highlight.identity': 'Appwrite-managed identity and email verification',
     'auth.highlight.isolation': 'Strict organization-level permissions and isolation',
     'auth.highlight.session': 'Automatic session refresh and secure sign-out',
-    'auth.badge': 'An AI team that is always on',
+    'auth.badge': 'A controllable AI team',
     'auth.title': 'Start with verified identity,',
     'auth.titleAccent': 'then move every collaboration forward safely',
     'auth.description':
@@ -698,16 +718,44 @@ function isLocale(value: string | null): value is Locale {
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('zh-CN');
+  const pathname = usePathname();
+  const titleRef = useRef('');
 
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (isLocale(saved)) setLocaleState(saved);
+    if (isLocale(saved)) {
+      setLocaleState(saved);
+      // Update the document metadata in the same pass as the persisted locale.
+      // This avoids the first render's observer briefly restoring the default
+      // Simplified Chinese title during hydration.
+      const title = localizedPageTitle(window.location.pathname, saved);
+      titleRef.current = title;
+      document.documentElement.lang = saved;
+      document.title = title;
+    }
   }, []);
 
   useEffect(() => {
     document.documentElement.lang = locale;
     window.localStorage.setItem(STORAGE_KEY, locale);
-  }, [locale]);
+    const secureCookie = window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `${LOCALE_COOKIE}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax${secureCookie}`;
+    // `usePathname()` can briefly be null during a direct App Router boot;
+    // the browser pathname is the safe fallback for that first title commit.
+    const currentPathname = pathname ?? window.location.pathname;
+    const title = localizedPageTitle(currentPathname, locale);
+    titleRef.current = title;
+    document.title = title;
+    // Next's route metadata can commit after this provider during client-side
+    // navigation. Keep the title synchronized if that metadata replaces it so
+    // the selected locale is also reflected in the browser tab and screen
+    // reader announcements.
+    const observer = new MutationObserver(() => {
+      if (document.title !== titleRef.current) document.title = titleRef.current;
+    });
+    observer.observe(document.head, { subtree: true, childList: true, characterData: true });
+    return () => observer.disconnect();
+  }, [locale, pathname]);
 
   const value = useMemo<LocaleContextValue>(
     () => ({
