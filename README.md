@@ -85,6 +85,7 @@ Provider 层会统一处理系统提示、温度、`max_tokens`、top-p、超时
 pnpm verify
 pnpm function:check
 pnpm function:test
+pnpm test:e2e
 pnpm audit --prod --audit-level=high
 npm audit --omit=dev --prefix apps/functions/matrixflow-core
 pnpm smoke:production
