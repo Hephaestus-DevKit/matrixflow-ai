@@ -124,7 +124,9 @@ export function PricingContent() {
     <main id="main-content" className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-24">
       <div className="mx-auto max-w-2xl text-center">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{copy.eyebrow}</p>
-        <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-5xl">{copy.title}</h1>
+        <h1 className="font-display mt-3 text-3xl font-semibold tracking-[-0.03em] sm:text-5xl">
+          {copy.title}
+        </h1>
         <p className="mt-4 text-sm leading-6 text-muted-foreground sm:text-base">
           {copy.description}
         </p>
@@ -147,7 +149,7 @@ export function PricingContent() {
                   {available ? copy.open : copy.waitlist}
                 </span>
               </div>
-              <p className="mt-4 text-4xl font-black tracking-tight">
+              <p className="font-display mt-4 text-4xl font-semibold tracking-[-0.03em]">
                 {PRICES[index]}
                 <span className="text-sm font-medium text-muted-foreground">{copy.month}</span>
               </p>
