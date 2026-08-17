@@ -119,6 +119,29 @@ test('does not duplicate the Chat Completions path for a full compatible endpoin
   );
 });
 
+test('resolves Token Rhythm aliases with safe defaults', () => {
+  const provider = configuredProvider({
+    MATRIXFLOW_AI_PROVIDER: 'tokenrhythm',
+    TOKENRHYTHM_API_KEY: 'tokenrhythm-secret',
+  });
+  assert.deepEqual(
+    {
+      name: provider.name,
+      gateway: provider.gateway,
+      endpoint: provider.endpoint,
+      model: provider.model,
+      maxTokensField: provider.maxTokensField,
+    },
+    {
+      name: 'tokenrhythm',
+      gateway: 'Token Rhythm',
+      endpoint: 'https://tokenrhythm.studio/v1/chat/completions',
+      model: 'deepseek-v4-flash-0731',
+      maxTokensField: 'max_tokens',
+    },
+  );
+});
+
 test('sends Anthropic headers and normalizes content and usage', async () => {
   const originalFetch = globalThis.fetch;
   let request;

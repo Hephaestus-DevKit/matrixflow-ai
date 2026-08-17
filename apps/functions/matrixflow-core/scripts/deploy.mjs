@@ -10,6 +10,8 @@ if (!key || !archive) throw new Error('Deployment key and function archive are r
 const client = new Client().setEndpoint(endpoint).setProject(projectId).setKey(key);
 const functions = new Functions(client);
 const functionId = 'matrixflow-core';
+const tokenRhythmKey =
+  process.env.TOKENRHYTHM_API_KEY?.trim() || process.env.OPENAI_COMPATIBLE_API_KEY?.trim() || '';
 const configuration = {
   functionId,
   name: 'MatrixFlow Core',
@@ -44,11 +46,14 @@ try {
 }
 
 const existingVariables = await functions.listVariables({ functionId });
-for (const [variableKey, value] of [
-  ['MATRIXFLOW_AI_PROVIDER', 'auto'],
+const managedVariables = [
+  ['MATRIXFLOW_AI_PROVIDER', 'tokenrhythm'],
+  ['TOKENRHYTHM_BASE_URL', 'https://tokenrhythm.studio/v1'],
+  ['TOKENRHYTHM_MODEL', 'deepseek-v4-flash-0731'],
+  ['OPENAI_MAX_TOKENS_FIELD', 'max_tokens'],
   ['MATRIXFLOW_AI_TIMEOUT_MS', '25000'],
   ['MATRIXFLOW_AI_MAX_RETRIES', '2'],
-  ['MATRIXFLOW_AI_FALLBACK', 'true'],
+  ['MATRIXFLOW_AI_FALLBACK', 'false'],
   ['MATRIXFLOW_REQUIRE_PROVIDER', 'false'],
   ['MATRIXFLOW_REQUIRE_ASYNC', 'false'],
   ['MATRIXFLOW_REQUIRE_BILLING', 'false'],
@@ -66,7 +71,10 @@ for (const [variableKey, value] of [
   ['MATRIXFLOW_KNOWLEDGE_BASE_LIMIT', '5'],
   ['MATRIXFLOW_WORKFLOW_LIMIT', '3'],
   ['MATRIXFLOW_RELEASE', process.env.MATRIXFLOW_RELEASE || 'production'],
-]) {
+];
+if (tokenRhythmKey) managedVariables.push(['TOKENRHYTHM_API_KEY', tokenRhythmKey, true]);
+
+for (const [variableKey, value, secret = false] of managedVariables) {
   const existing = existingVariables.variables.find((variable) => variable.key === variableKey);
   if (existing) {
     await functions.updateVariable({
@@ -74,7 +82,7 @@ for (const [variableKey, value] of [
       variableId: existing.$id,
       key: variableKey,
       value,
-      secret: false,
+      secret,
     });
   } else {
     await functions.createVariable({
@@ -82,7 +90,7 @@ for (const [variableKey, value] of [
       variableId: ID.unique(),
       key: variableKey,
       value,
-      secret: false,
+      secret,
     });
   }
 }

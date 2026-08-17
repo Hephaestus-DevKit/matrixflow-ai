@@ -8,10 +8,12 @@ export function providerReadiness() {
     return {
       ready: true,
       provider: primary.name,
+      gateway: primary.gateway,
       protocol: primary.protocol,
       model: primary.model,
       providers: providers.map((provider) => ({
         name: provider.name,
+        gateway: provider.gateway,
         protocol: provider.protocol,
         model: provider.model,
       })),

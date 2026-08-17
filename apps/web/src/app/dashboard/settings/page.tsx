@@ -140,10 +140,11 @@ const COPY: Record<
     pending: '待配置',
     checkingDescription: '正在检查 Appwrite Function 的 AI 连接状态…',
     readyPrefix: '当前使用',
-    changeHint: '。如需切换，请在 Appwrite Console 的 matrixflow-core 函数变量中修改协议和密钥。',
+    changeHint:
+      '。如需切换，请在 Appwrite Console 的 matrixflow-core 私有变量中修改协议、网关或模型。',
     unavailableDescription: '暂时无法读取连接状态，请稍后刷新重试。',
-    configurePrefix: '管理员配置 ',
-    configureSuffix: ' 后，重新部署函数即可启用。',
+    configurePrefix: '请在 Appwrite Function 私有变量中配置 ',
+    configureSuffix: '，再重新部署函数即可启用。',
     logout: '退出当前登录',
     sessionsTitle: '登录设备管理',
     sessionsDescription: '查看并撤销当前账号的其他登录会话。',
@@ -202,10 +203,11 @@ const COPY: Record<
     pending: '待設定',
     checkingDescription: '正在檢查 Appwrite Function 的 AI 連線狀態…',
     readyPrefix: '目前使用',
-    changeHint: '。如需切換，請在 Appwrite Console 的 matrixflow-core 函數變數中修改協議與金鑰。',
+    changeHint:
+      '。如需切換，請在 Appwrite Console 的 matrixflow-core 私有變數中修改協議、閘道或模型。',
     unavailableDescription: '暫時無法讀取連線狀態，請稍後重新整理重試。',
-    configurePrefix: '管理員設定 ',
-    configureSuffix: ' 後，重新部署函數即可啟用。',
+    configurePrefix: '請在 Appwrite Function 私有變數中設定 ',
+    configureSuffix: '，再重新部署函數即可啟用。',
     logout: '登出目前帳號',
     sessionsTitle: '登入裝置管理',
     sessionsDescription: '查看並撤銷目前帳號的其他登入工作階段。',
@@ -265,10 +267,10 @@ const COPY: Record<
     checkingDescription: 'Checking the AI connection in Appwrite Function…',
     readyPrefix: 'Using',
     changeHint:
-      '. To switch, edit the protocol and key variables in the matrixflow-core Appwrite Function.',
+      '. To switch, edit the protocol, gateway, or model in the matrixflow-core private variables.',
     unavailableDescription: 'The connection status is unavailable. Refresh and try again.',
-    configurePrefix: 'An administrator must configure ',
-    configureSuffix: ' then redeploy the function to enable it.',
+    configurePrefix: 'Configure ',
+    configureSuffix: ' in Appwrite Function private variables, then redeploy to enable it.',
     logout: 'Log out',
     sessionsTitle: 'Signed-in devices',
     sessionsDescription: 'Review and revoke other active sessions for this account.',
@@ -318,6 +320,7 @@ export default function SettingsPage() {
   const [aiStatus, setAiStatus] = useState<{
     ready: boolean;
     provider?: string;
+    gateway?: string;
     protocol?: string;
     model?: string;
   } | null>(null);
@@ -356,9 +359,15 @@ export default function SettingsPage() {
     setAiStatusLoading(true);
     setAiStatusError(false);
     void apiClient
-      .get<{ ai: { ready: boolean; provider?: string; protocol?: string; model?: string } }>(
-        '/health',
-      )
+      .get<{
+        ai: {
+          ready: boolean;
+          provider?: string;
+          gateway?: string;
+          protocol?: string;
+          model?: string;
+        };
+      }>('/health')
       .then((health) => {
         if (!active) return;
         setAiStatus(health.ai);
@@ -489,29 +498,37 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <div className="border-b border-border/40 pb-5">
-        <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-          {copy.title}
-        </h1>
-        <p className="text-xs text-muted-foreground mt-0.5">{copy.description}</p>
+    <div className="mx-auto w-full max-w-[1180px] space-y-5 pb-8">
+      <div className="flex flex-col gap-3 border-b border-border/40 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground">
+            {copy.title}
+          </h1>
+          <p className="mt-1 text-xs text-muted-foreground">{copy.description}</p>
+        </div>
+        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border/60 bg-card/80 px-3 py-1.5 text-[11px] text-muted-foreground shadow-sm">
+          <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
+          <span className="max-w-[18rem] truncate">
+            {membership?.organizationName ?? copy.noOrg}
+          </span>
+        </div>
       </div>
 
       {/* Tabs */}
       <div
         role="tablist"
         aria-label={copy.title}
-        className="flex gap-4 border-b border-border/60 text-xs font-semibold"
+        className="inline-flex w-fit gap-1 rounded-xl border border-border/60 bg-muted/30 p-1 text-xs font-semibold"
       >
         <button
           type="button"
           role="tab"
           aria-selected={activeTab === 'profile'}
           onClick={() => setActiveTab('profile')}
-          className={`border-b-2 px-1 pb-2.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+          className={`rounded-lg px-3 py-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
             activeTab === 'profile'
-              ? 'border-primary text-primary font-bold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+              ? 'bg-card text-primary font-bold shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           {copy.tabs.profile}
@@ -521,10 +538,10 @@ export default function SettingsPage() {
           role="tab"
           aria-selected={activeTab === 'enterprise'}
           onClick={() => setActiveTab('enterprise')}
-          className={`border-b-2 px-1 pb-2.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+          className={`rounded-lg px-3 py-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
             activeTab === 'enterprise'
-              ? 'border-primary text-primary font-bold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+              ? 'bg-card text-primary font-bold shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           {copy.tabs.enterprise}
@@ -645,8 +662,8 @@ export default function SettingsPage() {
         </form>
       ) : (
         /* Enterprise Tab */
-        <div className="space-y-4">
-          <div className="rounded-xl border border-border/60 bg-card p-6 shadow-sm space-y-4">
+        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
+          <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm space-y-4 lg:col-start-1 lg:row-start-1">
             <div className="flex items-center gap-3 pb-3 border-b border-border/40">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/5 text-primary border border-primary/10">
                 <ShieldCheck className="h-4.5 w-4.5" />
@@ -697,9 +714,11 @@ export default function SettingsPage() {
             )}
           </div>
 
-          <MfaSecurityCard />
+          <div className="min-w-0 lg:col-start-2 lg:row-start-1">
+            <MfaSecurityCard />
+          </div>
 
-          <div className="rounded-xl border border-border/60 bg-card p-6 shadow-sm space-y-4">
+          <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm space-y-4 lg:col-start-1 lg:row-start-2">
             <div className="flex items-start justify-between gap-4 border-b border-border/40 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-foreground">{copy.sessionsTitle}</h3>
@@ -755,7 +774,7 @@ export default function SettingsPage() {
             )}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 lg:col-start-1 lg:row-start-3">
             <form
               onSubmit={handleCreateTeam}
               className="rounded-xl border border-border/60 bg-card p-5 shadow-sm"
@@ -828,7 +847,7 @@ export default function SettingsPage() {
             </form>
           </div>
 
-          <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm space-y-4">
+          <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm space-y-4 lg:col-start-2 lg:row-start-2">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3.5">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/5 text-primary">
@@ -869,7 +888,7 @@ export default function SettingsPage() {
                     : locale === 'zh-TW'
                       ? '相容閘道'
                       : '兼容网关',
-                  'GLM / vLLM / LiteLLM',
+                  'Token Rhythm / vLLM / LiteLLM',
                 ],
               ].map(([name, protocol]) => (
                 <div
@@ -888,7 +907,9 @@ export default function SettingsPage() {
             ) : aiStatus?.ready ? (
               <p className="text-[11px] leading-5 text-muted-foreground">
                 {copy.readyPrefix}{' '}
-                <span className="font-semibold text-foreground">{aiStatus.provider}</span>
+                <span className="font-semibold text-foreground">
+                  {aiStatus.gateway || aiStatus.provider}
+                </span>
                 {aiStatus.protocol ? ` · ${aiStatus.protocol}` : ''}
                 {aiStatus.model ? ` · ${aiStatus.model}` : ''}
                 {copy.changeHint}
@@ -898,11 +919,11 @@ export default function SettingsPage() {
                 {aiStatusError ? copy.unavailableDescription : copy.configurePrefix}
                 {!aiStatusError && (
                   <>
-                    <span className="font-semibold text-foreground">ANTHROPIC_API_KEY</span>
+                    <span className="font-semibold text-foreground">OPENAI_COMPATIBLE_API_KEY</span>
                     {locale === 'en' ? ', ' : '、'}
-                    <span className="font-semibold text-foreground">OPENAI_API_KEY</span>
-                    {locale === 'en' ? ' or ' : ' 或 '}
-                    <span className="font-semibold text-foreground">GLM_API_KEY</span>
+                    <span className="font-semibold text-foreground">OPENAI_BASE_URL</span>
+                    {locale === 'en' ? ' and ' : ' 与 '}
+                    <span className="font-semibold text-foreground">OPENAI_MODEL</span>
                     {copy.configureSuffix}
                   </>
                 )}
@@ -910,11 +931,15 @@ export default function SettingsPage() {
             )}
           </div>
 
-          <ApiAccessCard />
-          <DataGovernanceCard />
+          <div className="min-w-0 lg:col-start-1 lg:row-start-4">
+            <ApiAccessCard />
+          </div>
+          <div className="min-w-0 lg:col-start-2 lg:row-start-3">
+            <DataGovernanceCard />
+          </div>
 
           {/* Actions */}
-          <div className="pt-2 flex justify-start">
+          <div className="flex justify-start pt-2 lg:col-start-2 lg:row-start-4">
             <Button
               variant="destructive"
               onClick={logout}

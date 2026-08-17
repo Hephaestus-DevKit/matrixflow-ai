@@ -113,22 +113,40 @@ function providerDefinition(name, env, requested) {
       maxTokensField: 'max_tokens',
     };
   }
-  const apiKey = envValue(env, 'OPENAI_API_KEY', 'OPENAI_COMPATIBLE_API_KEY');
-  if (!apiKey) unavailable('openai');
+  // Token Rhythm is an OpenAI-compatible gateway. Keep its explicit aliases
+  // separate from the generic OpenAI variables so operators can switch
+  // gateways without changing application code or exposing secrets to Web.
+  const configuredBaseUrl = envValue(
+    env,
+    'TOKENRHYTHM_BASE_URL',
+    'OPENAI_BASE_URL',
+    'OPENAI_API_BASE',
+  );
+  const tokenRhythm =
+    requested === 'tokenrhythm' ||
+    Boolean(envValue(env, 'TOKENRHYTHM_API_KEY')) ||
+    /tokenrhythm\.studio/i.test(configuredBaseUrl);
+  const apiKey = tokenRhythm
+    ? envValue(env, 'TOKENRHYTHM_API_KEY', 'OPENAI_COMPATIBLE_API_KEY', 'OPENAI_API_KEY')
+    : envValue(env, 'OPENAI_API_KEY', 'OPENAI_COMPATIBLE_API_KEY');
+  if (!apiKey) unavailable(tokenRhythm ? 'tokenrhythm' : 'openai');
+  const baseUrl = configuredBaseUrl || (tokenRhythm ? 'https://tokenrhythm.studio/v1' : '');
   return {
-    name: 'openai',
+    name: tokenRhythm ? 'tokenrhythm' : 'openai',
     protocol: 'openai-chat-completions',
-    endpoint: validateProviderEndpoint(
-      openAiEndpoint(envValue(env, 'OPENAI_BASE_URL', 'OPENAI_API_BASE')),
-      env,
-    ),
+    endpoint: validateProviderEndpoint(openAiEndpoint(baseUrl), env),
     apiKey,
-    model: envValue(env, 'OPENAI_MODEL') || 'gpt-4o-mini',
+    model:
+      envValue(env, 'TOKENRHYTHM_MODEL', 'OPENAI_MODEL') ||
+      (tokenRhythm ? 'deepseek-v4-flash-0731' : 'gpt-4o-mini'),
     maxTokensField:
       envValue(env, 'OPENAI_MAX_TOKENS_FIELD') ||
-      (requested === 'openai-compatible' ? 'max_tokens' : 'max_completion_tokens'),
+      (requested === 'openai-compatible' || requested === 'tokenrhythm'
+        ? 'max_tokens'
+        : 'max_completion_tokens'),
     organization: envValue(env, 'OPENAI_ORGANIZATION', 'OPENAI_ORG_ID'),
     project: envValue(env, 'OPENAI_PROJECT'),
+    gateway: tokenRhythm ? 'Token Rhythm' : undefined,
   };
 }
 
@@ -138,9 +156,11 @@ function unavailable(provider) {
       ? 'ANTHROPIC_API_KEY'
       : provider === 'glm'
         ? 'GLM_API_KEY'
-        : 'OPENAI_API_KEY';
+        : provider === 'tokenrhythm'
+          ? 'TOKENRHYTHM_API_KEY'
+          : 'OPENAI_API_KEY';
   throw new ProviderError(
-    `尚未配置 ${provider === 'anthropic' ? 'Anthropic' : provider === 'glm' ? 'GLM' : 'OpenAI 兼容'} AI 服务密钥，请在 Appwrite Function 变量中设置 ${label}`,
+    `尚未配置 ${provider === 'anthropic' ? 'Anthropic' : provider === 'glm' ? 'GLM' : provider === 'tokenrhythm' ? 'Token Rhythm' : 'OpenAI 兼容'} AI 服务密钥，请在 Appwrite Function 变量中设置 ${label}`,
     503,
     'AI_PROVIDER_UNAVAILABLE',
   );
@@ -153,11 +173,14 @@ function unavailable(provider) {
  * - auto (default): GLM, Anthropic, then OpenAI when their keys exist
  * - anthropic: native Anthropic Messages API
  * - openai: OpenAI Chat Completions protocol (also supports any compatible base URL)
+ * - tokenrhythm: explicit Token Rhythm alias; uses the same OpenAI-compatible protocol
  * - glm: GLM's OpenAI-compatible Chat Completions API (legacy alias)
  */
 export function configuredProvider(env = process.env) {
   const requested = envValue(env, 'MATRIXFLOW_AI_PROVIDER', 'AI_PROVIDER').toLowerCase() || 'auto';
-  if (!['auto', 'anthropic', 'openai', 'openai-compatible', 'glm'].includes(requested)) {
+  if (
+    !['auto', 'anthropic', 'openai', 'openai-compatible', 'tokenrhythm', 'glm'].includes(requested)
+  ) {
     throw new ProviderError(`不支持的 AI 服务协议：${requested}`, 500, 'AI_PROVIDER_INVALID');
   }
   return configuredProviders(env)[0];
@@ -166,11 +189,13 @@ export function configuredProvider(env = process.env) {
 /** Return the ordered provider pool used for automatic failover. */
 export function configuredProviders(env = process.env) {
   const requested = envValue(env, 'MATRIXFLOW_AI_PROVIDER', 'AI_PROVIDER').toLowerCase() || 'auto';
-  if (!['auto', 'anthropic', 'openai', 'openai-compatible', 'glm'].includes(requested))
+  if (
+    !['auto', 'anthropic', 'openai', 'openai-compatible', 'tokenrhythm', 'glm'].includes(requested)
+  )
     throw new ProviderError(`不支持的 AI 服务协议：${requested}`, 500, 'AI_PROVIDER_INVALID');
   if (requested === 'anthropic') return [providerDefinition('anthropic', env, requested)];
   if (requested === 'glm') return [providerDefinition('glm', env, requested)];
-  if (requested === 'openai' || requested === 'openai-compatible')
+  if (requested === 'openai' || requested === 'openai-compatible' || requested === 'tokenrhythm')
     return [providerDefinition('openai', env, requested)];
 
   const providers = [];
@@ -179,11 +204,11 @@ export function configuredProviders(env = process.env) {
   if (envValue(env, 'GLM_API_KEY')) providers.push(providerDefinition('glm', env, requested));
   if (envValue(env, 'ANTHROPIC_API_KEY'))
     providers.push(providerDefinition('anthropic', env, requested));
-  if (envValue(env, 'OPENAI_API_KEY', 'OPENAI_COMPATIBLE_API_KEY'))
+  if (envValue(env, 'TOKENRHYTHM_API_KEY', 'OPENAI_API_KEY', 'OPENAI_COMPATIBLE_API_KEY'))
     providers.push(providerDefinition('openai', env, requested));
   if (!providers.length)
     throw new ProviderError(
-      '尚未配置 AI 服务密钥，请在 Appwrite Function 变量中设置 ANTHROPIC_API_KEY、OPENAI_API_KEY 或 OPENAI_COMPATIBLE_API_KEY',
+      '尚未配置 AI 服务密钥，请在 Appwrite Function 变量中设置 ANTHROPIC_API_KEY、OPENAI_API_KEY、OPENAI_COMPATIBLE_API_KEY 或 TOKENRHYTHM_API_KEY',
       503,
       'AI_PROVIDER_UNAVAILABLE',
     );
