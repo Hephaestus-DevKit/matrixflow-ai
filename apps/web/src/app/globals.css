@@ -140,7 +140,7 @@
 
 @layer components {
   .brand-mark {
-    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 via-primary to-indigo-700 text-sm font-black text-white shadow-glow-sm;
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 via-primary to-indigo-700 text-sm font-bold text-white shadow-glow-sm;
   }
 
   .surface-card {
