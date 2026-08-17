@@ -60,6 +60,10 @@ export default function LandingPage() {
             <div className="landing-aurora landing-aurora-violet" />
             <div className="landing-aurora landing-aurora-blue" />
             <div className="landing-aurora landing-aurora-cyan" />
+            <div className="landing-motion-field" />
+            <div className="landing-orbit landing-orbit-one" />
+            <div className="landing-orbit landing-orbit-two" />
+            <div className="landing-shimmer" />
             <div className="landing-ribbon" />
             <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background via-background/75 to-transparent" />
           </div>

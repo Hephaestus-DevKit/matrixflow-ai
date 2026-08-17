@@ -47,7 +47,16 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }, [navigationOpen]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="dashboard-shell relative isolate min-h-screen overflow-x-clip">
+      <div
+        className="dashboard-backdrop pointer-events-none fixed inset-y-0 right-0 z-0 left-0 lg:left-64"
+        aria-hidden="true"
+      >
+        <div className="dashboard-grid absolute inset-0" />
+        <div className="dashboard-glow dashboard-glow-violet" />
+        <div className="dashboard-glow dashboard-glow-blue" />
+        <div className="dashboard-sweep" />
+      </div>
       <Sidebar />
       {navigationOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
@@ -68,7 +77,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       )}
-      <div className="lg:pl-64">
+      <div className="relative z-10 lg:pl-64">
         <Topbar
           onOpenNavigation={() => {
             previousFocusRef.current = document.activeElement as HTMLElement | null;

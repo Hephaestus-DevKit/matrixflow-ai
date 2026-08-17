@@ -1,4 +1,9 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+async function chooseLocale(page: Page, locale: 'zh-CN' | 'zh-TW' | 'en') {
+  await page.getByTestId('locale-switcher-trigger').click();
+  await page.getByTestId(`locale-option-${locale}`).click();
+}
 
 test('server-renders the persisted locale before hydration', async ({ context }) => {
   await context.addCookies([
@@ -14,17 +19,16 @@ test('server-renders the persisted locale before hydration', async ({ context })
 
 test('switches among all three locales and persists the choice', async ({ page }) => {
   await page.goto('/');
-  const locale = page.locator('header select');
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
   await expect(page).toHaveTitle(/MatrixFlow AI/);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('把跨境运营流程');
 
-  await locale.selectOption('zh-TW');
+  await chooseLocale(page, 'zh-TW');
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('把跨境營運流程');
 
-  await locale.selectOption('en');
+  await chooseLocale(page, 'en');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page).toHaveTitle('MatrixFlow AI — AI Workforce OS');
   await expect(page.getByRole('heading', { level: 1 })).toContainText(
@@ -33,7 +37,7 @@ test('switches among all three locales and persists the choice', async ({ page }
 
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  await expect(page.locator('header select')).toHaveValue('en');
+  await expect(page.getByTestId('locale-switcher-trigger')).toHaveAttribute('data-locale', 'en');
 
   await page.goto('/pricing');
   await expect(page).toHaveTitle('Pricing | MatrixFlow AI');
@@ -41,7 +45,7 @@ test('switches among all three locales and persists the choice', async ({ page }
 
 test('keeps authentication screens in the selected language', async ({ page }) => {
   await page.goto('/');
-  await page.locator('header select').selectOption('en');
+  await chooseLocale(page, 'en');
   await page.goto('/login');
 
   await expect(page).toHaveURL(/\/login$/);
@@ -66,7 +70,7 @@ test('does not overflow a narrow mobile viewport', async ({ page }) => {
     scrollWidth: document.documentElement.scrollWidth,
   }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
-  await expect(page.locator('header select')).toBeVisible();
+  await expect(page.getByTestId('locale-switcher-trigger')).toBeVisible();
   await expect(page.getByRole('link', { name: '免费开始', exact: true })).toBeVisible();
 });
 
