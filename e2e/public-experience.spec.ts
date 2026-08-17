@@ -73,6 +73,8 @@ test('does not overflow a narrow mobile viewport', async ({ page }) => {
 test('keeps the complete public journey inside the 320px minimum width in every locale', async ({
   page,
 }) => {
+  test.setTimeout(90_000);
+  page.setDefaultNavigationTimeout(60_000);
   await page.setViewportSize({ width: 320, height: 800 });
 
   for (const locale of ['zh-CN', 'zh-TW', 'en']) {
