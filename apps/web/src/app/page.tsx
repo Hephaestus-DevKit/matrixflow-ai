@@ -60,12 +60,10 @@ export default function LandingPage() {
             <div className="landing-aurora landing-aurora-violet" />
             <div className="landing-aurora landing-aurora-blue" />
             <div className="landing-aurora landing-aurora-cyan" />
-            <div className="landing-motion-field" />
-            <div className="landing-orbit landing-orbit-one" />
-            <div className="landing-orbit landing-orbit-two" />
-            <div className="landing-shimmer" />
-            <div className="landing-ribbon" />
-            <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background via-background/75 to-transparent" />
+            <div className="landing-ambient landing-ambient-one" />
+            <div className="landing-ambient landing-ambient-two" />
+            <div className="landing-ambient landing-ambient-three" />
+            <div className="landing-hero-fade absolute inset-x-0 bottom-0 h-48" />
           </div>
 
           <div className="relative z-10 mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[minmax(0,0.96fr)_minmax(440px,1.04fr)] lg:gap-14">
@@ -209,7 +207,7 @@ export default function LandingPage() {
         {/* Features */}
         <section
           id="capabilities"
-          className="landing-section relative scroll-mt-16 border-t border-slate-200/80 px-4 py-20 sm:py-24"
+          className="landing-section relative scroll-mt-16 px-4 py-20 sm:py-24"
         >
           <div className="relative z-10 mx-auto max-w-6xl">
             <div className="mb-14 text-center sm:mb-16">
@@ -274,7 +272,7 @@ export default function LandingPage() {
         </section>
 
         {/* CTA */}
-        <section className="landing-cta-section relative overflow-hidden border-t border-slate-200/80 px-4 py-20 text-center sm:py-24">
+        <section className="landing-cta-section relative overflow-hidden px-4 py-20 text-center sm:py-24">
           <div className="landing-cta-panel relative z-10 mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-white/80 px-6 py-14 sm:px-12 sm:py-16">
             <div
               className="absolute left-1/2 top-0 h-48 w-2/3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-500/20 blur-3xl"
