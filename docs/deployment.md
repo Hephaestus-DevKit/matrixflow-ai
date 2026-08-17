@@ -45,7 +45,7 @@ appwrite functions create-deployment \
 初始化脚本是幂等的，会创建或更新数据库、表权限、列、索引和文件桶。函数发布后，在 Appwrite Console 的 `matrixflow-core` 变量中设置协议与密钥，再部署一个新版本使变量生效：
 
 ```text
-MATRIXFLOW_AI_PROVIDER=anthropic      # anthropic | openai | openai-compatible | glm | auto
+MATRIXFLOW_AI_PROVIDER=anthropic      # anthropic | openai | openai-compatible | tokenrhythm | glm | auto
 ANTHROPIC_API_KEY=                   # 仅选择 anthropic 时需要
 ANTHROPIC_MODEL=claude-3-5-haiku-latest
 ANTHROPIC_BASE_URL=https://api.anthropic.com
@@ -56,6 +56,14 @@ OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_MAX_TOKENS_FIELD=max_completion_tokens
+
+# Token Rhythm（OpenAI-compatible，推荐生产配置）：
+MATRIXFLOW_AI_PROVIDER=tokenrhythm
+TOKENRHYTHM_API_KEY=<Appwrite Function secret>
+TOKENRHYTHM_MODEL=deepseek-v4-flash-0731  # or qwen3.8-max
+TOKENRHYTHM_BASE_URL=https://tokenrhythm.studio/v1
+# If you prefer generic names, use OPENAI_COMPATIBLE_API_KEY,
+# OPENAI_MODEL, OPENAI_BASE_URL and OPENAI_MAX_TOKENS_FIELD=max_tokens.
 ```
 
 可选的运营变量：
@@ -94,7 +102,7 @@ MATRIXFLOW_RESTORE_LAST_SUCCESS_AT=2026-08-01T00:00:00.000Z
 `X-MatrixFlow-Billing-Signature: sha256=<hex>` 发送；事件 ID 在
 `billing_events` 中唯一去重。订阅权益只由 Function 根据 `subscriptions` 表判定，浏览器不能传入或覆盖套餐。
 
-`OPENAI_BASE_URL` 支持任意遵循 Chat Completions 请求/响应结构的网关；官方 OpenAI 新模型默认使用 `max_completion_tokens`，旧版兼容网关可切换为 `max_tokens`。GLM 保留独立变量以兼容既有环境。`ANTHROPIC_API_KEY`、`OPENAI_API_KEY` 和 `GLM_API_KEY` 必须标记为 Secret，其他模型、端点和限流变量可以是普通变量。密钥永远不要放到 Web 环境变量或仓库。
+`OPENAI_BASE_URL` 支持任意遵循 Chat Completions 请求/响应结构的网关；官方 OpenAI 新模型默认使用 `max_completion_tokens`，旧版兼容网关（包括 Token Rhythm）应使用 `max_tokens`。GLM 保留独立变量以兼容既有环境。`ANTHROPIC_API_KEY`、`OPENAI_API_KEY`、`OPENAI_COMPATIBLE_API_KEY`、`TOKENRHYTHM_API_KEY` 和 `GLM_API_KEY` 必须标记为 Secret，其他模型、端点和限流变量可以是普通变量。密钥永远不要放到 Web 环境变量或仓库。
 
 自动部署由 `.github/workflows/appwrite.yml` 提供。主分支的后端或基础设施变更会依次执行测试、Schema 更新、Function 部署和可选 smoke test；如果仓库 Secret `MATRIXFLOW_DEPLOY_KEY` 缺失，任务会明确失败，不会把未发布的后端代码标记为成功。
 
