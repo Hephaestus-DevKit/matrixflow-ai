@@ -11,7 +11,7 @@ function extractKeys(locale) {
   const marker = locale === 'en' ? 'en' : `'${locale}'`;
   const block = source.match(
     new RegExp(
-      `  ${marker}: \\{([\\s\\S]*?)\\n  \\},\\n(?=  (?:'[^']+'|en):|\\} ?(?:as const)?;)`,
+      `  ${marker}: \\{([\\s\\S]*?)\\r?\\n  \\},\\r?\\n(?=  (?:'[^']+'|en):|\\} ?(?:as const)?;)`,
       'm',
     ),
   )?.[1];

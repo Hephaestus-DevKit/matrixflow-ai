@@ -98,7 +98,7 @@ export default function RecoverPage() {
               required
               minLength={8}
               autoComplete="new-password"
-              className="h-11 rounded-xl bg-background/70"
+              className="auth-input h-11 rounded-xl"
             />
           </div>
           <div className="space-y-2">
@@ -111,7 +111,7 @@ export default function RecoverPage() {
               required
               minLength={8}
               autoComplete="new-password"
-              className="h-11 rounded-xl bg-background/70"
+              className="auth-input h-11 rounded-xl"
             />
           </div>
           {error && <AuthMessage>{error}</AuthMessage>}
@@ -137,7 +137,7 @@ export default function RecoverPage() {
               required
               autoComplete="email"
               placeholder={t('auth.emailPlaceholder')}
-              className="h-11 rounded-xl bg-background/70"
+              className="auth-input h-11 rounded-xl"
             />
           </div>
           {error && <AuthMessage>{error}</AuthMessage>}

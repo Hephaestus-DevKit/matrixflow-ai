@@ -47,7 +47,7 @@ export function Providers({
   return (
     <QueryClientProvider client={qc}>
       <OrganizationCacheBoundary queryClient={qc} />
-      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
         <LocaleProvider initialLocale={initialLocale}>{children}</LocaleProvider>
       </ThemeProvider>
     </QueryClientProvider>
