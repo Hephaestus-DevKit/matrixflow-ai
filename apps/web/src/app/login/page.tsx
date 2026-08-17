@@ -202,7 +202,7 @@ export default function LoginPage() {
                 mfaMode === 'totp' ? t('auth.mfaPlaceholder') : t('auth.recoveryCodePlaceholder')
               }
               className={cn(
-                'h-12 rounded-xl bg-background/70 text-center font-mono text-lg font-black',
+                'auth-input h-12 rounded-xl text-center font-mono text-lg font-semibold',
                 mfaMode === 'totp' && 'tracking-[0.35em]',
               )}
             />
@@ -229,7 +229,7 @@ export default function LoginPage() {
               required
               autoComplete="email"
               placeholder={t('auth.emailPlaceholder')}
-              className="h-11 rounded-xl bg-background/70"
+              className="auth-input h-11 rounded-xl"
             />
           </div>
           <div className="space-y-2">
@@ -251,7 +251,7 @@ export default function LoginPage() {
                 required
                 autoComplete="current-password"
                 placeholder={t('auth.passwordPlaceholder')}
-                className="h-11 rounded-xl bg-background/70 pr-11"
+                className="auth-input h-11 rounded-xl pr-11"
               />
               <button
                 type="button"
@@ -288,7 +288,7 @@ export default function LoginPage() {
               required
               autoComplete="email"
               placeholder={t('auth.emailPlaceholder')}
-              className="h-11 rounded-xl bg-background/70"
+              className="auth-input h-11 rounded-xl"
             />
           </div>
           {error && <AuthMessage>{error}</AuthMessage>}
@@ -323,7 +323,7 @@ export default function LoginPage() {
               inputMode="numeric"
               autoComplete="one-time-code"
               placeholder={t('auth.otpPlaceholder')}
-              className="h-12 rounded-xl bg-background/70 text-center font-mono text-lg font-black tracking-[0.35em]"
+              className="auth-input h-12 rounded-xl text-center font-mono text-lg font-semibold tracking-[0.35em]"
             />
           </div>
           {error && <AuthMessage>{error}</AuthMessage>}

@@ -92,7 +92,7 @@ export default function RegisterPage() {
               required
               autoComplete="name"
               placeholder={t('auth.name')}
-              className="h-11 rounded-xl bg-background/70"
+              className="auth-input h-11 rounded-xl"
             />
           </div>
           <div className="space-y-2">
@@ -105,7 +105,7 @@ export default function RegisterPage() {
               required
               autoComplete="email"
               placeholder={t('auth.emailPlaceholder')}
-              className="h-11 rounded-xl bg-background/70"
+              className="auth-input h-11 rounded-xl"
             />
           </div>
           <div className="space-y-2">
@@ -125,7 +125,7 @@ export default function RegisterPage() {
                 minLength={8}
                 autoComplete="new-password"
                 placeholder={t('auth.passwordPlaceholder')}
-                className="h-11 rounded-xl bg-background/70 pr-11"
+                className="auth-input h-11 rounded-xl pr-11"
               />
               <button
                 type="button"
@@ -203,7 +203,7 @@ export default function RegisterPage() {
               inputMode="numeric"
               autoComplete="one-time-code"
               placeholder={t('auth.otpPlaceholder')}
-              className="h-12 rounded-xl bg-background/70 text-center font-mono text-lg font-black tracking-[0.35em]"
+              className="auth-input h-12 rounded-xl text-center font-mono text-lg font-semibold tracking-[0.35em]"
             />
           </div>
           {error && <AuthMessage>{error}</AuthMessage>}
