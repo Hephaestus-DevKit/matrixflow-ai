@@ -21,7 +21,7 @@ export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
   useEffect(() => setMounted(true), []);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border/70 bg-background/85 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
+    <header className="dashboard-topbar sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border/60 px-4 backdrop-blur-2xl sm:px-6 lg:px-8">
       <div className="flex min-w-0 items-center gap-3">
         <Button
           variant="ghost"
