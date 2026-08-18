@@ -30,7 +30,7 @@ interface AuthState {
   verifyOtp: (userId: string, code: string, name?: string) => Promise<void>;
   updateProfile: (name: string, avatarUrl: string) => Promise<void>;
   logout: () => Promise<void>;
-  fetchMe: () => Promise<User>;
+  fetchMe: (timeoutMs?: number) => Promise<User>;
   setOrg: (orgId: string) => void;
   hasPerm: (action: string) => boolean;
   createTeam: (name: string) => Promise<void>;
@@ -231,9 +231,9 @@ export const useAuth = create<AuthState>()(
         set({ user: null, organizationId: null, pendingMfaChallengeId: null });
       },
 
-      fetchMe: async () => {
+      fetchMe: async (timeoutMs = AUTH_BOOTSTRAP_TIMEOUT_MS) => {
         try {
-          const me = await withTimeout(getCurrentIdentity(), AUTH_BOOTSTRAP_TIMEOUT_MS);
+          const me = await withTimeout(getCurrentIdentity(), timeoutMs);
           const persisted = get().organizationId;
           const orgId = me.memberships.some((membership) => membership.organizationId === persisted)
             ? persisted

@@ -55,10 +55,12 @@ function slugify(value: string, fallback: string) {
 }
 
 export async function getCurrentIdentity(): Promise<MatrixFlowUser> {
-  const current = await account.get();
+  // These two independent reads can share one network round trip. This is
+  // especially noticeable on a cold dashboard load over a distant region.
+  const [current, initialTeamList] = await Promise.all([account.get(), teams.list()]);
   if (!current.emailVerification) throw new Error('邮箱尚未完成验证，请使用邮箱验证码登录');
 
-  let teamList = await teams.list();
+  let teamList = initialTeamList;
   if (teamList.teams.length === 0) {
     await teams.create({
       teamId: ID.unique(),
