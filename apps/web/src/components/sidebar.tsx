@@ -3,17 +3,21 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { Cloud, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-store';
 import { cn } from '@/lib/cn';
 import { DASHBOARD_NAVIGATION } from '@/components/dashboard-navigation';
 import { useLocale } from '@/lib/i18n';
+import { prefetchDashboardData } from '@/lib/dashboard-prefetch';
 
 export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
   const { user, organizationId, hasPerm } = useAuth();
   const membership = user?.memberships.find((item) => item.organizationId === organizationId);
   const { t } = useLocale();
+  const queryClient = useQueryClient();
+  const warmRoute = (href: string) => void prefetchDashboardData(queryClient, href);
 
   return (
     <aside
@@ -25,8 +29,12 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
       <div className="flex h-16 items-center gap-3 border-b border-border/70 px-4">
         <Link
           href="/dashboard"
+          prefetch
           className="flex min-w-0 flex-1 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
           onClick={onClose}
+          onMouseEnter={() => warmRoute('/dashboard')}
+          onFocus={() => warmRoute('/dashboard')}
+          onTouchStart={() => warmRoute('/dashboard')}
         >
           <span className="brand-mark" aria-hidden="true">
             M
@@ -71,7 +79,11 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
                     <Link
                       key={item.href}
                       href={item.href}
+                      prefetch
                       onClick={onClose}
+                      onMouseEnter={() => warmRoute(item.href)}
+                      onFocus={() => warmRoute(item.href)}
+                      onTouchStart={() => warmRoute(item.href)}
                       aria-current={isActive ? 'page' : undefined}
                       className={cn(
                         'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -120,6 +132,7 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
         </div>
         <Link
           href="/dashboard/settings"
+          prefetch
           onClick={onClose}
           className="flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >

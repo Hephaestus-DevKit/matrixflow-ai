@@ -7,6 +7,15 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { SkipLink } from '@/components/skip-link';
 import { getServerLocale, pageDescription, pageTitle } from '@/lib/server-locale';
 
+const appwriteOrigin = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT ?? 'https://sgp.cloud.appwrite.io/v1')
+      .origin;
+  } catch {
+    return 'https://sgp.cloud.appwrite.io';
+  }
+})();
+
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getServerLocale();
   return {
@@ -29,6 +38,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const locale = await getServerLocale();
   return (
     <html lang={locale} suppressHydrationWarning data-scroll-behavior="smooth">
+      <head>
+        <link rel="preconnect" href={appwriteOrigin} crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href={appwriteOrigin} />
+      </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         <Providers initialLocale={locale}>
           <SkipLink />

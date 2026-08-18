@@ -55,7 +55,7 @@ const nextConfig = {
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
           { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
-          { key: 'X-DNS-Prefetch-Control', value: 'off' },
+          { key: 'X-DNS-Prefetch-Control', value: 'on' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
           ...(isDevelopment
             ? []
