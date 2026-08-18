@@ -801,7 +801,7 @@ export default function WorkflowEditorPage() {
                     placeholder={copy.valuePlaceholder}
                     className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
                   />
-                  <p className="text-[10px] text-muted-foreground">{copy.conditionHint}</p>
+                  <p className="text-2xs text-muted-foreground">{copy.conditionHint}</p>
                 </div>
               )}
 
@@ -863,7 +863,7 @@ export default function WorkflowEditorPage() {
           )}
 
           <div className="pt-4 border-t border-border mt-6 shrink-0">
-            <p className="text-[10px] text-muted-foreground text-center">{copy.footer}</p>
+            <p className="text-center text-2xs text-muted-foreground">{copy.footer}</p>
           </div>
         </div>
       </div>

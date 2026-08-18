@@ -108,7 +108,7 @@ export default function MarketplacePage() {
                   </h3>
                   <p className="text-2xs text-muted-foreground mt-0.5 font-medium">{typeLabel}</p>
                 </div>
-                <div className="mt-5 flex items-center justify-between border-t border-border/40 pt-3 text-[11px] text-muted-foreground">
+                <div className="mt-5 flex items-center justify-between border-t border-border/40 pt-3 text-2xs text-muted-foreground">
                   <span>
                     {it.installs} {copy.installs}
                   </span>

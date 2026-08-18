@@ -33,7 +33,7 @@ export default function GlobalError({
           {t('common.unexpectedErrorDescription')}
         </p>
         {error.digest && (
-          <p className="mt-3 font-mono text-[0.6875rem] text-muted-foreground">
+          <p className="mt-3 font-mono text-2xs text-muted-foreground">
             {t('common.errorCode')}：{error.digest}
           </p>
         )}

@@ -82,13 +82,13 @@ export function LocaleSwitcher({ compact = false }: { compact?: boolean }) {
         <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/15 dark:bg-primary/15">
           <Languages className="h-3.5 w-3.5" aria-hidden="true" />
         </span>
-        <span className={cn('whitespace-nowrap', compact && 'hidden min-[390px]:inline')}>
+        <span className={cn('whitespace-nowrap', compact && 'hidden min-[500px]:inline')}>
           {current.label}
         </span>
         <ChevronDown
           className={cn(
             'h-3.5 w-3.5 text-slate-400 transition-transform duration-200',
-            compact && 'hidden min-[390px]:block',
+            compact && 'hidden min-[500px]:block',
             open && 'rotate-180 text-primary',
           )}
           aria-hidden="true"
@@ -104,7 +104,7 @@ export function LocaleSwitcher({ compact = false }: { compact?: boolean }) {
           onKeyDown={moveOptionFocus}
           className="absolute right-0 top-full z-[80] mt-2 w-48 origin-top-right animate-slide-up overflow-hidden rounded-2xl border border-slate-200/90 bg-white/95 p-1.5 shadow-[0_24px_70px_-30px_rgb(30_41_59/0.45)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/95"
         >
-          <div className="px-2.5 pb-1.5 pt-1 text-[0.625rem] font-semibold uppercase tracking-[0.14em] text-slate-400">
+          <div className="px-2.5 pb-1.5 pt-1 text-2xs font-semibold uppercase tracking-[0.14em] text-slate-400">
             {t('common.language')}
           </div>
           {LOCALE_OPTIONS.map((option) => {
@@ -126,7 +126,7 @@ export function LocaleSwitcher({ compact = false }: { compact?: boolean }) {
               >
                 <span
                   className={cn(
-                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-[0.6875rem] font-bold',
+                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-2xs font-bold',
                     selected
                       ? 'border-primary/20 bg-white text-primary shadow-sm dark:bg-white/10'
                       : 'border-slate-200 bg-slate-50 text-slate-500 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-400',

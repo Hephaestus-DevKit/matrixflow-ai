@@ -18,7 +18,10 @@ export function PublicHeader() {
           <span className="brand-mark h-8 w-8 rounded-lg" aria-hidden="true">
             M
           </span>
-          <span className="sr-only min-[360px]:not-sr-only">MatrixFlow AI</span>
+          <span className="sr-only">MatrixFlow AI</span>
+          <span aria-hidden="true" className="hidden min-[500px]:inline">
+            MatrixFlow AI
+          </span>
         </Link>
         <nav
           aria-label={t('public.navLabel')}
@@ -32,11 +35,11 @@ export function PublicHeader() {
             asChild
             variant="ghost"
             size="sm"
-            className="h-10 px-2 text-xs sm:px-3 sm:text-sm"
+            className="h-10 px-2 text-xs min-[420px]:px-3 sm:text-sm"
           >
             <Link href="/login">{t('public.login')}</Link>
           </Button>
-          <Button asChild size="sm" className="h-10 px-2 text-xs sm:px-3 sm:text-sm">
+          <Button asChild size="sm" className="h-10 px-2 text-xs min-[420px]:px-3 sm:text-sm">
             <Link href="/register">{t('public.register')}</Link>
           </Button>
         </nav>

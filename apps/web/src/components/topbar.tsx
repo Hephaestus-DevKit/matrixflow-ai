@@ -16,6 +16,7 @@ export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const current = navigationItemForPath(pathname);
+  const CurrentIcon = current.icon;
   const { t } = useLocale();
 
   useEffect(() => setMounted(true), []);
@@ -32,9 +33,12 @@ export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
         >
           <Menu className="h-5 w-5" />
         </Button>
+        <span className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-primary/[0.07] text-primary sm:flex">
+          <CurrentIcon className="h-4 w-4" aria-hidden="true" />
+        </span>
         <div className="min-w-0">
           <p className="truncate text-sm font-bold text-foreground">{t(current.labelKey)}</p>
-          <p className="hidden truncate text-[0.6875rem] text-muted-foreground sm:block">
+          <p className="hidden truncate text-2xs text-muted-foreground sm:block">
             {t(current.descriptionKey)}
           </p>
         </div>

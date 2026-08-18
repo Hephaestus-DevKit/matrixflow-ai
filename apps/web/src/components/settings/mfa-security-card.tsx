@@ -251,7 +251,7 @@ export function MfaSecurityCard() {
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-border/60 bg-card p-6 shadow-sm">
+    <div className="surface-card space-y-4 p-5 sm:p-6">
       <div className="flex items-start justify-between gap-4 border-b border-border/40 pb-3">
         <div className="flex items-start gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/10 bg-primary/5 text-primary">
@@ -263,7 +263,7 @@ export function MfaSecurityCard() {
           </div>
         </div>
         <span
-          className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${status === 'enabled' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}
+          className={`status-pill shrink-0 font-bold ${status === 'enabled' ? 'border-success/10 bg-success/10 text-success' : 'border-transparent bg-muted text-muted-foreground'}`}
         >
           {status === 'loading'
             ? copy.loadingStatus
@@ -297,13 +297,10 @@ export function MfaSecurityCard() {
             <p className="mt-1 text-xs leading-5 text-muted-foreground">{copy.setupDescription}</p>
             <div className="mt-3 space-y-2 text-xs">
               <p className="font-semibold text-foreground">{copy.secret}</p>
-              <code className="block break-all rounded-md bg-background px-3 py-2 font-mono text-[11px] text-foreground">
+              <code className="block break-all rounded-lg bg-background px-3 py-2 font-mono text-2xs text-foreground">
                 {setup.secret}
               </code>
-              <a
-                href={setup.uri}
-                className="block break-all text-[11px] text-primary hover:underline"
-              >
+              <a href={setup.uri} className="block break-all text-2xs text-primary hover:underline">
                 {setup.uri}
               </a>
             </div>
@@ -368,7 +365,7 @@ export function MfaSecurityCard() {
               <code key={code}>{code}</code>
             ))}
           </div>
-          <p className="mt-2 text-[11px] text-warning">{copy.recoveryWarning}</p>
+          <p className="mt-2 text-2xs text-warning">{copy.recoveryWarning}</p>
         </div>
       )}
       <ConfirmDialog

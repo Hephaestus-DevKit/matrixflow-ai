@@ -164,7 +164,7 @@ export function BillingHistoryCard() {
                 >
                   <div className="min-w-0">
                     <p className="truncate font-semibold">{invoice.externalInvoiceId}</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">
+                    <p className="mt-1 text-2xs text-muted-foreground">
                       {date(invoice.issuedAt, locale)} · {statusLabel(invoice.status, copy)}
                     </p>
                   </div>
@@ -205,7 +205,7 @@ export function BillingHistoryCard() {
                 >
                   <div className="min-w-0">
                     <p className="truncate font-semibold">{transaction.externalTransactionId}</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">
+                    <p className="mt-1 text-2xs text-muted-foreground">
                       {date(transaction.processedAt, locale)} ·{' '}
                       {transactionTypeLabel(transaction.type, copy)} · {copy.status}:{' '}
                       {statusLabel(transaction.status, copy)}
