@@ -225,7 +225,7 @@ export default function AgentDetailPage() {
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold tracking-tight">{agent.name}</h1>
               <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                className={`rounded-full border px-2 py-0.5 text-2xs font-bold ${
                   agent.status === 'ACTIVE'
                     ? 'bg-success/5 border-success/15 text-success'
                     : 'bg-muted border-border text-muted-foreground'
@@ -247,26 +247,26 @@ export default function AgentDetailPage() {
       <div className="grid gap-6 md:grid-cols-3">
         {/* Meta Stats Panel */}
         <div className="md:col-span-1 space-y-4">
-          <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm space-y-4">
+          <div className="surface-card space-y-4 p-5">
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 border-b border-border/40 pb-2">
               <Cpu className="h-3.5 w-3.5 text-primary" /> {copy.config}
             </h3>
 
             <div className="space-y-3">
               <div>
-                <p className="text-[0.6875rem] font-semibold text-muted-foreground">{copy.model}</p>
+                <p className="text-2xs font-semibold text-muted-foreground">{copy.model}</p>
                 <p className="text-xs font-mono font-bold mt-0.5 text-foreground">
                   {agent.model ?? 'glm-4-flash'}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-muted-foreground">{copy.orgId}</p>
+                <p className="text-2xs font-semibold text-muted-foreground">{copy.orgId}</p>
                 <p className="text-xs font-mono mt-0.5 text-muted-foreground truncate">
                   {agent.organizationId}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-muted-foreground">{copy.deployed}</p>
+                <p className="text-2xs font-semibold text-muted-foreground">{copy.deployed}</p>
                 <p className="text-xs mt-0.5 text-foreground">
                   {new Date(agent.createdAt).toLocaleString(locale, { hour12: false })}
                 </p>
@@ -275,7 +275,7 @@ export default function AgentDetailPage() {
           </div>
 
           {/* Skills panel */}
-          <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm space-y-3">
+          <div className="surface-card space-y-3 p-5">
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 border-b border-border/40 pb-2">
               <Zap className="h-3.5 w-3.5 text-primary" /> {copy.skills}
             </h3>
@@ -283,7 +283,7 @@ export default function AgentDetailPage() {
               {agent.skills?.map((s) => (
                 <span
                   key={s.skillKey}
-                  className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground border border-border/50"
+                  className="rounded-md border border-border/50 bg-muted px-2 py-0.5 text-2xs font-medium text-muted-foreground"
                 >
                   {s.skillKey}
                 </span>
@@ -329,7 +329,7 @@ export default function AgentDetailPage() {
             )}
           </section>
           {/* Prompt Section */}
-          <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm space-y-3">
+          <div className="surface-card space-y-3 p-5">
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 border-b border-border/40 pb-2">
               <Sparkles className="h-3.5 w-3.5 text-primary" /> {copy.persona}
             </h3>
@@ -359,17 +359,17 @@ export default function AgentDetailPage() {
                 {agent.runs.slice(0, 10).map((r) => (
                   <div
                     key={r.id}
-                    className="flex items-center justify-between rounded-xl border border-border/60 bg-card p-4 transition-all hover:border-border/80"
+                    className="flex items-center justify-between rounded-xl border border-border/60 bg-card/70 p-4 transition-[border-color,background-color,box-shadow] hover:border-primary/20 hover:bg-card hover:shadow-xs"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex h-7 w-7 items-center justify-center rounded bg-muted font-mono text-[10px] text-muted-foreground border border-border/40">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/40 bg-muted font-mono text-2xs text-muted-foreground">
                         RUN
                       </div>
                       <div>
                         <p className="font-mono text-2xs text-muted-foreground truncate max-w-[120px]">
                           {r.id}
                         </p>
-                        <p className="text-[10px] text-muted-foreground font-medium mt-0.5">
+                        <p className="mt-0.5 text-2xs font-medium text-muted-foreground">
                           {copy.consumed}:{' '}
                           <span className="text-foreground">{r.tokensUsed ?? 0} tokens</span>
                         </p>
@@ -385,7 +385,7 @@ export default function AgentDetailPage() {
                         <p className="text-2xs text-muted-foreground mt-0.5">{copy.cost}</p>
                       </div>
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                        className={`rounded-full border px-2 py-0.5 text-2xs font-bold ${
                           r.status === 'COMPLETED'
                             ? 'bg-success/5 border-success/15 text-success'
                             : r.status === 'FAILED'

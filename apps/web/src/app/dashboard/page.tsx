@@ -188,7 +188,7 @@ export default function DashboardPage() {
                   <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />
                 )}
                 <span>
-                  <span className="block text-[0.6875rem] text-muted-foreground">
+                  <span className="block text-2xs text-muted-foreground">
                     {t('dashboard.step')} {index + 1}
                   </span>
                   <span className="font-semibold">{step.label}</span>

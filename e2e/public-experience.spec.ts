@@ -70,6 +70,16 @@ test('does not overflow a narrow mobile viewport', async ({ page }) => {
     scrollWidth: document.documentElement.scrollWidth,
   }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+  const headerControls = await page.locator('header a, header button').evaluateAll((controls) =>
+    controls
+      .map((control) => control.getBoundingClientRect())
+      .filter((rect) => rect.width > 0 && rect.height > 0)
+      .map((rect) => ({ left: rect.left, right: rect.right })),
+  );
+  for (const control of headerControls) {
+    expect(control.left).toBeGreaterThanOrEqual(0);
+    expect(control.right).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+  }
   await expect(page.getByTestId('locale-switcher-trigger')).toBeVisible();
   await expect(page.getByRole('link', { name: '免费开始', exact: true })).toBeVisible();
 });
@@ -93,10 +103,20 @@ test('keeps the complete public journey inside the 320px minimum width in every 
       const dimensions = await page.evaluate(() => ({
         clientWidth: document.documentElement.clientWidth,
         scrollWidth: document.documentElement.scrollWidth,
+        headerControls: [...document.querySelectorAll('header a, header button')]
+          .map((control) => control.getBoundingClientRect())
+          .filter((rect) => rect.width > 0 && rect.height > 0)
+          .map((rect) => ({ left: rect.left, right: rect.right })),
       }));
       expect(dimensions.scrollWidth, `${locale} ${path} overflowed`).toBeLessThanOrEqual(
         dimensions.clientWidth + 1,
       );
+      for (const control of dimensions.headerControls) {
+        expect(control.left, `${locale} ${path} header left overflowed`).toBeGreaterThanOrEqual(0);
+        expect(control.right, `${locale} ${path} header right overflowed`).toBeLessThanOrEqual(
+          dimensions.clientWidth + 1,
+        );
+      }
     }
   }
 });

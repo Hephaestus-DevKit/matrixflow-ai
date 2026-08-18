@@ -476,7 +476,7 @@ export default function ContentFactoryPage() {
             {CONTENT_TYPES.map((ct) => (
               <div
                 key={ct.key}
-                className="flex flex-col justify-between rounded-xl border border-border/60 bg-card p-5 transition-all hover:border-border hover:shadow-sm"
+                className="flex flex-col justify-between rounded-xl border border-border/60 bg-card p-5 transition-[border-color,box-shadow] hover:border-border hover:shadow-sm"
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -505,10 +505,10 @@ export default function ContentFactoryPage() {
 
                 {results[ct.key] && (
                   <div className="mt-2 space-y-1">
-                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">
+                    <span className="text-2xs font-semibold uppercase text-muted-foreground">
                       {copy.output}
                     </span>
-                    <pre className="max-h-40 overflow-auto rounded-lg bg-muted/40 p-3 text-[11px] font-mono leading-relaxed border border-border/40 whitespace-pre-wrap">
+                    <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-lg border border-border/40 bg-muted/40 p-3 font-mono text-2xs leading-relaxed">
                       {formatContent(results[ct.key].content)}
                     </pre>
                   </div>

@@ -41,7 +41,12 @@ const config: Config = {
           950: '#1e1b4b',
         },
         danger: { DEFAULT: '#ef4444', light: '#fee2e2', dark: '#991b1b' },
-        info: { DEFAULT: '#3b82f6', light: '#dbeafe', dark: '#1e40af' },
+        info: {
+          DEFAULT: 'hsl(var(--info))',
+          foreground: 'hsl(var(--info-foreground))',
+          light: '#dbeafe',
+          dark: '#1e40af',
+        },
         surface: {
           DEFAULT: 'var(--surface)',
           1: 'var(--surface-1)',
@@ -64,7 +69,9 @@ const config: Config = {
         display: ['var(--font-display)', 'var(--font-sans)', 'system-ui', 'sans-serif'],
       },
       fontSize: {
-        '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
+        // 11px is the minimum supporting-text size in the product UI. The old
+        // 10px token was difficult to scan on Windows and high-DPI displays.
+        '2xs': ['0.6875rem', { lineHeight: '1rem' }],
       },
       boxShadow: {
         xs: '0 1px 2px 0 rgb(0 0 0 / 0.03)',
