@@ -14,6 +14,7 @@ import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-store';
 import { EmptyState, ErrorState, LoadingCards } from '@/components/ui/states';
 import { PageHeader } from '@/components/ui/page';
+import { Button } from '@/components/ui/button';
 import { useLocale, type Locale } from '@/lib/i18n';
 
 type HealthCheck = {
@@ -203,14 +204,16 @@ export default function AdminPage() {
                     <Activity className="h-4 w-4 text-primary" aria-hidden="true" />
                     <h2 className="font-semibold text-foreground">{copy.serviceHealth}</h2>
                   </div>
-                  <button
+                  <Button
                     type="button"
+                    size="sm"
+                    variant="outline"
                     onClick={() => void refetch()}
-                    className="inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-xs font-semibold text-muted-foreground transition hover:border-primary/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="gap-2 text-xs text-muted-foreground hover:text-foreground"
                   >
                     <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
                     {copy.refresh}
-                  </button>
+                  </Button>
                 </div>
                 <div className="mt-4 space-y-2">
                   {Object.entries(health.checks).map(([key, check]) => {

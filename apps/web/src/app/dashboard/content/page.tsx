@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Factory, Sparkles, Plus, Loader2, AlertCircle, Trash2 } from 'lucide-react';
 import type {
   ContentGenerationView,
@@ -381,13 +382,13 @@ export default function ContentFactoryPage() {
             <Label htmlFor="projDesc" className="text-2xs font-semibold">
               {copy.productDescription}
             </Label>
-            <textarea
+            <Textarea
               id="projDesc"
               value={productDesc}
               onChange={(e) => setProductDesc(e.target.value)}
               placeholder={copy.productPlaceholder}
               rows={3}
-              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 border-border/85 focus-visible:ring-primary/30"
+              className="min-h-20"
             />
           </div>
           <div className="flex gap-2 justify-end">
@@ -410,7 +411,7 @@ export default function ContentFactoryPage() {
           {projects?.map((project) => (
             <span
               key={project.id}
-              className={`inline-flex overflow-hidden rounded-lg border transition-all ${
+              className={`inline-flex min-h-9 overflow-hidden rounded-xl border transition-[border-color,background-color,color,box-shadow] ${
                 projectId === project.id
                   ? 'border-primary bg-primary/10 text-primary shadow-sm'
                   : 'border-border/60 text-muted-foreground'
@@ -418,7 +419,7 @@ export default function ContentFactoryPage() {
             >
               <button
                 onClick={() => setProjectId(project.id)}
-                className="px-3.5 py-1.5 text-xs font-medium hover:bg-muted/80 hover:text-foreground"
+                className="min-h-9 px-3.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted/80 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               >
                 {project.name}
               </button>
@@ -426,7 +427,7 @@ export default function ContentFactoryPage() {
                 type="button"
                 aria-label={`${copy.deleteProject} ${project.name}`}
                 onClick={() => setDeleteProjectId(project.id)}
-                className="border-l border-current/10 px-2 hover:bg-destructive/10 hover:text-destructive"
+                className="min-h-9 border-l border-current/10 px-2.5 transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               >
                 <Trash2 className="h-3 w-3" />
               </button>
@@ -474,10 +475,7 @@ export default function ContentFactoryPage() {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {CONTENT_TYPES.map((ct) => (
-              <div
-                key={ct.key}
-                className="flex flex-col justify-between rounded-xl border border-border/60 bg-card p-5 transition-[border-color,box-shadow] hover:border-border hover:shadow-sm"
-              >
+              <div key={ct.key} className="surface-card flex flex-col justify-between p-5">
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -489,7 +487,7 @@ export default function ContentFactoryPage() {
                       variant="outline"
                       onClick={() => generate(ct.key)}
                       disabled={!!generating}
-                      className="h-7 text-2xs px-2.5 border-border/60 hover:bg-muted"
+                      className="h-8 border-border/60 px-2.5 text-2xs hover:bg-muted"
                     >
                       {generating === ct.key ? (
                         <Loader2 className="h-3 w-3 animate-spin" />

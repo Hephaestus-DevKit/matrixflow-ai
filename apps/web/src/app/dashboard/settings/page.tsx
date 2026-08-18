@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import {
   LogOut,
   Check,
@@ -525,7 +526,7 @@ export default function SettingsPage() {
           role="tab"
           aria-selected={activeTab === 'profile'}
           onClick={() => setActiveTab('profile')}
-          className={`rounded-lg px-3 py-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+          className={`rounded-xl px-3 py-2 transition-[color,background-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
             activeTab === 'profile'
               ? 'bg-card text-primary font-bold shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
@@ -538,7 +539,7 @@ export default function SettingsPage() {
           role="tab"
           aria-selected={activeTab === 'enterprise'}
           onClick={() => setActiveTab('enterprise')}
-          className={`rounded-lg px-3 py-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+          className={`rounded-xl px-3 py-2 transition-[color,background-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
             activeTab === 'enterprise'
               ? 'bg-card text-primary font-bold shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
@@ -608,7 +609,7 @@ export default function SettingsPage() {
                         key={p.id}
                         type="button"
                         onClick={() => selectPreset(p.color)}
-                        className={`group relative flex aspect-square flex-col items-center justify-center rounded-xl border text-center transition-all duration-200 ${
+                        className={`group relative flex aspect-square flex-col items-center justify-center rounded-xl border text-center transition-[border-color,background-color,box-shadow,transform] duration-200 ${
                           isSelected
                             ? 'border-primary bg-primary/5 ring-1 ring-primary'
                             : 'border-border hover:border-foreground/40 bg-muted/10'
@@ -697,18 +698,17 @@ export default function SettingsPage() {
                 <Label htmlFor="organization" className="text-xs font-semibold text-foreground">
                   {copy.currentOrg}
                 </Label>
-                <select
+                <Select
                   id="organization"
                   value={organizationId ?? ''}
                   onChange={(event) => setOrg(event.target.value)}
-                  className="flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {user.memberships.map((item) => (
                     <option key={item.organizationId} value={item.organizationId}>
                       {item.organizationName} · {item.role}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <p className="text-2xs text-muted-foreground">{copy.orgHint}</p>
               </div>
             )}
@@ -824,16 +824,16 @@ export default function SettingsPage() {
                 disabled={!canInvite}
               />
               <div className="mt-2 flex gap-2">
-                <select
+                <Select
                   aria-label={copy.memberRole}
                   value={inviteRole}
                   onChange={(event) => setInviteRole(event.target.value as 'member' | 'admin')}
                   disabled={!canInvite}
-                  className="h-10 flex-1 rounded-lg border border-input bg-background px-3 text-sm"
+                  className="flex-1"
                 >
                   <option value="member">{copy.member}</option>
                   <option value="admin">{copy.admin}</option>
-                </select>
+                </Select>
                 <Button type="submit" disabled={!canInvite || !inviteEmail.trim() || teamPending}>
                   <Mail className="h-4 w-4" /> {copy.invite}
                 </Button>

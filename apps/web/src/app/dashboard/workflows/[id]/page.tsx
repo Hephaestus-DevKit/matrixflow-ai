@@ -20,6 +20,9 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { PageLoader } from '@/components/ui/states';
 import { Plus, Save, Play, Trash2, ArrowLeft, Settings2, HelpCircle } from 'lucide-react';
 import type {
   WorkflowDetail,
@@ -586,8 +589,8 @@ export default function WorkflowEditorPage() {
         <div className="flex items-center justify-between border-b border-border/40 pb-5">
           <h1 className="text-xl font-bold tracking-tight">{copy.workflows}</h1>
         </div>
-        <div className="h-[600px] rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground text-sm">
-          {copy.loading}
+        <div className="surface-card">
+          <PageLoader label={copy.loading} />
         </div>
       </div>
     );
@@ -598,14 +601,16 @@ export default function WorkflowEditorPage() {
       {/* Editor Top Bar */}
       <div className="flex shrink-0 flex-col items-start justify-between gap-3 border-b border-border/40 pb-4 sm:flex-row sm:items-center">
         <div className="flex min-w-0 items-center gap-3">
-          <button
+          <Button
             type="button"
+            size="icon"
+            variant="ghost"
             onClick={() => router.push('/dashboard/workflows')}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="shrink-0 text-muted-foreground hover:text-foreground"
             aria-label={copy.back}
           >
             <ArrowLeft className="h-4 w-4" />
-          </button>
+          </Button>
           <div>
             <h1 className="text-xl font-bold tracking-tight">{wf?.name ?? copy.editorFallback}</h1>
             <p className="mt-0.5 text-xs text-muted-foreground">
@@ -656,7 +661,7 @@ export default function WorkflowEditorPage() {
       {/* Editor Body */}
       <div className="flex min-h-0 grow flex-col gap-4 lg:flex-row">
         {/* Canvas Area */}
-        <div className="min-h-[420px] flex-1 rounded-xl border border-border bg-card relative overflow-hidden lg:min-h-0">
+        <div className="surface-card relative min-h-[420px] flex-1 overflow-hidden lg:min-h-0">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -678,7 +683,7 @@ export default function WorkflowEditorPage() {
         </div>
 
         {/* Properties / Nodes Control Sidebar */}
-        <div className="max-h-[50vh] w-full shrink-0 overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-dark-sm lg:max-h-none lg:w-[320px]">
+        <div className="surface-card max-h-[50vh] w-full shrink-0 overflow-y-auto p-5 lg:max-h-none lg:w-[320px]">
           {selectedNode ? (
             /* Selected Node Properties Editor */
             <div className="space-y-5">
@@ -686,7 +691,7 @@ export default function WorkflowEditorPage() {
                 <h3 className="text-sm font-bold flex items-center gap-1.5 text-primary">
                   <Settings2 className="h-4 w-4" /> {copy.properties}
                 </h3>
-                <span className="rounded bg-muted px-2 py-0.5 text-3xs font-semibold text-muted-foreground uppercase">
+                <span className="rounded-lg bg-muted px-2 py-0.5 text-2xs font-semibold uppercase text-muted-foreground">
                   {selectedNode.data?.rawNode?.type}
                 </span>
               </div>
@@ -700,10 +705,9 @@ export default function WorkflowEditorPage() {
               {selectedNode.data?.rawNode?.type === 'ai' && (
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold">{copy.promptTemplate}</Label>
-                  <select
+                  <Select
                     value={configText(editConfig, 'promptKey')}
                     onChange={(e) => setEditConfig({ ...editConfig, promptKey: e.target.value })}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border-border/80 text-foreground"
                   >
                     <option value="" disabled>
                       {copy.choosePrompt}
@@ -713,7 +717,7 @@ export default function WorkflowEditorPage() {
                         {copy.prompts[key]}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               )}
 
@@ -735,12 +739,11 @@ export default function WorkflowEditorPage() {
                     className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
                   />
                   <Label className="text-xs font-semibold">{copy.body}</Label>
-                  <textarea
+                  <Textarea
                     value={configText(editConfig, 'body')}
                     onChange={(e) => setEditConfig({ ...editConfig, body: e.target.value })}
                     placeholder={copy.bodyPlaceholder}
                     rows={4}
-                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   />
                 </div>
               )}
@@ -761,12 +764,11 @@ export default function WorkflowEditorPage() {
               {selectedNode.data?.rawNode?.type === 'transform' && (
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold">{copy.transform}</Label>
-                  <textarea
+                  <Textarea
                     value={configText(editConfig, 'template')}
                     onChange={(e) => setEditConfig({ ...editConfig, template: e.target.value })}
                     placeholder={copy.transformPlaceholder}
                     rows={4}
-                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border-border/80 text-foreground"
                   />
                 </div>
               )}
@@ -781,10 +783,9 @@ export default function WorkflowEditorPage() {
                     className="text-sm bg-muted/10 border-border/60 focus-visible:ring-primary/30"
                   />
                   <Label className="text-xs font-semibold">{copy.operator}</Label>
-                  <select
+                  <Select
                     value={configText(editConfig, 'operator') || 'eq'}
                     onChange={(e) => setEditConfig({ ...editConfig, operator: e.target.value })}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   >
                     {['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'contains', 'truthy'].map(
                       (operator) => (
@@ -793,7 +794,7 @@ export default function WorkflowEditorPage() {
                         </option>
                       ),
                     )}
-                  </select>
+                  </Select>
                   <Label className="text-xs font-semibold">{copy.value}</Label>
                   <Input
                     value={configText(editConfig, 'value')}
@@ -837,7 +838,7 @@ export default function WorkflowEditorPage() {
                   <button
                     key={nt.type}
                     onClick={() => addNode(nt.type)}
-                    className="w-full text-left rounded-xl border border-border/60 bg-muted/10 p-3 hover:border-primary/20 hover:bg-primary/5 transition-all group"
+                    className="group w-full rounded-xl border border-border/60 bg-muted/10 p-3 text-left transition-[border-color,background-color,box-shadow] hover:border-primary/20 hover:bg-primary/5 hover:shadow-xs"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
@@ -845,12 +846,12 @@ export default function WorkflowEditorPage() {
                       </span>
                       <Plus className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
-                    <p className="text-3xs text-muted-foreground mt-1 leading-normal">{nt.desc}</p>
+                    <p className="mt-1 text-2xs leading-normal text-muted-foreground">{nt.desc}</p>
                   </button>
                 ))}
               </div>
 
-              <div className="rounded-lg bg-muted/30 p-3 text-3xs text-muted-foreground leading-relaxed flex gap-1.5 border border-border/40">
+              <div className="flex gap-1.5 rounded-lg border border-border/40 bg-muted/30 p-3 text-2xs leading-relaxed text-muted-foreground">
                 <HelpCircle className="h-4 w-4 shrink-0 text-primary/70" />
                 <div>
                   <span className="font-bold text-foreground block mb-0.5">{copy.helpTitle}</span>

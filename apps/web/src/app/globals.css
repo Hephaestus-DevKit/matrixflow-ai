@@ -196,6 +196,10 @@
   .auth-input:focus-visible {
     @apply border-primary/50 bg-white shadow-[0_0_0_4px_hsl(var(--primary)/0.1)];
   }
+
+  .auth-action-link {
+    @apply -mx-1 inline-flex min-h-8 items-center rounded-lg px-1 font-semibold text-primary transition-[color,background-color] hover:bg-primary/5 hover:text-primary/90 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
 }
 
 .landing-page {
@@ -707,7 +711,7 @@
 
 /* Custom ReactFlow node & edge aesthetics overrides */
 .react-flow__node {
-  @apply rounded-xl border border-border bg-card p-4 text-xs font-semibold shadow-dark-sm transition-all duration-200 hover:border-primary/40 hover:shadow-glow-sm !important;
+  @apply rounded-xl border border-border bg-card p-4 text-xs font-semibold shadow-dark-sm transition-[border-color,box-shadow,transform] duration-200 hover:border-primary/40 hover:shadow-glow-sm !important;
 }
 
 .react-flow__handle {

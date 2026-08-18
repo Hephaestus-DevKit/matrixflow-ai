@@ -201,14 +201,16 @@ export default function NewAgentPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center gap-3 border-b border-border/40 pb-5">
-        <button
+        <Button
           type="button"
+          size="icon"
+          variant="ghost"
           onClick={() => router.back()}
-          className="text-muted-foreground hover:text-foreground transition-colors"
+          className="shrink-0 text-muted-foreground hover:text-foreground"
           aria-label={copy.back}
         >
           <ArrowLeft className="h-4 w-4" />
-        </button>
+        </Button>
         <div>
           <h1 className="text-xl font-bold tracking-tight">{copy.title}</h1>
           <p className="text-xs text-muted-foreground mt-0.5">{copy.description}</p>
@@ -252,10 +254,7 @@ export default function NewAgentPage() {
           {TEMPLATES.map((t) => {
             const Icon = t.icon;
             return (
-              <div
-                key={t.id}
-                className="group rounded-xl border border-border bg-card p-5 transition-all duration-300 hover:border-primary/30 hover:shadow-sm flex flex-col justify-between"
-              >
+              <div key={t.id} className="interactive-card group flex flex-col justify-between p-5">
                 <div>
                   <div
                     className={`flex h-10 w-10 items-center justify-center rounded-lg ${t.bg} ${t.color} mb-4`}
@@ -290,7 +289,7 @@ export default function NewAgentPage() {
             e.preventDefault();
             if (name.trim()) createCustom();
           }}
-          className="max-w-md space-y-4 border border-border/60 rounded-xl bg-card p-5"
+          className="surface-card max-w-md space-y-4 p-5"
         >
           <h3 className="text-sm font-bold flex items-center gap-1.5 text-primary">
             <Sparkles className="h-4 w-4" /> {copy.customTitle}

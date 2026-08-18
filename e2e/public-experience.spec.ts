@@ -80,8 +80,32 @@ test('does not overflow a narrow mobile viewport', async ({ page }) => {
     expect(control.left).toBeGreaterThanOrEqual(0);
     expect(control.right).toBeLessThanOrEqual(dimensions.clientWidth + 1);
   }
+  const heroHeight = await page
+    .locator('main section')
+    .first()
+    .evaluate((section) => Math.round(section.getBoundingClientRect().height));
+  expect(heroHeight).toBeLessThanOrEqual(1150);
   await expect(page.getByTestId('locale-switcher-trigger')).toBeVisible();
   await expect(page.getByRole('link', { name: '免费开始', exact: true })).toBeVisible();
+});
+
+test('keeps authentication helper actions touch friendly', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  for (const path of ['/login', '/register']) {
+    await page.goto(path);
+    const actions = await page.locator('.auth-action-link').evaluateAll((links) =>
+      links
+        .map((link) => link.getBoundingClientRect())
+        .filter((rect) => rect.width > 0 && rect.height > 0)
+        .map((rect) => ({ height: rect.height, width: rect.width })),
+    );
+    expect(actions.length, `${path} should expose helper actions`).toBeGreaterThan(0);
+    for (const action of actions) {
+      expect(action.height, `${path} helper action is too short`).toBeGreaterThanOrEqual(32);
+      expect(action.width, `${path} helper action is too narrow`).toBeGreaterThanOrEqual(32);
+    }
+  }
 });
 
 test('keeps the complete public journey inside the 320px minimum width in every locale', async ({

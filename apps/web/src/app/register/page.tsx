@@ -72,10 +72,7 @@ export default function RegisterPage() {
       footer={
         <>
           {t('auth.haveAccount')}{' '}
-          <Link
-            href="/login"
-            className="rounded-sm font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
+          <Link href="/login" className="auth-action-link font-bold">
             {t('public.login')}
           </Link>
         </>
@@ -139,7 +136,7 @@ export default function RegisterPage() {
           </div>
 
           <AuthMessage tone="info">{t('auth.otpInfoRegister')}</AuthMessage>
-          <label className="flex items-start gap-2.5 text-xs leading-5 text-muted-foreground">
+          <label className="flex min-h-10 cursor-pointer items-start gap-2.5 py-1 text-xs leading-5 text-muted-foreground">
             <input
               type="checkbox"
               checked={accepted}
@@ -149,19 +146,11 @@ export default function RegisterPage() {
             />
             <span>
               {t('auth.agreementPrefix')}{' '}
-              <Link
-                href="/terms"
-                target="_blank"
-                className="rounded-sm font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
+              <Link href="/terms" target="_blank" className="auth-action-link">
                 {t('public.terms')}
               </Link>{' '}
               {t('auth.and')}{' '}
-              <Link
-                href="/privacy"
-                target="_blank"
-                className="rounded-sm font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
+              <Link href="/privacy" target="_blank" className="auth-action-link">
                 {t('public.privacy')}
               </Link>
             </span>
@@ -190,7 +179,7 @@ export default function RegisterPage() {
                   setOtpCode('');
                   setError('');
                 }}
-                className="rounded-sm text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="auth-action-link text-xs"
               >
                 {t('auth.changeDetails')}
               </button>
@@ -222,7 +211,7 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => handleRegister()}
-                className="rounded-sm font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="auth-action-link font-bold"
               >
                 {t('auth.resend')}
               </button>
