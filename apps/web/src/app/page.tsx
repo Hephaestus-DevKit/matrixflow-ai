@@ -54,7 +54,7 @@ export default function LandingPage() {
 
       <main id="main-content" className="relative flex-1">
         {/* Hero */}
-        <section className="landing-hero relative flex min-h-[calc(100svh-4rem)] items-center overflow-hidden px-4 py-14 sm:px-6 sm:py-16 lg:py-20">
+        <section className="landing-hero relative flex min-h-[calc(100svh-4rem)] items-center overflow-hidden px-4 py-10 sm:px-6 sm:py-16 lg:py-20">
           <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
             <div className="landing-grid absolute inset-0" />
             <div className="landing-aurora landing-aurora-violet" />
@@ -66,22 +66,22 @@ export default function LandingPage() {
             <div className="landing-hero-fade absolute inset-x-0 bottom-0 h-48" />
           </div>
 
-          <div className="relative z-10 mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[minmax(0,0.96fr)_minmax(440px,1.04fr)] lg:gap-14">
+          <div className="relative z-10 mx-auto grid w-full max-w-6xl items-center gap-9 sm:gap-12 lg:grid-cols-[minmax(0,0.96fr)_minmax(440px,1.04fr)] lg:gap-14">
             <div className="animate-fade-in text-center lg:text-left">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-white/75 px-4 py-1.5 text-xs font-semibold text-primary shadow-[0_8px_26px_-18px_rgb(79_70_229/0.55)] backdrop-blur-md">
+              <div className="mb-4 inline-flex max-w-full items-center justify-center gap-1.5 rounded-full border border-primary/15 bg-white/75 px-3 py-1.5 text-2xs font-semibold leading-4 text-primary shadow-[0_8px_26px_-18px_rgb(79_70_229/0.55)] backdrop-blur-md sm:mb-6 sm:gap-2 sm:px-4 sm:text-xs">
                 <Sparkles className="h-3 w-3 animate-pulse" aria-hidden="true" />
                 <LocalizedText id="public.heroEyebrow" />
               </div>
-              <h1 className="font-display mx-auto max-w-[35rem] text-[clamp(2.2rem,3.3vw,3.3rem)] font-semibold leading-[1.1] tracking-[-0.035em] text-slate-950 [text-wrap:balance] lg:mx-0">
+              <h1 className="font-display mx-auto max-w-[35rem] text-[clamp(2.05rem,3.3vw,3.3rem)] font-semibold leading-[1.1] tracking-[-0.035em] text-slate-950 [text-wrap:balance] lg:mx-0">
                 <LocalizedText id="public.heroTitle" />
                 <span className="mt-2 block bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent">
                   <LocalizedText id="public.heroTitleAccent" />
                 </span>
               </h1>
-              <p className="mx-auto mt-6 max-w-[32rem] text-[0.9375rem] leading-7 text-slate-600 sm:text-base lg:mx-0">
+              <p className="mx-auto mt-5 max-w-[32rem] text-[0.9375rem] leading-6 text-slate-600 sm:mt-6 sm:text-base sm:leading-7 lg:mx-0">
                 <LocalizedText id="public.heroDescription" />
               </p>
-              <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
+              <div className="mt-7 flex flex-col items-center gap-3 sm:mt-8 sm:flex-row sm:justify-center lg:justify-start">
                 <Button
                   asChild
                   size="lg"
@@ -103,7 +103,7 @@ export default function LandingPage() {
                   </Link>
                 </Button>
               </div>
-              <div className="mt-7 flex flex-wrap items-center justify-center gap-2 text-2xs font-medium text-slate-600 lg:justify-start">
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-2xs font-medium text-slate-600 sm:mt-7 lg:justify-start">
                 {(
                   [
                     'public.trust.isolation',
@@ -128,7 +128,7 @@ export default function LandingPage() {
             <div className="landing-console-shell relative mx-auto w-full max-w-lg">
               <div className="landing-console-glow absolute -inset-10 -z-10 rounded-[4rem]" />
               <div className="landing-console overflow-hidden rounded-[1.75rem] border border-white/80 bg-white/80 text-slate-900 backdrop-blur-2xl">
-                <div className="flex flex-col items-start gap-3 border-b border-slate-200/80 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                <div className="flex flex-col items-start gap-2.5 border-b border-slate-200/80 px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-3.5">
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="brand-mark h-8 w-8 rounded-lg text-xs" aria-hidden="true">
                       M
@@ -146,14 +146,14 @@ export default function LandingPage() {
                     <LocalizedText id="public.preview.dataLayer" />
                   </span>
                 </div>
-                <div className="space-y-2.5 p-4">
+                <div className="space-y-2 p-3 sm:space-y-2.5 sm:p-4">
                   {OPERATING_FLOW.map((item, index) => {
                     const Icon = item.icon;
                     return (
                       <div key={item.step}>
-                        <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/75 p-3.5 sm:gap-4">
-                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary">
-                            <Icon className="h-5 w-5" aria-hidden="true" />
+                        <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/75 p-3 sm:gap-4 sm:p-3.5">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary sm:h-10 sm:w-10">
+                            <Icon className="h-4.5 w-4.5 sm:h-5 sm:w-5" aria-hidden="true" />
                           </span>
                           <div className="min-w-0 flex-1">
                             <p className="text-2xs font-bold uppercase tracking-[0.14em] text-primary">
@@ -162,7 +162,7 @@ export default function LandingPage() {
                             <p className="mt-0.5 text-sm font-bold">
                               <LocalizedText id={item.title} />
                             </p>
-                            <p className="mt-1 text-xs leading-5 text-slate-500">
+                            <p className="mt-0.5 text-xs leading-4 text-slate-500 sm:mt-1 sm:leading-5">
                               <LocalizedText id={item.description} />
                             </p>
                           </div>
@@ -207,10 +207,10 @@ export default function LandingPage() {
         {/* Features */}
         <section
           id="capabilities"
-          className="landing-section relative scroll-mt-16 px-4 py-20 sm:py-24"
+          className="landing-section relative scroll-mt-16 px-4 py-16 sm:py-24"
         >
           <div className="relative z-10 mx-auto max-w-6xl">
-            <div className="mb-14 text-center sm:mb-16">
+            <div className="mb-10 text-center sm:mb-16">
               <h2 className="font-display text-2xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-3xl lg:text-[2.25rem]">
                 <LocalizedText id="public.features.title" />
               </h2>
@@ -219,7 +219,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
               {[
                 {
                   icon: Bot,
@@ -254,8 +254,8 @@ export default function LandingPage() {
               ].map((f) => {
                 const IconComponent = f.icon;
                 return (
-                  <div key={f.title} className="landing-feature-card p-6">
-                    <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary">
+                  <div key={f.title} className="landing-feature-card p-5 sm:p-6">
+                    <div className="mb-3.5 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary sm:mb-4">
                       <IconComponent className="h-5 w-5" aria-hidden="true" />
                     </div>
                     <h3 className="font-display mb-2 text-base font-semibold text-slate-900">
@@ -272,8 +272,8 @@ export default function LandingPage() {
         </section>
 
         {/* CTA */}
-        <section className="landing-cta-section relative overflow-hidden px-4 py-20 text-center sm:py-24">
-          <div className="landing-cta-panel relative z-10 mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-white/80 px-6 py-14 sm:px-12 sm:py-16">
+        <section className="landing-cta-section relative overflow-hidden px-4 py-14 text-center sm:py-24">
+          <div className="landing-cta-panel relative z-10 mx-auto max-w-5xl overflow-hidden rounded-[1.75rem] border border-white/80 px-5 py-10 sm:rounded-[2rem] sm:px-12 sm:py-16">
             <div
               className="absolute left-1/2 top-0 h-48 w-2/3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-500/20 blur-3xl"
               aria-hidden="true"
@@ -281,7 +281,7 @@ export default function LandingPage() {
             <h2 className="font-display relative mb-4 text-2xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-3xl">
               <LocalizedText id="public.cta.title" />
             </h2>
-            <p className="relative mx-auto mb-8 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
+            <p className="relative mx-auto mb-6 max-w-2xl text-sm leading-6 text-slate-600 sm:mb-8 sm:text-base sm:leading-7">
               <LocalizedText id="public.cta.description" />
             </p>
             <Button asChild size="lg" className="landing-primary-action relative">
