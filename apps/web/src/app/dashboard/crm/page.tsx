@@ -269,7 +269,7 @@ export default function CrmPage() {
                 >
                   {copy.previous}
                 </Button>
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-2xs text-muted-foreground">
                   {leadOffset + 1}–{Math.min(leadOffset + leads.length, leadPage.total)} /{' '}
                   {leadPage.total}
                 </span>
@@ -299,7 +299,7 @@ export default function CrmPage() {
                 >
                   {copy.previous}
                 </Button>
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-2xs text-muted-foreground">
                   {customerOffset + 1}–
                   {Math.min(customerOffset + customers.length, customerPage.total)} /{' '}
                   {customerPage.total}
@@ -337,7 +337,7 @@ export default function CrmPage() {
                   <span className="text-foreground">
                     {l.customer?.name ?? l.customer?.email ?? copy.anonymous}
                   </span>
-                  <span className="rounded-full bg-success/10 px-2 py-0.5 text-success text-[10px] font-bold">
+                  <span className="rounded-full bg-success/10 px-2 py-0.5 text-2xs font-bold text-success">
                     {copy.intent} {l.score}
                   </span>
                 </div>

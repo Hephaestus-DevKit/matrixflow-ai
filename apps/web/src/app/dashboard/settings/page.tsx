@@ -506,7 +506,7 @@ export default function SettingsPage() {
           </h1>
           <p className="mt-1 text-xs text-muted-foreground">{copy.description}</p>
         </div>
-        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border/60 bg-card/80 px-3 py-1.5 text-[11px] text-muted-foreground shadow-sm">
+        <div className="status-pill w-fit">
           <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
           <span className="max-w-[18rem] truncate">
             {membership?.organizationName ?? copy.noOrg}
@@ -551,7 +551,7 @@ export default function SettingsPage() {
       {activeTab === 'profile' ? (
         /* Profile Tab */
         <form onSubmit={handleSaveProfile} className="space-y-6">
-          <div className="rounded-xl border border-border/60 bg-card p-6 shadow-sm space-y-5">
+          <div className="surface-card space-y-5 p-5 sm:p-6">
             <div className="flex items-center gap-5 pb-2 border-b border-border/40">
               {/* Avatar Preview */}
               <div className="relative">
@@ -599,7 +599,7 @@ export default function SettingsPage() {
               {/* Presets Grid */}
               <div className="space-y-2">
                 <Label className="text-xs font-semibold text-foreground">{copy.avatarStyle}</Label>
-                <div className="grid grid-cols-6 gap-3">
+                <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-6 sm:gap-3">
                   {PRESET_AVATARS.map((p) => {
                     const presetUri = makeSvgAvatar(p.color);
                     const isSelected = avatarUrl === presetUri;
@@ -616,10 +616,10 @@ export default function SettingsPage() {
                         title={p.labels[locale]}
                       >
                         <div
-                          className="h-7 w-7 rounded-full shadow-sm border border-black/5"
+                          className="h-8 w-8 rounded-full border border-black/5 shadow-sm sm:h-7 sm:w-7"
                           style={{ backgroundColor: p.color }}
                         />
-                        <span className="text-[10px] text-muted-foreground mt-1.5 group-hover:text-foreground font-medium">
+                        <span className="mt-1.5 text-2xs font-medium text-muted-foreground group-hover:text-foreground">
                           {p.labels[locale]}
                         </span>
                         {isSelected && (
@@ -663,7 +663,7 @@ export default function SettingsPage() {
       ) : (
         /* Enterprise Tab */
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
-          <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm space-y-4 lg:col-start-1 lg:row-start-1">
+          <div className="surface-card space-y-4 p-5 lg:col-start-1 lg:row-start-1">
             <div className="flex items-center gap-3 pb-3 border-b border-border/40">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/5 text-primary border border-primary/10">
                 <ShieldCheck className="h-4.5 w-4.5" />
@@ -676,7 +676,7 @@ export default function SettingsPage() {
 
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div className="bg-muted/10 p-3 rounded-lg border border-border/40">
-                <p className="text-[10px] text-muted-foreground font-semibold uppercase">
+                <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {copy.orgName}
                 </p>
                 <p className="font-bold text-foreground mt-1">
@@ -684,7 +684,7 @@ export default function SettingsPage() {
                 </p>
               </div>
               <div className="bg-muted/10 p-3 rounded-lg border border-border/40">
-                <p className="text-[10px] text-muted-foreground font-semibold uppercase">
+                <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {copy.role}
                 </p>
                 <p className="font-bold text-primary mt-1 flex items-center gap-1">
@@ -709,7 +709,7 @@ export default function SettingsPage() {
                     </option>
                   ))}
                 </select>
-                <p className="text-[0.6875rem] text-muted-foreground">{copy.orgHint}</p>
+                <p className="text-2xs text-muted-foreground">{copy.orgHint}</p>
               </div>
             )}
           </div>
@@ -718,7 +718,7 @@ export default function SettingsPage() {
             <MfaSecurityCard />
           </div>
 
-          <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm space-y-4 lg:col-start-1 lg:row-start-2">
+          <div className="surface-card space-y-4 p-5 lg:col-start-1 lg:row-start-2">
             <div className="flex items-start justify-between gap-4 border-b border-border/40 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-foreground">{copy.sessionsTitle}</h3>
@@ -775,10 +775,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:col-start-1 lg:row-start-3">
-            <form
-              onSubmit={handleCreateTeam}
-              className="rounded-xl border border-border/60 bg-card p-5 shadow-sm"
-            >
+            <form onSubmit={handleCreateTeam} className="surface-card p-5">
               <div className="flex items-center gap-2">
                 <Plus className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-bold">{copy.createTeam}</h3>
@@ -806,10 +803,7 @@ export default function SettingsPage() {
               </Button>
             </form>
 
-            <form
-              onSubmit={handleInvite}
-              className="rounded-xl border border-border/60 bg-card p-5 shadow-sm"
-            >
+            <form onSubmit={handleInvite} className="surface-card p-5">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-bold">{copy.inviteTeam}</h3>
@@ -847,7 +841,7 @@ export default function SettingsPage() {
             </form>
           </div>
 
-          <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm space-y-4 lg:col-start-2 lg:row-start-2">
+          <div className="surface-card space-y-4 p-5 lg:col-start-2 lg:row-start-2">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3.5">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/5 text-primary">
@@ -861,19 +855,19 @@ export default function SettingsPage() {
                 </div>
               </div>
               {aiStatusLoading ? (
-                <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-bold text-muted-foreground">
+                <span className="status-pill border-transparent bg-muted font-bold">
                   {copy.checking}
                 </span>
               ) : aiStatus?.ready ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-[10px] font-bold text-success">
+                <span className="status-pill border-success/10 bg-success/10 font-bold text-success">
                   <CircleCheck className="h-3 w-3" /> {copy.connected}
                 </span>
               ) : aiStatusError ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[10px] font-bold text-muted-foreground">
+                <span className="status-pill border-transparent bg-muted font-bold">
                   <CircleAlert className="h-3 w-3" /> {copy.unavailable}
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-1 text-[10px] font-bold text-warning">
+                <span className="status-pill border-warning/10 bg-warning/10 font-bold text-warning">
                   <CircleAlert className="h-3 w-3" /> {copy.pending}
                 </span>
               )}
@@ -895,17 +889,15 @@ export default function SettingsPage() {
                   key={name}
                   className="rounded-lg border border-border/50 bg-muted/10 px-3 py-2.5"
                 >
-                  <p className="text-[11px] font-semibold text-foreground">{name}</p>
-                  <p className="mt-0.5 text-[10px] text-muted-foreground">{protocol}</p>
+                  <p className="text-2xs font-semibold text-foreground">{name}</p>
+                  <p className="mt-0.5 text-2xs text-muted-foreground">{protocol}</p>
                 </div>
               ))}
             </div>
             {aiStatusLoading ? (
-              <p className="text-[11px] leading-5 text-muted-foreground">
-                {copy.checkingDescription}
-              </p>
+              <p className="text-2xs leading-5 text-muted-foreground">{copy.checkingDescription}</p>
             ) : aiStatus?.ready ? (
-              <p className="text-[11px] leading-5 text-muted-foreground">
+              <p className="text-2xs leading-5 text-muted-foreground">
                 {copy.readyPrefix}{' '}
                 <span className="font-semibold text-foreground">
                   {aiStatus.gateway || aiStatus.provider}
@@ -915,7 +907,7 @@ export default function SettingsPage() {
                 {copy.changeHint}
               </p>
             ) : (
-              <p className="text-[11px] leading-5 text-muted-foreground">
+              <p className="text-2xs leading-5 text-muted-foreground">
                 {aiStatusError ? copy.unavailableDescription : copy.configurePrefix}
                 {!aiStatusError && (
                   <>

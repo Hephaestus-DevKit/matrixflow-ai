@@ -349,7 +349,7 @@ export default function BillingPage() {
                     className={`surface-card relative flex flex-col p-6 ${selected || isIntent ? 'border-primary/40 ring-1 ring-primary/20' : ''}`}
                   >
                     {selected && (
-                      <span className="absolute right-4 top-4 rounded-full bg-primary/10 px-2.5 py-1 text-[0.625rem] font-bold text-primary">
+                      <span className="absolute right-4 top-4 rounded-full bg-primary/10 px-2.5 py-1 text-2xs font-bold text-primary">
                         {copy.current}
                       </span>
                     )}

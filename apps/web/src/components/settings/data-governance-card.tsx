@@ -148,7 +148,7 @@ export function DataGovernanceCard() {
   }
 
   return (
-    <section className="rounded-xl border border-border/60 bg-card p-6 shadow-sm space-y-5">
+    <section className="surface-card space-y-5 p-5 sm:p-6">
       <div className="flex items-start gap-3 border-b border-border/40 pb-4">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <FileKey2 className="h-4.5 w-4.5" aria-hidden="true" />

@@ -20,7 +20,7 @@ export function PageLoader({ label }: { label?: string }) {
   return (
     <div
       role="status"
-      className="flex min-h-64 flex-col items-center justify-center gap-3 text-center"
+      className="flex min-h-52 flex-col items-center justify-center gap-3 text-center sm:min-h-64"
     >
       <span className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
         <Spinner className="h-6 w-6" />
@@ -39,12 +39,14 @@ export function LoadingCards({ count = 3 }: { count?: number }) {
       className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
     >
       {Array.from({ length: count }, (_, index) => (
-        <div key={index} className="surface-card animate-pulse p-5">
-          <div className="h-10 w-10 rounded-xl bg-muted" />
-          <div className="mt-5 h-4 w-2/5 rounded bg-muted" />
-          <div className="mt-2 h-3 w-3/5 rounded bg-muted/80" />
-          <div className="mt-6 h-px bg-border" />
-          <div className="mt-3 h-3 w-1/4 rounded bg-muted/70" />
+        <div key={index} className="surface-card overflow-hidden p-5">
+          <div className="animate-pulse">
+            <div className="h-10 w-10 rounded-xl bg-muted" />
+            <div className="mt-5 h-4 w-2/5 rounded bg-muted" />
+            <div className="mt-2 h-3 w-3/5 rounded bg-muted/80" />
+            <div className="mt-6 h-px bg-border" />
+            <div className="mt-3 h-3 w-1/4 rounded bg-muted/70" />
+          </div>
         </div>
       ))}
     </div>
@@ -63,7 +65,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <section className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/45 px-6 py-14 text-center">
+    <section className="flex min-h-60 flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 bg-card/55 px-5 py-12 text-center backdrop-blur-sm sm:min-h-72 sm:px-6 sm:py-14">
       {Icon && (
         <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
           <Icon className="h-6 w-6" aria-hidden="true" />
@@ -83,7 +85,7 @@ export function ErrorState({ message, onRetry }: { message?: string; onRetry?: (
   return (
     <section
       role="alert"
-      className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-destructive/20 bg-destructive/5 px-6 py-12 text-center"
+      className="flex min-h-56 flex-col items-center justify-center rounded-2xl border border-destructive/20 bg-destructive/5 px-5 py-10 text-center backdrop-blur-sm sm:min-h-64 sm:px-6 sm:py-12"
     >
       <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
         <AlertTriangle className="h-6 w-6" aria-hidden="true" />

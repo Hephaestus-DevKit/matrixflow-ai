@@ -22,7 +22,7 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
   return (
     <aside
       className={cn(
-        'inset-y-0 left-0 flex w-64 flex-col border-r border-border/70 bg-card/95 shadow-sm backdrop-blur-xl',
+        'inset-y-0 left-0 flex w-64 flex-col border-r border-border/70 bg-card/90 shadow-[12px_0_40px_-34px_hsl(var(--foreground)/0.24)] backdrop-blur-2xl',
         mobile ? 'h-full' : 'fixed z-40 hidden lg:flex',
       )}
     >
@@ -41,7 +41,7 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
           </span>
           <span className="min-w-0">
             <span className="block truncate text-sm font-bold tracking-tight">MatrixFlow AI</span>
-            <span className="block text-[0.6875rem] font-semibold tracking-wide text-muted-foreground">
+            <span className="block text-2xs font-semibold tracking-wide text-muted-foreground">
               {t('dashboard.workspaceLabel')}
             </span>
           </span>
@@ -60,11 +60,11 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
 
       <nav
         aria-label={t('common.mainNavigation')}
-        className="flex-1 space-y-6 overflow-y-auto px-3 py-5"
+        className="flex-1 space-y-5 overflow-y-auto px-3 py-4"
       >
         {DASHBOARD_NAVIGATION.map((group) => (
           <div key={group.label}>
-            <p className="mb-2 px-3 text-[0.6875rem] font-bold tracking-wide text-muted-foreground">
+            <p className="mb-1.5 px-3 text-2xs font-bold uppercase tracking-[0.12em] text-muted-foreground/90">
               {t(group.labelKey)}
             </p>
             <div className="space-y-1">
@@ -86,9 +86,9 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
                       onTouchStart={() => warmRoute(item.href)}
                       aria-current={isActive ? 'page' : undefined}
                       className={cn(
-                        'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        'group relative flex items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 text-sm font-medium transition-[color,background-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                         isActive
-                          ? 'bg-primary/10 text-primary'
+                          ? 'bg-gradient-to-r from-primary/14 to-primary/[0.055] text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.08)]'
                           : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
                       )}
                     >
@@ -102,9 +102,15 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
                       >
                         <Icon className="h-4 w-4" aria-hidden="true" />
                       </span>
+                      {isActive && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary"
+                        />
+                      )}
                       <span className="min-w-0">
                         <span className="block truncate leading-4">{t(item.labelKey)}</span>
-                        <span className="mt-0.5 block truncate text-[0.6875rem] font-normal text-muted-foreground">
+                        <span className="mt-0.5 block truncate text-xs font-normal leading-4 text-muted-foreground">
                           {t(item.descriptionKey)}
                         </span>
                       </span>
@@ -117,7 +123,7 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
       </nav>
 
       <div className="border-t border-border/70 p-3">
-        <div className="mb-2 flex items-center gap-2 rounded-xl border border-border/70 bg-muted/35 px-3 py-2 text-[0.6875rem] text-muted-foreground">
+        <div className="mb-2 flex items-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-2xs text-muted-foreground">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Cloud className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
@@ -125,9 +131,7 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
             <span className="block truncate font-semibold text-foreground">
               {t('common.hostedData')}
             </span>
-            <span className="block text-[0.6875rem] text-muted-foreground">
-              {t('common.appwrite')}
-            </span>
+            <span className="block text-2xs text-muted-foreground">{t('common.appwrite')}</span>
           </span>
         </div>
         <Link
@@ -154,7 +158,7 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
             <span className="block truncate text-xs font-bold">
               {user?.name ?? t('common.personalUser')}
             </span>
-            <span className="mt-0.5 block truncate text-[0.6875rem] text-muted-foreground">
+            <span className="mt-0.5 block truncate text-2xs text-muted-foreground">
               {membership?.organizationName ?? user?.email ?? ''}
             </span>
           </span>

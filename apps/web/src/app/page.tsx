@@ -103,7 +103,7 @@ export default function LandingPage() {
                   </Link>
                 </Button>
               </div>
-              <div className="mt-7 flex flex-wrap items-center justify-center gap-2 text-[0.6875rem] font-medium text-slate-600 lg:justify-start">
+              <div className="mt-7 flex flex-wrap items-center justify-center gap-2 text-2xs font-medium text-slate-600 lg:justify-start">
                 {(
                   [
                     'public.trust.isolation',
@@ -137,12 +137,12 @@ export default function LandingPage() {
                       <p className="text-xs font-bold">
                         <LocalizedText id="public.preview.label" />
                       </p>
-                      <p className="text-[0.6875rem] text-slate-500">
+                      <p className="text-2xs text-slate-500">
                         <LocalizedText id="public.preview.description" />
                       </p>
                     </div>
                   </div>
-                  <span className="rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 text-[0.6875rem] font-bold text-primary">
+                  <span className="rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 text-2xs font-bold text-primary">
                     <LocalizedText id="public.preview.dataLayer" />
                   </span>
                 </div>
@@ -156,7 +156,7 @@ export default function LandingPage() {
                             <Icon className="h-5 w-5" aria-hidden="true" />
                           </span>
                           <div className="min-w-0 flex-1">
-                            <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-primary">
+                            <p className="text-2xs font-bold uppercase tracking-[0.14em] text-primary">
                               <LocalizedText id="public.preview.stepLabel" /> {item.step}
                             </p>
                             <p className="mt-0.5 text-sm font-bold">
@@ -166,7 +166,7 @@ export default function LandingPage() {
                               <LocalizedText id={item.description} />
                             </p>
                           </div>
-                          <span className="hidden rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[0.6875rem] font-semibold text-slate-500 sm:block">
+                          <span className="hidden rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-2xs font-semibold text-slate-500 sm:block">
                             <LocalizedText
                               id={
                                 index === 2
@@ -193,7 +193,7 @@ export default function LandingPage() {
                       <p className="font-display text-sm font-semibold">
                         {value === '12' ? value : <LocalizedText id={value as MessageKey} />}
                       </p>
-                      <p className="mt-0.5 text-[0.6875rem] text-slate-500">
+                      <p className="mt-0.5 text-2xs text-slate-500">
                         <LocalizedText id={label as MessageKey} />
                       </p>
                     </div>

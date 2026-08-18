@@ -126,7 +126,7 @@ export default function AgentListPage() {
                     <Bot className="h-4.5 w-4.5" />
                   </div>
                   <span
-                    className={`rounded-full border px-2 py-0.5 text-[0.6875rem] font-bold ${
+                    className={`rounded-full border px-2 py-0.5 text-2xs font-bold ${
                       a.status === 'ACTIVE'
                         ? 'bg-success/5 border-success/15 text-success'
                         : 'bg-muted border-border text-muted-foreground'
@@ -150,13 +150,13 @@ export default function AgentListPage() {
                   a.skills.slice(0, 3).map((s) => (
                     <span
                       key={s.skillKey}
-                      className="rounded-md border border-border/50 bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-muted-foreground"
+                      className="rounded-md border border-border/50 bg-muted px-2 py-0.5 text-2xs font-medium text-muted-foreground"
                     >
                       {s.skillKey}
                     </span>
                   ))
                 ) : (
-                  <span className="text-[0.6875rem] text-muted-foreground">{copy.noSkills}</span>
+                  <span className="text-2xs text-muted-foreground">{copy.noSkills}</span>
                 )}
               </div>
             </Link>

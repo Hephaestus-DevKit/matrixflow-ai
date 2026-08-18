@@ -145,7 +145,7 @@ export function PricingContent() {
             >
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-lg font-bold">{plan.name}</h2>
-                <span className="rounded-full bg-muted px-2.5 py-1 text-[0.6875rem] font-bold text-muted-foreground">
+                <span className="rounded-full bg-muted px-2.5 py-1 text-2xs font-bold text-muted-foreground">
                   {available ? copy.open : copy.waitlist}
                 </span>
               </div>

@@ -266,7 +266,7 @@ export function ApiAccessCard() {
   }
 
   return (
-    <section className="rounded-xl border border-border/60 bg-card p-6 shadow-sm space-y-5">
+    <section className="surface-card space-y-5 p-5 sm:p-6">
       <div className="flex items-start gap-3 border-b border-border/40 pb-4">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <KeyRound className="h-4.5 w-4.5" aria-hidden="true" />
@@ -327,7 +327,7 @@ export function ApiAccessCard() {
                       className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
                     />
                     <span>{copy.scopeLabels[scope]}</span>
-                    <code className="ml-auto text-[10px] text-muted-foreground">{scope}</code>
+                    <code className="ml-auto text-2xs text-muted-foreground">{scope}</code>
                   </label>
                 );
               })}
@@ -341,7 +341,7 @@ export function ApiAccessCard() {
               </div>
               <p className="mt-2 text-xs leading-5 text-muted-foreground">{copy.secretWarning}</p>
               <div className="mt-3 flex gap-2">
-                <code className="min-w-0 flex-1 overflow-x-auto rounded-lg border border-border bg-background px-3 py-2 text-[11px] text-foreground">
+                <code className="min-w-0 flex-1 overflow-x-auto rounded-lg border border-border bg-background px-3 py-2 text-2xs text-foreground">
                   {secret}
                 </code>
                 <Button
@@ -376,15 +376,15 @@ export function ApiAccessCard() {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="truncate text-xs font-semibold text-foreground">{item.name}</p>
                       {!item.active && (
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-2xs text-muted-foreground">
                           {copy.revoked}
                         </span>
                       )}
                     </div>
-                    <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+                    <p className="mt-1 font-mono text-2xs text-muted-foreground">
                       {copy.prefix}: {item.keyPrefix}••••
                     </p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">
+                    <p className="mt-1 text-2xs text-muted-foreground">
                       {copy.created}: {formatDate(item.createdAt, locale, '')} · {copy.lastUsed}:{' '}
                       {formatDate(item.lastUsedAt, locale, copy.never)}
                       {item.expiresAt
