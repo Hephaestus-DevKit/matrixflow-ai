@@ -623,6 +623,26 @@
   }
 }
 
+.dashboard-navigation-progress {
+  transform-origin: left center;
+  animation: dashboard-navigation-progress 10s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes dashboard-navigation-progress {
+  0% {
+    transform: scaleX(0.03);
+  }
+  12% {
+    transform: scaleX(0.42);
+  }
+  45% {
+    transform: scaleX(0.72);
+  }
+  100% {
+    transform: scaleX(0.94);
+  }
+}
+
 .text-glow-primary {
   text-shadow: 0 0 12px hsl(var(--primary) / 0.5);
 }

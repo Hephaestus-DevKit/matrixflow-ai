@@ -11,11 +11,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { locale } = useLocale();
   const { user, fetchMe } = useAuth();
   const router = useRouter();
-  const [checking, setChecking] = useState(true);
+  const [checking, setChecking] = useState(() => !useAuth.getState().user);
 
   useEffect(() => {
+    if (useAuth.getState().user) {
+      setChecking(false);
+      return;
+    }
     let active = true;
-    fetchMe()
+    // A protected-route guard should fail closed quickly when there is no
+    // session; login and profile synchronization retain the longer default.
+    fetchMe(2_500)
       .catch(() => undefined)
       .finally(() => {
         if (!active) return;
