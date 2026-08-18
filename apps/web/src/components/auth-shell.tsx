@@ -112,7 +112,9 @@ export function AuthShell({ title, description, children, footer, step }: AuthSh
           </div>
 
           <div className="auth-card rounded-[1.5rem] p-5 sm:p-7">{children}</div>
-          <div className="mt-6 text-center text-xs text-slate-500">{footer}</div>
+          <div className="mt-5 flex min-h-8 items-center justify-center text-center text-xs text-slate-500 sm:mt-6">
+            {footer}
+          </div>
         </div>
       </section>
     </main>

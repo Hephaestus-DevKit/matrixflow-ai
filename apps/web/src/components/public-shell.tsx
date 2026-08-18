@@ -61,19 +61,19 @@ export function PublicFooter() {
         >
           <Link
             href="/pricing"
-            className="rounded-sm outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-8 items-center rounded-lg px-1 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             {t('public.pricing')}
           </Link>
           <Link
             href="/terms"
-            className="rounded-sm outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-8 items-center rounded-lg px-1 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             {t('public.terms')}
           </Link>
           <Link
             href="/privacy"
-            className="rounded-sm outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-8 items-center rounded-lg px-1 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             {t('public.privacy')}
           </Link>
@@ -81,7 +81,7 @@ export function PublicFooter() {
             href="https://github.com/Hephaestus-DevKit/matrixflow-ai/security"
             target="_blank"
             rel="noreferrer"
-            className="rounded-sm outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-8 items-center rounded-lg px-1 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             {t('public.security')}
           </a>

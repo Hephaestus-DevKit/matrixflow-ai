@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Bot, ArrowLeft, Loader2, Sparkles, Cpu, Clock, DollarSign, Zap } from 'lucide-react';
 import type { AgentSummary } from '@matrixflow/shared';
 import { toast } from 'sonner';
@@ -209,14 +210,16 @@ export default function AgentDetailPage() {
     <div className="space-y-6 max-w-4xl animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-border/40 pb-5">
-        <button
+        <Button
           type="button"
+          size="icon"
+          variant="ghost"
           onClick={() => router.push('/dashboard/agents')}
-          className="text-muted-foreground hover:text-foreground transition-colors"
+          className="shrink-0 text-muted-foreground hover:text-foreground"
           aria-label={copy.back}
         >
           <ArrowLeft className="h-4 w-4" />
-        </button>
+        </Button>
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/5 text-primary border border-primary/10">
             <Bot className="h-5 w-5" />
@@ -303,12 +306,12 @@ export default function AgentDetailPage() {
             <label htmlFor="agent-run-prompt" className="sr-only">
               {copy.taskLabel}
             </label>
-            <textarea
+            <Textarea
               id="agent-run-prompt"
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
               placeholder={copy.placeholder}
-              className="mt-4 min-h-28 w-full resize-y rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="mt-4 min-h-28"
             />
             <div className="mt-3 flex justify-end">
               <Button
