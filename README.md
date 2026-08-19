@@ -6,6 +6,10 @@
 [![CodeQL](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/codeql.yml/badge.svg)](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/codeql.yml)
 [![Production smoke](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/production-smoke.yml/badge.svg)](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/production-smoke.yml)
 
+> 当前版本定位：生产可用 Beta。公开体验、Appwrite 租户边界和 AI Provider 适配已可用于真实试用；Stripe 结账、外部连接器、企业 SSO、备份恢复演练和多区域 Worker 仍需按发布清单配置后，才适合承诺企业级 SLA。
+
+发布前请运行 `corepack pnpm verify`、`corepack pnpm readiness:audit:strict`、`corepack pnpm test:e2e` 和 `corepack pnpm smoke:production`。严格就绪检查依赖 Appwrite/Vercel/告警/备份等外部证据；本地未配置这些凭证时失败是预期行为，不应通过关闭检查来绕过。
+
 ## 当前能力
 
 - Appwrite Email/Password 登录、邮箱验证、团队成员关系和组织隔离。
@@ -68,9 +72,9 @@ appwrite.config.json                   Appwrite 项目配置入口
 要求 Node.js 22.14+、pnpm 11。
 
 ```bash
-pnpm install --frozen-lockfile
+corepack pnpm install --frozen-lockfile
 cp .env.example .env.local
-pnpm dev
+corepack pnpm dev
 ```
 
 打开 `http://localhost:3000`。仓库已提供公开的 Appwrite endpoint 与 project ID 默认值；如果复制项目，请在 `.env.local` 中替换。公开页面、登录、注册、恢复密码和工作台均支持简体中文、繁體中文与 English。
@@ -97,20 +101,20 @@ X-MatrixFlow-Organization: <team-id>
 
 长任务在请求体中设置 `mode: "async"`，服务器返回 `202` 与 `jobId`，再使用 `GET /jobs/<job-id>` 查询或 `POST /jobs/<job-id>/cancel` 取消。完整契约见 [API 文档](docs/api.md)。
 
-业务列表默认按团队过滤并限制单次最多加载 10,000 条，避免大数据量拖垮浏览器或函数执行；超过范围时会返回可重试的明确错误。普通业务行只读权限开放给团队成员，审计、用量、计费和幂等记录只能由 Function 访问。未知 Appwrite/上游异常只返回稳定的用户提示，详细内部信息不会回传到浏览器。
+业务列表默认按团队过滤并限制单次最多加载 10,000 条，避免大数据量拖垮浏览器或函数执行；需要分页的 Agents、内容项目、知识库和工作流接口支持 `limit`/`offset` 查询参数并返回 `nextOffset`。超过范围时会返回可重试的明确错误。普通业务行只读权限开放给团队成员，审计、用量、计费和幂等记录只能由 Function 访问。未知 Appwrite/上游异常只返回稳定的用户提示，详细内部信息不会回传到浏览器。
 
 ## 质量检查
 
 ```bash
-pnpm verify
-pnpm schema:check
-pnpm readiness:audit
-pnpm function:check
-pnpm function:test
-pnpm test:e2e
-pnpm audit --prod --audit-level=high
+corepack pnpm verify
+corepack pnpm schema:check
+corepack pnpm readiness:audit
+corepack pnpm function:check
+corepack pnpm function:test
+corepack pnpm test:e2e
+corepack pnpm audit --prod --audit-level=high
 npm audit --omit=dev --prefix apps/functions/matrixflow-core
-pnpm smoke:production
+corepack pnpm smoke:production
 ```
 
 生产公开 smoke 会分别携带简体中文、繁體中文与 English 的持久化语言 Cookie，校验服务端首屏的 `<html lang>`、标题和页面主体，避免只在 hydration 后看起来正确。

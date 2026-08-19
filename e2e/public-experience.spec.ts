@@ -34,6 +34,7 @@ test('switches among all three locales and persists the choice', async ({ page }
   await expect(page.getByRole('heading', { level: 1 })).toContainText(
     'Put cross-border operations',
   );
+  await expect(page.getByRole('heading', { level: 1 })).not.toContainText('operationsin');
 
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
@@ -140,6 +141,13 @@ test('keeps the complete public journey inside the 320px minimum width in every 
         expect(control.right, `${locale} ${path} header right overflowed`).toBeLessThanOrEqual(
           dimensions.clientWidth + 1,
         );
+      }
+      if (path === '/' && locale === 'en') {
+        const heroHeight = await page
+          .locator('main section')
+          .first()
+          .evaluate((section) => Math.round(section.getBoundingClientRect().height));
+        expect(heroHeight, 'English 320px hero is too vertically heavy').toBeLessThanOrEqual(1250);
       }
     }
   }

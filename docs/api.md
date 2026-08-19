@@ -40,6 +40,17 @@ POST /jobs/<job-id>/cancel
 
 CRM 客户列表使用显式分页：`GET /crm/customers?limit=50&offset=0` 返回 `data`、`total`、`limit`、`offset` 和 `nextOffset`。客户端不应一次性拉取整个客户库。
 
+Agents、内容项目、知识库和工作流列表也支持同样的分页参数：
+
+```http
+GET /agents?limit=50&offset=0
+GET /content/projects?limit=50&offset=0
+GET /kb?limit=50&offset=0
+GET /workflows?limit=50&offset=0
+```
+
+分页响应返回 `data`、`total`、`limit`、`offset` 和 `nextOffset`；不带分页参数时保留兼容的数组响应。生产客户端应优先使用分页形式，避免把大型组织的全部资源一次性加载进浏览器。
+
 ## 关键端点
 
 | 用途               | 方法   | 路径                    |

@@ -28,7 +28,7 @@ export function PublicHeader() {
           className="flex min-w-0 items-center gap-0.5 sm:gap-2"
         >
           <LocaleSwitcher compact />
-          <Button asChild variant="ghost" size="sm" className="hidden h-10 md:inline-flex">
+          <Button asChild variant="ghost" size="sm" className="hidden h-10 min-[360px]:inline-flex">
             <Link href="/pricing">{t('public.pricing')}</Link>
           </Button>
           <Button

@@ -1,7 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
+import { useState } from 'react';
+import { apiClient, type ListPage } from '@/lib/api-client';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { FolderOpen, Plus, FileText } from 'lucide-react';
@@ -9,6 +10,9 @@ import type { KnowledgeBaseSummary } from '@matrixflow/shared';
 import { EmptyState, ErrorState, LoadingCards } from '@/components/ui/states';
 import { PageHeader } from '@/components/ui/page';
 import { useLocale, type Locale } from '@/lib/i18n';
+import { PaginationBar } from '@/components/ui/pagination';
+
+const PAGE_SIZE = 24;
 
 const COPY: Record<
   Locale,
@@ -59,15 +63,19 @@ const COPY: Record<
 export default function KbListPage() {
   const { locale } = useLocale();
   const copy = COPY[locale];
+  const [offset, setOffset] = useState(0);
   const {
-    data: kbs,
+    data: page,
     isLoading,
     isError,
     refetch,
   } = useQuery({
-    queryKey: ['kb'],
-    queryFn: () => apiClient.get<KnowledgeBaseSummary[]>('/kb'),
+    queryKey: ['kb', offset],
+    queryFn: () =>
+      apiClient.get<ListPage<KnowledgeBaseSummary>>(`/kb?limit=${PAGE_SIZE}&offset=${offset}`),
+    placeholderData: (previous) => previous,
   });
+  const kbs = page?.data;
 
   return (
     <div className="space-y-6">
@@ -123,6 +131,15 @@ export default function KbListPage() {
             </Link>
           ))}
         </div>
+      )}
+      {page && (
+        <PaginationBar
+          offset={page.offset}
+          limit={page.limit}
+          total={page.total}
+          nextOffset={page.nextOffset}
+          onChange={setOffset}
+        />
       )}
     </div>
   );
