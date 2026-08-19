@@ -8,7 +8,12 @@ async function chooseLocale(page: Page, locale: 'zh-CN' | 'zh-TW' | 'en') {
 test('protected dashboard routes fail closed to the localized login screen', async ({ page }) => {
   await page.goto('/');
   await chooseLocale(page, 'en');
-  for (const path of ['/dashboard', '/dashboard/settings', '/dashboard/knowledge']) {
+  for (const path of [
+    '/dashboard',
+    '/dashboard/settings',
+    '/dashboard/knowledge',
+    '/dashboard/jobs',
+  ]) {
     await page.goto(path);
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();

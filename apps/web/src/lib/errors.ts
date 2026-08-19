@@ -95,6 +95,7 @@ const GENERIC_ERROR_COPY: Record<
 const ERROR_COPY_BY_CODE: Record<string, keyof (typeof GENERIC_ERROR_COPY)['en']> = {
   NETWORK_ERROR: 'network',
   REQUEST_TIMEOUT: 'timeout',
+  REQUEST_ABORTED: 'operationFailed',
   UNAUTHENTICATED: 'unauthorized',
   FORBIDDEN: 'forbidden',
   RESOURCE_NOT_FOUND: 'notFound',
@@ -186,7 +187,10 @@ export function errorMessage(error: unknown, fallback?: string, locale?: Locale)
   const mappedKey = code ? ERROR_COPY_BY_CODE[code] : undefined;
   if (mappedKey) return copy[mappedKey];
   if (error instanceof ApiError) return fallback ?? copy.operationFailed;
-  if (error instanceof Error && error.message) return error.message;
+  // Never surface raw Appwrite/provider messages: they may be localized to a
+  // different language or contain implementation details. Map unknown errors
+  // to the current locale and keep the original value in telemetry only.
+  if (error instanceof Error && error.message) return fallback ?? copy.operationFailed;
   return fallback ?? copy.operationFailed;
 }
 

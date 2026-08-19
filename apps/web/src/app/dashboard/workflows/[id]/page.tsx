@@ -672,7 +672,7 @@ export default function WorkflowEditorPage() {
             onPaneClick={onPaneClick}
             fitView
           >
-            <Background color="#555" gap={16} />
+            <Background color="hsl(var(--border))" gap={20} size={1} />
             <Controls className="bg-card text-foreground border-border fill-current" />
             <MiniMap
               nodeColor="#1e293b"

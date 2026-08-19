@@ -73,7 +73,7 @@ export default function LandingPage() {
                 <LocalizedText id="public.heroEyebrow" />
               </div>
               <h1 className="font-display mx-auto max-w-[35rem] text-[clamp(2.05rem,3.3vw,3.3rem)] font-semibold leading-[1.1] tracking-[-0.035em] text-slate-950 [text-wrap:balance] lg:mx-0">
-                <LocalizedText id="public.heroTitle" />
+                <LocalizedText id="public.heroTitle" />{' '}
                 <span className="mt-2 block bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent">
                   <LocalizedText id="public.heroTitleAccent" />
                 </span>
@@ -103,7 +103,7 @@ export default function LandingPage() {
                   </Link>
                 </Button>
               </div>
-              <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-2xs font-medium text-slate-600 sm:mt-7 lg:justify-start">
+              <div className="landing-trust-row mt-5 flex flex-wrap items-center justify-center gap-2 text-2xs font-medium text-slate-600 sm:mt-7 lg:justify-start">
                 {(
                   [
                     'public.trust.isolation',

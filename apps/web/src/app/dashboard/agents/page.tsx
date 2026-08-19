@@ -1,14 +1,18 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import Link from 'next/link';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, type ListPage } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Bot, Plus } from 'lucide-react';
 import type { AgentSummary } from '@matrixflow/shared';
 import { EmptyState, ErrorState, LoadingCards } from '@/components/ui/states';
 import { PageHeader } from '@/components/ui/page';
 import { useLocale, type Locale } from '@/lib/i18n';
+import { PaginationBar } from '@/components/ui/pagination';
+
+const PAGE_SIZE = 24;
 
 const COPY: Record<
   Locale,
@@ -71,15 +75,19 @@ const COPY: Record<
 export default function AgentListPage() {
   const { locale } = useLocale();
   const copy = COPY[locale];
+  const [offset, setOffset] = useState(0);
   const {
-    data: agents,
+    data: page,
     isLoading,
     isError,
     refetch,
   } = useQuery({
-    queryKey: ['agents'],
-    queryFn: () => apiClient.get<AgentSummary[]>('/agents'),
+    queryKey: ['agents', offset],
+    queryFn: () =>
+      apiClient.get<ListPage<AgentSummary>>(`/agents?limit=${PAGE_SIZE}&offset=${offset}`),
+    placeholderData: (previous) => previous,
   });
+  const agents = page?.data;
 
   return (
     <div className="space-y-6">
@@ -162,6 +170,15 @@ export default function AgentListPage() {
             </Link>
           ))}
         </div>
+      )}
+      {page && (
+        <PaginationBar
+          offset={page.offset}
+          limit={page.limit}
+          total={page.total}
+          nextOffset={page.nextOffset}
+          onChange={setOffset}
+        />
       )}
     </div>
   );
