@@ -1,6 +1,5 @@
 import { ExecutionMethod, Query } from 'appwrite';
 import {
-  countRows,
   executeCore,
   getRow,
   listRows,
@@ -32,6 +31,17 @@ function summarizeAgent(row: Body) {
   };
 }
 
+function wantsPage(search: URLSearchParams) {
+  return search.has('limit') || search.has('offset');
+}
+
+function chunks<T>(items: T[], size = 100) {
+  const output: T[][] = [];
+  for (let index = 0; index < items.length; index += size)
+    output.push(items.slice(index, index + size));
+  return output;
+}
+
 async function routeGet(path: string) {
   const { segments, search } = parts(path);
   if (segments[0] === 'agents') {
@@ -42,11 +52,23 @@ async function routeGet(path: string) {
       ]);
       return { ...summarizeAgent(agent), runs };
     }
+    if (wantsPage(search)) {
+      const page = await listRowsPage(TABLES.agents, [], 'organizationId', {
+        limit: Number(search.get('limit') || 50),
+        offset: Number(search.get('offset') || 0),
+      });
+      return { ...page, data: page.data.map(summarizeAgent) };
+    }
     return (await listRows(TABLES.agents)).map(summarizeAgent);
   }
   if (segments[0] === 'content' && segments[1] === 'projects') {
     if (segments[2] && segments[3] === 'items')
       return listRows(TABLES.contentItems, [Query.equal('projectId', segments[2])]);
+    if (wantsPage(search))
+      return listRowsPage(TABLES.contentProjects, [], 'organizationId', {
+        limit: Number(search.get('limit') || 50),
+        offset: Number(search.get('offset') || 0),
+      });
     return listRows(TABLES.contentProjects);
   }
   if (segments[0] === 'kb') {
@@ -57,12 +79,19 @@ async function routeGet(path: string) {
       ]);
       return { ...base, documents, _count: { documents: documents.length } };
     }
-    const bases = await listRows(TABLES.knowledgeBases);
+    const basePage = wantsPage(search)
+      ? await listRowsPage(TABLES.knowledgeBases, [], 'organizationId', {
+          limit: Number(search.get('limit') || 50),
+          offset: Number(search.get('offset') || 0),
+        })
+      : null;
+    const bases = basePage?.data ?? (await listRows(TABLES.knowledgeBases));
     const documents = await listRows(TABLES.knowledgeDocuments);
-    return bases.map((base) => ({
+    const data = bases.map((base) => ({
       ...base,
       _count: { documents: documents.filter((doc) => doc.knowledgeBaseId === base.id).length },
     }));
+    return basePage ? { ...basePage, data } : data;
   }
   if (segments[0] === 'workflows') {
     if (segments[1] && segments[2] === 'logs')
@@ -74,17 +103,26 @@ async function routeGet(path: string) {
       ]);
       return { ...workflow, versions };
     }
-    const workflows = await listRows(TABLES.workflows);
-    return Promise.all(
-      workflows.map(async (workflow) => ({
-        ...workflow,
-        _count: {
-          runs: await countRows(TABLES.workflowRuns, [
-            Query.equal('workflowId', String(workflow.id)),
-          ]),
-        },
-      })),
-    );
+    const workflowPage = wantsPage(search)
+      ? await listRowsPage(TABLES.workflows, [], 'organizationId', {
+          limit: Number(search.get('limit') || 50),
+          offset: Number(search.get('offset') || 0),
+        })
+      : null;
+    const workflows = workflowPage?.data ?? (await listRows(TABLES.workflows));
+    // Fetch the tenant's runs once and aggregate locally. The previous
+    // implementation issued one Appwrite count query per workflow (N+1).
+    const runs = await listRows(TABLES.workflowRuns);
+    const runCounts = new Map<string, number>();
+    for (const run of runs) {
+      const workflowId = String(run.workflowId ?? '');
+      runCounts.set(workflowId, (runCounts.get(workflowId) ?? 0) + 1);
+    }
+    const data = workflows.map((workflow) => ({
+      ...workflow,
+      _count: { runs: runCounts.get(String(workflow.id)) ?? 0 },
+    }));
+    return workflowPage ? { ...workflowPage, data } : data;
   }
   if (segments[0] === 'crm' && segments[1] === 'customers') {
     if (!segments[2]) {
@@ -96,14 +134,25 @@ async function routeGet(path: string) {
     const conversations = await listRows(TABLES.conversations, [
       Query.equal('customerId', segments[2]),
     ]);
-    const withMessages = await Promise.all(
-      conversations.map(async (conversation) => ({
-        ...conversation,
-        messages: await listRows(TABLES.messages, [
-          Query.equal('conversationId', String(conversation.id)),
-        ]),
-      })),
-    );
+    const conversationIds = conversations.map((conversation) => String(conversation.id));
+    const messages = (
+      await Promise.all(
+        chunks(conversationIds).map((ids) =>
+          listRows(TABLES.messages, [Query.equal('conversationId', ids)]),
+        ),
+      )
+    ).flat();
+    const messagesByConversation = new Map<string, Body[]>();
+    for (const message of messages) {
+      const conversationId = String(message.conversationId ?? '');
+      const existing = messagesByConversation.get(conversationId) ?? [];
+      existing.push(message);
+      messagesByConversation.set(conversationId, existing);
+    }
+    const withMessages = conversations.map((conversation) => ({
+      ...conversation,
+      messages: messagesByConversation.get(String(conversation.id)) ?? [],
+    }));
     const tags = Array.isArray(customer.tags)
       ? customer.tags.map((tag) => ({ tag: String(tag) }))
       : [];
@@ -119,19 +168,21 @@ async function routeGet(path: string) {
     const limit = Number(search.get('limit') || 50);
     const offset = Number(search.get('offset') || 0);
     const page = await listRowsPage(TABLES.leads, [], 'organizationId', { limit, offset });
-    const customers = await Promise.all(
-      page.data.map(async (lead) => {
-        if (!lead.customerId) return null;
-        try {
-          return await getRow(TABLES.customers, String(lead.customerId));
-        } catch {
-          return null;
-        }
-      }),
-    );
+    const customerIds = [
+      ...new Set(page.data.map((lead) => String(lead.customerId ?? '')).filter(Boolean)),
+    ];
+    const customers = (
+      await Promise.all(
+        chunks(customerIds).map((ids) => listRows(TABLES.customers, [Query.equal('$id', ids)])),
+      )
+    ).flat();
+    const customersById = new Map(customers.map((customer) => [String(customer.id), customer]));
     return {
       ...page,
-      data: page.data.map((lead, index) => ({ ...lead, customer: customers[index] })),
+      data: page.data.map((lead) => ({
+        ...lead,
+        customer: lead.customerId ? (customersById.get(String(lead.customerId)) ?? null) : null,
+      })),
     };
   }
   if (segments[0] === 'market' && segments[1] === 'items') {

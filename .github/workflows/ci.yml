@@ -32,6 +32,8 @@ jobs:
         working-directory: apps/functions/matrixflow-core
         run: npm ci
       - run: pnpm format:check
+      - name: Validate production configuration shape
+        run: pnpm readiness:audit
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test

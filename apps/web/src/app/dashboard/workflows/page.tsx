@@ -1,7 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
+import { useState } from 'react';
+import { apiClient, type ListPage } from '@/lib/api-client';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { GitFork, Plus, ArrowRight } from 'lucide-react';
@@ -9,6 +10,9 @@ import type { WorkflowSummary } from '@matrixflow/shared';
 import { EmptyState, ErrorState, LoadingCards } from '@/components/ui/states';
 import { PageHeader } from '@/components/ui/page';
 import { useLocale, type Locale } from '@/lib/i18n';
+import { PaginationBar } from '@/components/ui/pagination';
+
+const PAGE_SIZE = 24;
 
 const COPY: Record<
   Locale,
@@ -62,15 +66,19 @@ const COPY: Record<
 export default function WorkflowListPage() {
   const { locale } = useLocale();
   const copy = COPY[locale];
+  const [offset, setOffset] = useState(0);
   const {
-    data: wfs,
+    data: page,
     isLoading,
     isError,
     refetch,
   } = useQuery({
-    queryKey: ['wfs'],
-    queryFn: () => apiClient.get<WorkflowSummary[]>('/workflows'),
+    queryKey: ['wfs', offset],
+    queryFn: () =>
+      apiClient.get<ListPage<WorkflowSummary>>(`/workflows?limit=${PAGE_SIZE}&offset=${offset}`),
+    placeholderData: (previous) => previous,
   });
+  const wfs = page?.data;
 
   return (
     <div className="space-y-6">
@@ -128,6 +136,15 @@ export default function WorkflowListPage() {
             </Link>
           ))}
         </div>
+      )}
+      {page && (
+        <PaginationBar
+          offset={page.offset}
+          limit={page.limit}
+          total={page.total}
+          nextOffset={page.nextOffset}
+          onChange={setOffset}
+        />
       )}
     </div>
   );

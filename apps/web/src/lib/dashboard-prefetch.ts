@@ -14,10 +14,11 @@ const ROUTE_DATA: Record<string, PrefetchTarget[]> = {
     { queryKey: ['usage'], path: '/billing/usage' },
     { queryKey: ['system-health'], path: '/health' },
   ],
-  '/dashboard/agents': [{ queryKey: ['agents'], path: '/agents' }],
+  '/dashboard/agents': [{ queryKey: ['agents', 0], path: '/agents?limit=24&offset=0' }],
   '/dashboard/content': [{ queryKey: ['content-projects'], path: '/content/projects' }],
-  '/dashboard/knowledge': [{ queryKey: ['kb'], path: '/kb' }],
-  '/dashboard/workflows': [{ queryKey: ['wfs'], path: '/workflows' }],
+  '/dashboard/knowledge': [{ queryKey: ['kb', 0], path: '/kb?limit=24&offset=0' }],
+  '/dashboard/workflows': [{ queryKey: ['wfs', 0], path: '/workflows?limit=24&offset=0' }],
+  '/dashboard/jobs': [{ queryKey: ['jobs'], path: '/jobs' }],
   '/dashboard/crm': [
     { queryKey: ['customers', 0], path: '/crm/customers?limit=50&offset=0' },
     { queryKey: ['leads', 0], path: '/crm/leads?limit=50&offset=0' },
@@ -40,6 +41,19 @@ const ROUTE_DATA: Record<string, PrefetchTarget[]> = {
  * already-fresh cache entries from generating extra traffic.
  */
 export async function prefetchDashboardData(queryClient: QueryClient, href: string) {
+  if (typeof navigator !== 'undefined') {
+    const connection = (
+      navigator as Navigator & {
+        connection?: { saveData?: boolean; effectiveType?: string };
+      }
+    ).connection;
+    if (
+      connection?.saveData ||
+      connection?.effectiveType === 'slow-2g' ||
+      connection?.effectiveType === '2g'
+    )
+      return;
+  }
   const targets = ROUTE_DATA[href] ?? [];
   await Promise.allSettled(
     targets.map(({ queryKey, path }) =>
