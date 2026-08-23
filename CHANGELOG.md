@@ -2,6 +2,14 @@
 
 All notable MatrixFlow AI changes are documented here. Versions follow semantic versioning for the product shell; the Appwrite Function keeps its own compatible runtime version.
 
+## [0.3.1] - 2026-08-23
+
+### Improved
+
+- Replaced the task-center list Function invocation with tenant-scoped Appwrite row reads, avoiding Function cold-start latency on the main jobs view.
+- Added 25-row task pagination and aligned sidebar prefetching with the paginated cache.
+- Kept task payloads, results, errors, worker leases, and internal execution fields out of browser list responses; cancellation and job-detail operations still use the protected Function.
+
 ## [0.3.0] - 2026-08-23
 
 ### Added

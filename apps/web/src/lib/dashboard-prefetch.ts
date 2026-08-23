@@ -23,7 +23,7 @@ const ROUTE_DATA: Record<string, PrefetchTarget[]> = {
   ],
   '/dashboard/knowledge': [{ queryKey: ['kb', 0], path: '/kb?limit=24&offset=0' }],
   '/dashboard/workflows': [{ queryKey: ['wfs', 0], path: '/workflows?limit=24&offset=0' }],
-  '/dashboard/jobs': [{ queryKey: ['jobs'], path: '/jobs' }],
+  '/dashboard/jobs': [{ queryKey: ['jobs', 0], path: '/jobs?limit=25&offset=0' }],
   '/dashboard/crm': [
     { queryKey: ['customers', 0], path: '/crm/customers?limit=50&offset=0' },
     { queryKey: ['leads', 0], path: '/crm/leads?limit=50&offset=0' },
