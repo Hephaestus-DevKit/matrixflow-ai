@@ -38,6 +38,8 @@ POST /jobs/<job-id>/cancel
 
 后台任务状态包括 `QUEUED`、`RUNNING`、`RETRY_WAIT`、`SUCCEEDED`、`FAILED` 和 `CANCELED`。异步执行必须配置 `MATRIXFLOW_WORKER_SECRET` 与 Appwrite `executions.write` scope；缺少配置时会明确返回 `ASYNC_WORKER_NOT_CONFIGURED`。
 
+工作台任务列表使用 `GET /jobs?limit=25&offset=0` 分页读取，只返回状态展示所需的脱敏字段；任务参数、结果、错误详情和 Worker 租约不会进入列表响应。任务详情与取消操作仍由 Function 执行授权与状态转换。
+
 CRM 客户列表使用显式分页：`GET /crm/customers?limit=50&offset=0` 返回 `data`、`total`、`limit`、`offset` 和 `nextOffset`。客户端不应一次性拉取整个客户库。
 
 Agents、内容项目、知识库和工作流列表也支持同样的分页参数：

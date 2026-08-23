@@ -31,6 +31,20 @@ function summarizeAgent(row: Body) {
   };
 }
 
+function summarizeJob(row: Body) {
+  return {
+    id: row.id,
+    type: row.type,
+    status: row.status,
+    attempts: Number(row.attempts || 0),
+    maxAttempts: Number(row.maxAttempts || 3),
+    runAfter: row.runAfter,
+    startedAt: row.startedAt || null,
+    completedAt: row.completedAt || null,
+    cancelRequested: Boolean(row.cancelRequested),
+  };
+}
+
 function wantsPage(search: URLSearchParams) {
   return search.has('limit') || search.has('offset');
 }
@@ -237,6 +251,16 @@ async function routeGet(path: string) {
       item: items.find((item) => item.id === purchase.itemId),
     }));
   }
+  if (segments[0] === 'jobs' && !segments[1]) {
+    if (wantsPage(search)) {
+      const page = await listRowsPage(TABLES.backgroundJobs, [], 'organizationId', {
+        limit: Number(search.get('limit') || 25),
+        offset: Number(search.get('offset') || 0),
+      });
+      return { ...page, data: page.data.map(summarizeJob) };
+    }
+    return (await listRows(TABLES.backgroundJobs)).map(summarizeJob);
+  }
   if (path === '/billing/plans') return executeCore('/billing/plans', {}, ExecutionMethod.GET);
   if (path === '/billing/config') return executeCore('/billing/config', {}, ExecutionMethod.GET);
   if (path === '/billing/current') return executeCore('/billing/current', {}, ExecutionMethod.GET);
@@ -250,7 +274,6 @@ async function routeGet(path: string) {
   if (path === '/health') return executeCore('/health', {}, ExecutionMethod.GET);
   if (path === '/account/export') return executeCore('/account/export', {}, ExecutionMethod.GET);
   if (path === '/api-keys') return executeCore('/api-keys', {}, ExecutionMethod.GET);
-  if (path === '/jobs') return executeCore('/jobs', {}, ExecutionMethod.GET);
   if (path.startsWith('/jobs/')) return executeCore(path, {}, ExecutionMethod.GET);
   if (path === '/admin/health') return executeCore('/admin/health', {}, ExecutionMethod.GET);
   if (path.startsWith('/admin/'))

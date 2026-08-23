@@ -14,13 +14,14 @@ import {
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, type ListPage } from '@/lib/api-client';
 import { errorMessage } from '@/lib/errors';
 import { useLocale, type Locale } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, LoadingCards } from '@/components/ui/states';
 import { PageHeader } from '@/components/ui/page';
 import { ListToolbar } from '@/components/ui/list-toolbar';
+import { PaginationBar } from '@/components/ui/pagination';
 import { Select } from '@/components/ui/select';
 
 type JobStatus = 'QUEUED' | 'RUNNING' | 'RETRY_WAIT' | 'SUCCEEDED' | 'FAILED' | 'CANCELED';
@@ -35,6 +36,8 @@ type BackgroundJob = {
   completedAt?: string | null;
   cancelRequested?: boolean;
 };
+
+const JOB_PAGE_SIZE = 25;
 
 const COPY: Record<
   Locale,
@@ -161,23 +164,26 @@ export default function JobsPage() {
   const [canceling, setCanceling] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
   const [status, setStatus] = useState<'ALL' | JobStatus>('ALL');
+  const [offset, setOffset] = useState(0);
   const query = useQuery({
-    queryKey: ['jobs'],
-    queryFn: () => apiClient.get<BackgroundJob[]>('/jobs'),
+    queryKey: ['jobs', offset],
+    queryFn: () =>
+      apiClient.get<ListPage<BackgroundJob>>(`/jobs?limit=${JOB_PAGE_SIZE}&offset=${offset}`),
+    placeholderData: (previous) => previous,
     refetchInterval: (state) =>
-      state.state.data?.some((job) => ['QUEUED', 'RUNNING', 'RETRY_WAIT'].includes(job.status))
+      state.state.data?.data.some((job) => ['QUEUED', 'RUNNING', 'RETRY_WAIT'].includes(job.status))
         ? 5_000
         : false,
   });
   const active = useMemo(
     () =>
-      query.data?.filter((job) => ['QUEUED', 'RUNNING', 'RETRY_WAIT'].includes(job.status))
+      query.data?.data.filter((job) => ['QUEUED', 'RUNNING', 'RETRY_WAIT'].includes(job.status))
         .length ?? 0,
     [query.data],
   );
   const filteredJobs = useMemo(() => {
     const needle = filter.trim().toLocaleLowerCase(locale);
-    return (query.data ?? []).filter(
+    return (query.data?.data ?? []).filter(
       (job) =>
         (status === 'ALL' || job.status === status) &&
         (!needle || `${job.type} ${job.id}`.toLocaleLowerCase(locale).includes(needle)),
@@ -222,16 +228,16 @@ export default function JobsPage() {
       />
       {query.isLoading && <LoadingCards count={3} />}
       {query.isError && <ErrorState onRetry={() => void query.refetch()} />}
-      {!query.isLoading && !query.isError && !query.data?.length && (
+      {!query.isLoading && !query.isError && !query.data?.data.length && (
         <EmptyState icon={ListChecks} title={copy.empty} description={copy.emptyDescription} />
       )}
-      {!!query.data?.length && (
+      {!!query.data?.data.length && (
         <div className="space-y-3">
           <ListToolbar
             value={filter}
             onChange={setFilter}
             placeholder={copy.filterPlaceholder}
-            resultLabel={copy.results(filteredJobs.length, query.data.length)}
+            resultLabel={copy.results(filteredJobs.length, query.data.data.length)}
           >
             <Select
               value={status}
@@ -316,6 +322,20 @@ export default function JobsPage() {
             );
           })}
         </div>
+      )}
+      {query.data && (
+        <PaginationBar
+          offset={query.data.offset}
+          limit={query.data.limit}
+          total={query.data.total}
+          nextOffset={query.data.nextOffset}
+          busy={query.isFetching}
+          onChange={(nextOffset) => {
+            setOffset(nextOffset);
+            setFilter('');
+            setStatus('ALL');
+          }}
+        />
       )}
     </div>
   );

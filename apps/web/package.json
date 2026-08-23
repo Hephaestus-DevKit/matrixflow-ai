@@ -1,6 +1,6 @@
 {
   "name": "@matrixflow/web",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "MatrixFlow AI · Next.js 前端",
   "scripts": {
