@@ -1,16 +1,17 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { apiClient, type ListPage } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
-import { Bot, Plus } from 'lucide-react';
+import { Bot, Plus, Search } from 'lucide-react';
 import type { AgentSummary } from '@matrixflow/shared';
 import { EmptyState, ErrorState, LoadingCards } from '@/components/ui/states';
 import { PageHeader } from '@/components/ui/page';
 import { useLocale, type Locale } from '@/lib/i18n';
 import { PaginationBar } from '@/components/ui/pagination';
+import { ListToolbar } from '@/components/ui/list-toolbar';
 
 const PAGE_SIZE = 24;
 
@@ -28,6 +29,9 @@ const COPY: Record<
     draft: string;
     archived: string;
     noSkills: string;
+    noMatches: string;
+    clearFilter: string;
+    results: (visible: number, pageTotal: number, total: number) => string;
   }
 > = {
   'zh-CN': {
@@ -42,6 +46,9 @@ const COPY: Record<
     draft: '草稿',
     archived: '已归档',
     noSkills: '暂无绑定技能',
+    noMatches: '当前页没有匹配的 AI 员工',
+    clearFilter: '清除筛选',
+    results: (visible, pageTotal, total) => `显示 ${visible}/${pageTotal}，共 ${total} 位`,
   },
   'zh-TW': {
     eyebrow: 'AI 員工',
@@ -55,6 +62,9 @@ const COPY: Record<
     draft: '草稿',
     archived: '已封存',
     noSkills: '暫無綁定技能',
+    noMatches: '目前頁面沒有符合的 AI 員工',
+    clearFilter: '清除篩選',
+    results: (visible, pageTotal, total) => `顯示 ${visible}/${pageTotal}，共 ${total} 位`,
   },
   en: {
     eyebrow: 'AI workforce',
@@ -69,6 +79,9 @@ const COPY: Record<
     draft: 'Draft',
     archived: 'Archived',
     noSkills: 'No skills linked',
+    noMatches: 'No AI workers on this page match the filter',
+    clearFilter: 'Clear filter',
+    results: (visible, pageTotal, total) => `${visible} of ${pageTotal} shown · ${total} total`,
   },
 };
 
@@ -76,10 +89,12 @@ export default function AgentListPage() {
   const { locale } = useLocale();
   const copy = COPY[locale];
   const [offset, setOffset] = useState(0);
+  const [filter, setFilter] = useState('');
   const {
     data: page,
     isLoading,
     isError,
+    isFetching,
     refetch,
   } = useQuery({
     queryKey: ['agents', offset],
@@ -88,6 +103,16 @@ export default function AgentListPage() {
     placeholderData: (previous) => previous,
   });
   const agents = page?.data;
+  const visibleAgents = useMemo(() => {
+    const needle = filter.trim().toLocaleLowerCase(locale);
+    if (!needle) return agents ?? [];
+    return (agents ?? []).filter((agent) =>
+      [agent.name, agent.role, ...(agent.skills?.map((skill) => skill.skillKey) ?? [])]
+        .join(' ')
+        .toLocaleLowerCase(locale)
+        .includes(needle),
+    );
+  }, [agents, filter, locale]);
 
   return (
     <div className="space-y-6">
@@ -107,6 +132,14 @@ export default function AgentListPage() {
       {isLoading && <LoadingCards />}
       {isError && <ErrorState onRetry={() => void refetch()} />}
 
+      {!isLoading && !isError && page && page.total > 0 && (
+        <ListToolbar
+          value={filter}
+          onChange={setFilter}
+          resultLabel={copy.results(visibleAgents.length, agents?.length ?? 0, page.total)}
+        />
+      )}
+
       {!isLoading && !isError && (!agents || agents.length === 0) && (
         <EmptyState
           icon={Bot}
@@ -120,9 +153,21 @@ export default function AgentListPage() {
         />
       )}
 
-      {agents && agents.length > 0 && (
+      {filter && agents && agents.length > 0 && visibleAgents.length === 0 && (
+        <EmptyState
+          icon={Search}
+          title={copy.noMatches}
+          action={
+            <Button size="sm" variant="outline" onClick={() => setFilter('')}>
+              {copy.clearFilter}
+            </Button>
+          }
+        />
+      )}
+
+      {visibleAgents.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {agents.map((a) => (
+          {visibleAgents.map((a) => (
             <Link
               key={a.id}
               href={`/dashboard/agents/${a.id}`}
@@ -177,7 +222,11 @@ export default function AgentListPage() {
           limit={page.limit}
           total={page.total}
           nextOffset={page.nextOffset}
-          onChange={setOffset}
+          busy={isFetching}
+          onChange={(nextOffset) => {
+            setOffset(nextOffset);
+            setFilter('');
+          }}
         />
       )}
     </div>

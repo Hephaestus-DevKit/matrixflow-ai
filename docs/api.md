@@ -47,9 +47,11 @@ GET /agents?limit=50&offset=0
 GET /content/projects?limit=50&offset=0
 GET /kb?limit=50&offset=0
 GET /workflows?limit=50&offset=0
+GET /kb/<knowledge-base-id>?limit=20&offset=0
+GET /workflows/<workflow-id>/logs?limit=25&offset=0
 ```
 
-分页响应返回 `data`、`total`、`limit`、`offset` 和 `nextOffset`；不带分页参数时保留兼容的数组响应。生产客户端应优先使用分页形式，避免把大型组织的全部资源一次性加载进浏览器。
+列表和工作流日志的分页响应返回 `data`、`total`、`limit`、`offset` 和 `nextOffset`；知识库详情保留知识库字段，并额外返回 `documentsPage` 和当前页 `documents`。不带分页参数时保留兼容响应。生产客户端应优先使用分页形式，避免把大型组织的全部资源一次性加载进浏览器。
 
 ## 关键端点
 

@@ -15,7 +15,12 @@ const ROUTE_DATA: Record<string, PrefetchTarget[]> = {
     { queryKey: ['system-health'], path: '/health' },
   ],
   '/dashboard/agents': [{ queryKey: ['agents', 0], path: '/agents?limit=24&offset=0' }],
-  '/dashboard/content': [{ queryKey: ['content-projects'], path: '/content/projects' }],
+  '/dashboard/content': [
+    {
+      queryKey: ['content-projects', 0],
+      path: '/content/projects?limit=12&offset=0',
+    },
+  ],
   '/dashboard/knowledge': [{ queryKey: ['kb', 0], path: '/kb?limit=24&offset=0' }],
   '/dashboard/workflows': [{ queryKey: ['wfs', 0], path: '/workflows?limit=24&offset=0' }],
   '/dashboard/jobs': [{ queryKey: ['jobs'], path: '/jobs' }],

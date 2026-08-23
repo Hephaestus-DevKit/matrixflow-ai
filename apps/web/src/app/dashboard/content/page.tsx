@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiClient, type ListPage } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,11 @@ import type {
 import { errorMessage } from '@/lib/errors';
 import { toast } from 'sonner';
 import { useLocale } from '@/lib/i18n';
+import { PageHeader } from '@/components/ui/page';
+import { EmptyState, ErrorState, LoadingCards } from '@/components/ui/states';
+import { PaginationBar } from '@/components/ui/pagination';
+
+const PROJECT_PAGE_SIZE = 12;
 
 const CONTENT_TYPES = [
   {
@@ -149,6 +154,7 @@ export default function ContentFactoryPage() {
   const { locale } = useLocale();
   const copy = {
     'zh-CN': {
+      eyebrow: '内容生产',
       title: '内容工厂',
       description: '智能批量产出适用于不同平台的电商宣发和社媒运营文案',
       create: '新建内容项目',
@@ -177,6 +183,7 @@ export default function ContentFactoryPage() {
       emptyProjectDescription: '选择上方已有项目或新建一个项目以启动 AI 员工的批量内容处理工厂。',
     },
     'zh-TW': {
+      eyebrow: '內容生產',
       title: '內容工廠',
       description: '智慧批次產出適用於不同平台的電商宣傳與社群營運文案',
       create: '建立內容專案',
@@ -205,6 +212,7 @@ export default function ContentFactoryPage() {
       emptyProjectDescription: '選擇上方已有專案或建立一個專案，以啟動 AI 員工的批次內容處理工廠。',
     },
     en: {
+      eyebrow: 'Content operations',
       title: 'Content factory',
       description: 'Batch-produce commerce and social copy tailored to every platform',
       create: 'New content project',
@@ -234,7 +242,9 @@ export default function ContentFactoryPage() {
         'Select an existing project or create one to start batch processing with AI workers.',
     },
   }[locale];
+  const queryClient = useQueryClient();
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [projectOffset, setProjectOffset] = useState(0);
   const [generating, setGenerating] = useState<string | null>(null);
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
@@ -243,10 +253,21 @@ export default function ContentFactoryPage() {
   const [projectName, setProjectName] = useState('');
   const [productDesc, setProductDesc] = useState('');
 
-  const { data: projects, refetch: refetchProjects } = useQuery({
-    queryKey: ['content-projects'],
-    queryFn: () => apiClient.get<ContentProjectSummary[]>('/content/projects'),
+  const {
+    data: projectPage,
+    isLoading: projectsLoading,
+    isError: projectsError,
+    isFetching: projectsFetching,
+    refetch: refetchProjects,
+  } = useQuery({
+    queryKey: ['content-projects', projectOffset],
+    queryFn: () =>
+      apiClient.get<ListPage<ContentProjectSummary>>(
+        `/content/projects?limit=${PROJECT_PAGE_SIZE}&offset=${projectOffset}`,
+      ),
+    placeholderData: (previous) => previous,
   });
+  const projects = projectPage?.data;
 
   const { data: items, refetch: refetchItems } = useQuery({
     queryKey: ['content-items', projectId],
@@ -314,7 +335,8 @@ export default function ContentFactoryPage() {
         name: projectName,
         productData: { title: projectName, description: productDesc },
       });
-      await refetchProjects();
+      setProjectOffset(0);
+      await queryClient.invalidateQueries({ queryKey: ['content-projects'] });
       setProjectId(res.id);
       setProjectName('');
       setProductDesc('');
@@ -331,7 +353,9 @@ export default function ContentFactoryPage() {
     try {
       await apiClient.del(`/content/projects/${id}`);
       if (projectId === id) setProjectId(null);
-      await refetchProjects();
+      if ((projects?.length ?? 0) === 1 && projectOffset > 0)
+        setProjectOffset(Math.max(0, projectOffset - PROJECT_PAGE_SIZE));
+      await queryClient.invalidateQueries({ queryKey: ['content-projects'] });
       toast.success(copy.deleted);
       setDeleteProjectId(null);
     } catch (error) {
@@ -343,18 +367,19 @@ export default function ContentFactoryPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between border-b border-border/40 pb-5">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">{copy.title}</h1>
-          <p className="text-xs text-muted-foreground mt-1">{copy.description}</p>
-        </div>
-        <Button
-          onClick={() => setIsCreating(!isCreating)}
-          className="gap-1.5 text-xs font-semibold"
-        >
-          <Plus className="h-3.5 w-3.5" /> {copy.create}
-        </Button>
-      </div>
+      <PageHeader
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        description={copy.description}
+        actions={
+          <Button
+            onClick={() => setIsCreating(!isCreating)}
+            className="gap-1.5 text-xs font-semibold"
+          >
+            <Plus className="h-3.5 w-3.5" /> {copy.create}
+          </Button>
+        }
+      />
 
       {/* Create project inline-form */}
       {isCreating && (
@@ -407,48 +432,59 @@ export default function ContentFactoryPage() {
         <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider block">
           {copy.select}
         </span>
-        <div className="flex flex-wrap gap-2">
-          {projects?.map((project) => (
-            <span
-              key={project.id}
-              className={`inline-flex min-h-9 overflow-hidden rounded-xl border transition-[border-color,background-color,color,box-shadow] ${
-                projectId === project.id
-                  ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                  : 'border-border/60 text-muted-foreground'
-              }`}
-            >
-              <button
-                onClick={() => setProjectId(project.id)}
-                className="min-h-9 px-3.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted/80 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+        {projectsLoading && <LoadingCards count={2} />}
+        {projectsError && <ErrorState onRetry={() => void refetchProjects()} />}
+        {!projectsLoading && !projectsError && (
+          <div className="flex flex-wrap gap-2">
+            {projects?.map((project) => (
+              <span
+                key={project.id}
+                className={`inline-flex min-h-9 overflow-hidden rounded-xl border transition-[border-color,background-color,color,box-shadow] ${
+                  projectId === project.id
+                    ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                    : 'border-border/60 text-muted-foreground'
+                }`}
               >
-                {project.name}
-              </button>
-              <button
-                type="button"
-                aria-label={`${copy.deleteProject} ${project.name}`}
-                onClick={() => setDeleteProjectId(project.id)}
-                className="min-h-9 border-l border-current/10 px-2.5 transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
-            </span>
-          ))}
-          {(!projects || projects.length === 0) && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <AlertCircle className="h-3.5 w-3.5" /> {copy.none}
-            </span>
-          )}
-        </div>
+                <button
+                  onClick={() => setProjectId(project.id)}
+                  className="min-h-9 px-3.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted/80 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                >
+                  {project.name}
+                </button>
+                <button
+                  type="button"
+                  aria-label={`${copy.deleteProject} ${project.name}`}
+                  onClick={() => setDeleteProjectId(project.id)}
+                  className="min-h-9 border-l border-current/10 px-2.5 transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+            {(!projects || projects.length === 0) && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <AlertCircle className="h-3.5 w-3.5" /> {copy.none}
+              </span>
+            )}
+          </div>
+        )}
+        {projectPage && (
+          <PaginationBar
+            offset={projectPage.offset}
+            limit={projectPage.limit}
+            total={projectPage.total}
+            nextOffset={projectPage.nextOffset}
+            busy={projectsFetching}
+            onChange={(nextOffset) => {
+              setProjectOffset(nextOffset);
+              setProjectId(null);
+            }}
+          />
+        )}
       </div>
 
       {!projectId && (
-        <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 p-12 text-center flex flex-col items-center justify-center">
-          <Factory className="h-10 w-10 text-muted-foreground/60 mb-3 animate-pulse-slow" />
-          <p className="text-sm font-semibold text-foreground">{copy.choose}</p>
-          <p className="mt-1 text-xs text-muted-foreground max-w-[280px]">
-            {copy.emptyProjectDescription}
-          </p>
-        </div>
+        <EmptyState icon={Factory} title={copy.choose} description={copy.emptyProjectDescription} />
       )}
 
       {projectId && (
