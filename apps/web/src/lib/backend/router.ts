@@ -74,6 +74,23 @@ async function routeGet(path: string) {
   if (segments[0] === 'kb') {
     if (segments[1]) {
       const base = await getRow(TABLES.knowledgeBases, segments[1]);
+      if (wantsPage(search)) {
+        const documentsPage = await listRowsPage(
+          TABLES.knowledgeDocuments,
+          [Query.equal('knowledgeBaseId', segments[1])],
+          'organizationId',
+          {
+            limit: Number(search.get('limit') || 20),
+            offset: Number(search.get('offset') || 0),
+          },
+        );
+        return {
+          ...base,
+          documents: documentsPage.data,
+          documentsPage,
+          _count: { documents: documentsPage.total },
+        };
+      }
       const documents = await listRows(TABLES.knowledgeDocuments, [
         Query.equal('knowledgeBaseId', segments[1]),
       ]);
@@ -86,7 +103,14 @@ async function routeGet(path: string) {
         })
       : null;
     const bases = basePage?.data ?? (await listRows(TABLES.knowledgeBases));
-    const documents = await listRows(TABLES.knowledgeDocuments);
+    const baseIds = bases.map((base) => String(base.id));
+    const documents = (
+      await Promise.all(
+        chunks(baseIds).map((ids) =>
+          listRows(TABLES.knowledgeDocuments, [Query.equal('knowledgeBaseId', ids)]),
+        ),
+      )
+    ).flat();
     const data = bases.map((base) => ({
       ...base,
       _count: { documents: documents.filter((doc) => doc.knowledgeBaseId === base.id).length },
@@ -94,8 +118,15 @@ async function routeGet(path: string) {
     return basePage ? { ...basePage, data } : data;
   }
   if (segments[0] === 'workflows') {
-    if (segments[1] && segments[2] === 'logs')
-      return listRows(TABLES.workflowRuns, [Query.equal('workflowId', segments[1])]);
+    if (segments[1] && segments[2] === 'logs') {
+      const queries = [Query.equal('workflowId', segments[1])];
+      if (wantsPage(search))
+        return listRowsPage(TABLES.workflowRuns, queries, 'organizationId', {
+          limit: Number(search.get('limit') || 25),
+          offset: Number(search.get('offset') || 0),
+        });
+      return listRows(TABLES.workflowRuns, queries);
+    }
     if (segments[1]) {
       const [workflow, versions] = await Promise.all([
         getRow(TABLES.workflows, segments[1]),
@@ -112,7 +143,14 @@ async function routeGet(path: string) {
     const workflows = workflowPage?.data ?? (await listRows(TABLES.workflows));
     // Fetch the tenant's runs once and aggregate locally. The previous
     // implementation issued one Appwrite count query per workflow (N+1).
-    const runs = await listRows(TABLES.workflowRuns);
+    const workflowIds = workflows.map((workflow) => String(workflow.id));
+    const runs = (
+      await Promise.all(
+        chunks(workflowIds).map((ids) =>
+          listRows(TABLES.workflowRuns, [Query.equal('workflowId', ids)]),
+        ),
+      )
+    ).flat();
     const runCounts = new Map<string, number>();
     for (const run of runs) {
       const workflowId = String(run.workflowId ?? '');

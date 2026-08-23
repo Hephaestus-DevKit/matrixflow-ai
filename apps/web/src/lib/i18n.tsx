@@ -756,7 +756,13 @@ export function LocaleProvider({
 
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (isLocale(saved)) {
+    const hasLocaleCookie = document.cookie
+      .split(';')
+      .some((entry) => entry.trim().startsWith(`${LOCALE_COOKIE}=`));
+    // The cookie is the server-rendering source of truth. Only fall back to
+    // legacy localStorage when no locale cookie exists, otherwise hydration
+    // can visibly switch the language back to a stale local value.
+    if (!hasLocaleCookie && isLocale(saved)) {
       setLocaleState(saved);
       // Update the document metadata in the same pass as the persisted locale.
       // This avoids the first render's observer briefly restoring the default

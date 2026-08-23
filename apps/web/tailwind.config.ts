@@ -89,8 +89,10 @@ const config: Config = {
           to: { transform: 'translateX(0)', opacity: '1' },
         },
         'slide-up': {
-          from: { transform: 'translateY(8px)', opacity: '0' },
-          to: { transform: 'translateY(0)', opacity: '1' },
+          // Keep text contrast stable during entry; opacity fades temporarily
+          // blend foreground and background colors below WCAG thresholds.
+          from: { transform: 'translateY(8px)' },
+          to: { transform: 'translateY(0)' },
         },
         'pulse-glow': { '0%, 100%': { opacity: '1' }, '50%': { opacity: '0.5' } },
         shimmer: {

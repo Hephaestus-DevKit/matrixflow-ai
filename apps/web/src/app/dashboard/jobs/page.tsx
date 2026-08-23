@@ -10,6 +10,7 @@ import {
   Loader2,
   RefreshCw,
   RotateCcw,
+  Search,
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -19,6 +20,8 @@ import { useLocale, type Locale } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, LoadingCards } from '@/components/ui/states';
 import { PageHeader } from '@/components/ui/page';
+import { ListToolbar } from '@/components/ui/list-toolbar';
+import { Select } from '@/components/ui/select';
 
 type JobStatus = 'QUEUED' | 'RUNNING' | 'RETRY_WAIT' | 'SUCCEEDED' | 'FAILED' | 'CANCELED';
 type BackgroundJob = {
@@ -46,6 +49,11 @@ const COPY: Record<
     canceling: string;
     canceled: string;
     failed: string;
+    filterPlaceholder: string;
+    allStatuses: string;
+    noMatch: string;
+    clearFilter: string;
+    results: (visible: number, total: number) => string;
     attempt: (current: number, maximum: number) => string;
     status: Record<JobStatus, string>;
   }
@@ -61,6 +69,11 @@ const COPY: Record<
     canceling: '正在取消',
     canceled: '已请求取消任务',
     failed: '任务操作失败',
+    filterPlaceholder: '按任务类型或 ID 筛选…',
+    allStatuses: '全部状态',
+    noMatch: '没有匹配的任务',
+    clearFilter: '清除筛选',
+    results: (visible, total) => `显示 ${visible} / ${total} 项`,
     attempt: (current, maximum) => `尝试 ${current}/${maximum}`,
     status: {
       QUEUED: '等待中',
@@ -82,6 +95,11 @@ const COPY: Record<
     canceling: '正在取消',
     canceled: '已請求取消任務',
     failed: '任務操作失敗',
+    filterPlaceholder: '依任務類型或 ID 篩選…',
+    allStatuses: '全部狀態',
+    noMatch: '沒有相符的任務',
+    clearFilter: '清除篩選',
+    results: (visible, total) => `顯示 ${visible} / ${total} 項`,
     attempt: (current, maximum) => `嘗試 ${current}/${maximum}`,
     status: {
       QUEUED: '等待中',
@@ -104,6 +122,11 @@ const COPY: Record<
     canceling: 'Canceling',
     canceled: 'Cancellation requested',
     failed: 'Task action failed',
+    filterPlaceholder: 'Filter by task type or ID…',
+    allStatuses: 'All statuses',
+    noMatch: 'No matching tasks',
+    clearFilter: 'Clear filters',
+    results: (visible, total) => `Showing ${visible} of ${total}`,
     attempt: (current, maximum) => `Attempt ${current}/${maximum}`,
     status: {
       QUEUED: 'Queued',
@@ -136,6 +159,8 @@ export default function JobsPage() {
   const { locale } = useLocale();
   const copy = COPY[locale];
   const [canceling, setCanceling] = useState<string | null>(null);
+  const [filter, setFilter] = useState('');
+  const [status, setStatus] = useState<'ALL' | JobStatus>('ALL');
   const query = useQuery({
     queryKey: ['jobs'],
     queryFn: () => apiClient.get<BackgroundJob[]>('/jobs'),
@@ -150,6 +175,14 @@ export default function JobsPage() {
         .length ?? 0,
     [query.data],
   );
+  const filteredJobs = useMemo(() => {
+    const needle = filter.trim().toLocaleLowerCase(locale);
+    return (query.data ?? []).filter(
+      (job) =>
+        (status === 'ALL' || job.status === status) &&
+        (!needle || `${job.type} ${job.id}`.toLocaleLowerCase(locale).includes(needle)),
+    );
+  }, [filter, locale, query.data, status]);
 
   async function cancel(jobId: string) {
     setCanceling(jobId);
@@ -194,7 +227,46 @@ export default function JobsPage() {
       )}
       {!!query.data?.length && (
         <div className="space-y-3">
-          {query.data.map((job) => {
+          <ListToolbar
+            value={filter}
+            onChange={setFilter}
+            placeholder={copy.filterPlaceholder}
+            resultLabel={copy.results(filteredJobs.length, query.data.length)}
+          >
+            <Select
+              value={status}
+              onChange={(event) => setStatus(event.target.value as 'ALL' | JobStatus)}
+              aria-label={copy.allStatuses}
+              className="w-auto min-w-36"
+            >
+              <option value="ALL">{copy.allStatuses}</option>
+              {(Object.keys(copy.status) as JobStatus[]).map((value) => (
+                <option key={value} value={value}>
+                  {copy.status[value]}
+                </option>
+              ))}
+            </Select>
+          </ListToolbar>
+          {filteredJobs.length === 0 && (
+            <EmptyState
+              icon={Search}
+              title={copy.noMatch}
+              action={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setFilter('');
+                    setStatus('ALL');
+                  }}
+                >
+                  {copy.clearFilter}
+                </Button>
+              }
+            />
+          )}
+          {filteredJobs.map((job) => {
             const Icon = STATUS_ICON[job.status];
             const activeJob = ['QUEUED', 'RUNNING', 'RETRY_WAIT'].includes(job.status);
             return (

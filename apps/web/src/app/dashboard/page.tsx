@@ -55,7 +55,7 @@ const QUICK_ACTIONS = [
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const agents = useQuery({
     queryKey: ['agents'],
     queryFn: () => apiClient.get<AgentSummary[]>('/agents'),
@@ -118,7 +118,9 @@ export default function DashboardPage() {
         eyebrow={t('dashboard.eyebrow')}
         title={
           <>
-            {t('dashboard.welcome')}，{user?.name || t('dashboard.group.workspace')}
+            {t('dashboard.welcome')}
+            {locale === 'en' ? ', ' : '，'}
+            {user?.name || t('dashboard.group.workspace')}
           </>
         }
         description={t('dashboard.description')}

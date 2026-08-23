@@ -1,16 +1,17 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { apiClient, type ListPage } from '@/lib/api-client';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { GitFork, Plus, ArrowRight } from 'lucide-react';
+import { GitFork, Plus, ArrowRight, Search } from 'lucide-react';
 import type { WorkflowSummary } from '@matrixflow/shared';
 import { EmptyState, ErrorState, LoadingCards } from '@/components/ui/states';
 import { PageHeader } from '@/components/ui/page';
 import { useLocale, type Locale } from '@/lib/i18n';
 import { PaginationBar } from '@/components/ui/pagination';
+import { ListToolbar } from '@/components/ui/list-toolbar';
 
 const PAGE_SIZE = 24;
 
@@ -26,6 +27,9 @@ const COPY: Record<
     first: string;
     runs: string;
     version: string;
+    noMatches: string;
+    clearFilter: string;
+    results: (visible: number, pageTotal: number, total: number) => string;
   }
 > = {
   'zh-CN': {
@@ -38,6 +42,9 @@ const COPY: Record<
     first: '创建第一个工作流',
     runs: '次历史运行',
     version: '版本',
+    noMatches: '当前页没有匹配的工作流',
+    clearFilter: '清除筛选',
+    results: (visible, pageTotal, total) => `显示 ${visible}/${pageTotal}，共 ${total} 个`,
   },
   'zh-TW': {
     eyebrow: '自動化',
@@ -49,6 +56,9 @@ const COPY: Record<
     first: '建立第一個工作流',
     runs: '次歷史執行',
     version: '版本',
+    noMatches: '目前頁面沒有符合的工作流程',
+    clearFilter: '清除篩選',
+    results: (visible, pageTotal, total) => `顯示 ${visible}/${pageTotal}，共 ${total} 個`,
   },
   en: {
     eyebrow: 'Automation',
@@ -60,6 +70,9 @@ const COPY: Record<
     first: 'Create your first workflow',
     runs: 'historical runs',
     version: 'Version',
+    noMatches: 'No workflows on this page match the filter',
+    clearFilter: 'Clear filter',
+    results: (visible, pageTotal, total) => `${visible} of ${pageTotal} shown · ${total} total`,
   },
 };
 
@@ -67,10 +80,12 @@ export default function WorkflowListPage() {
   const { locale } = useLocale();
   const copy = COPY[locale];
   const [offset, setOffset] = useState(0);
+  const [filter, setFilter] = useState('');
   const {
     data: page,
     isLoading,
     isError,
+    isFetching,
     refetch,
   } = useQuery({
     queryKey: ['wfs', offset],
@@ -79,6 +94,13 @@ export default function WorkflowListPage() {
     placeholderData: (previous) => previous,
   });
   const wfs = page?.data;
+  const visibleWorkflows = useMemo(() => {
+    const needle = filter.trim().toLocaleLowerCase(locale);
+    if (!needle) return wfs ?? [];
+    return (wfs ?? []).filter((workflow) =>
+      workflow.name.toLocaleLowerCase(locale).includes(needle),
+    );
+  }, [filter, locale, wfs]);
 
   return (
     <div className="space-y-6">
@@ -98,6 +120,14 @@ export default function WorkflowListPage() {
       {isLoading && <LoadingCards count={2} />}
       {isError && <ErrorState onRetry={() => void refetch()} />}
 
+      {!isLoading && !isError && page && page.total > 0 && (
+        <ListToolbar
+          value={filter}
+          onChange={setFilter}
+          resultLabel={copy.results(visibleWorkflows.length, wfs?.length ?? 0, page.total)}
+        />
+      )}
+
       {!isLoading && !isError && wfs && wfs.length === 0 && (
         <EmptyState
           icon={GitFork}
@@ -111,9 +141,21 @@ export default function WorkflowListPage() {
         />
       )}
 
-      {wfs && wfs.length > 0 && (
+      {filter && wfs && wfs.length > 0 && visibleWorkflows.length === 0 && (
+        <EmptyState
+          icon={Search}
+          title={copy.noMatches}
+          action={
+            <Button size="sm" variant="outline" onClick={() => setFilter('')}>
+              {copy.clearFilter}
+            </Button>
+          }
+        />
+      )}
+
+      {visibleWorkflows.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2">
-          {wfs.map((w) => (
+          {visibleWorkflows.map((w) => (
             <Link
               key={w.id}
               href={`/dashboard/workflows/${w.id}`}
@@ -143,7 +185,11 @@ export default function WorkflowListPage() {
           limit={page.limit}
           total={page.total}
           nextOffset={page.nextOffset}
-          onChange={setOffset}
+          busy={isFetching}
+          onChange={(nextOffset) => {
+            setOffset(nextOffset);
+            setFilter('');
+          }}
         />
       )}
     </div>

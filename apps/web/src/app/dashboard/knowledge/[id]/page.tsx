@@ -1,18 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, type ListPage } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
-import type { KnowledgeBaseDetail, RagAnswer } from '@matrixflow/shared';
+import type { KnowledgeBaseDetail, KnowledgeDocumentSummary, RagAnswer } from '@matrixflow/shared';
 import { toast } from 'sonner';
 import { errorMessage } from '@/lib/errors';
 import { ErrorState, PageLoader } from '@/components/ui/states';
-import { FileText, RefreshCw, Trash2, Upload } from 'lucide-react';
+import { FileText, Loader2, RefreshCw, Trash2, Upload } from 'lucide-react';
 import { useLocale, type Locale } from '@/lib/i18n';
+import { PageHeader } from '@/components/ui/page';
+import { PaginationBar } from '@/components/ui/pagination';
+
+const DOCUMENT_PAGE_SIZE = 20;
+
+type PagedKnowledgeBaseDetail = KnowledgeBaseDetail & {
+  documentsPage: ListPage<KnowledgeDocumentSummary>;
+};
 
 const COPY: Record<
   Locale,
@@ -34,6 +42,7 @@ const COPY: Record<
     kbFallback: string;
     deleteKb: string;
     upload: string;
+    uploading: string;
     documents: string;
     noDocuments: string;
     ready: string;
@@ -65,6 +74,7 @@ const COPY: Record<
     kbFallback: '知识库',
     deleteKb: '删除知识库',
     upload: '上传 PDF、DOCX、TXT、Markdown 或 CSV（最大 20 MB）',
+    uploading: '正在上传并建立索引…',
     documents: '文档列表',
     noDocuments: '还没有文档。上传资料并完成索引后即可提问。',
     ready: '已就绪',
@@ -95,6 +105,7 @@ const COPY: Record<
     kbFallback: '知識庫',
     deleteKb: '刪除知識庫',
     upload: '上傳 PDF、DOCX、TXT、Markdown 或 CSV（最大 20 MB）',
+    uploading: '正在上傳並建立索引…',
     documents: '文件列表',
     noDocuments: '還沒有文件。上傳資料並完成索引後即可提問。',
     ready: '已就緒',
@@ -125,6 +136,7 @@ const COPY: Record<
     kbFallback: 'Knowledge base',
     deleteKb: 'Delete knowledge base',
     upload: 'Upload PDF, DOCX, TXT, Markdown, or CSV (20 MB max)',
+    uploading: 'Uploading and indexing…',
     documents: 'Documents',
     noDocuments: 'No documents yet. Upload and index material before asking a question.',
     ready: 'Ready',
@@ -144,6 +156,9 @@ export default function KbDetailPage() {
   const copy = COPY[locale];
   const { id } = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const [documentOffset, setDocumentOffset] = useState(0);
+  const [uploading, setUploading] = useState(false);
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState<RagAnswer | null>(null);
   const [asking, setAsking] = useState(false);
@@ -154,10 +169,15 @@ export default function KbDetailPage() {
     data: kb,
     isLoading,
     isError,
+    isFetching,
     refetch,
   } = useQuery({
-    queryKey: ['kb', id],
-    queryFn: () => apiClient.get<KnowledgeBaseDetail>(`/kb/${id}`),
+    queryKey: ['kb', id, documentOffset],
+    queryFn: () =>
+      apiClient.get<PagedKnowledgeBaseDetail>(
+        `/kb/${id}?limit=${DOCUMENT_PAGE_SIZE}&offset=${documentOffset}`,
+      ),
+    placeholderData: (previous) => previous,
     enabled: !!id,
   });
 
@@ -166,17 +186,20 @@ export default function KbDetailPage() {
     if (!file) return;
     const fd = new FormData();
     fd.append('file', file);
+    setUploading(true);
     try {
       const result = await apiClient.upload<{ status?: string; error?: string }>(
         `/kb/${id}/documents`,
         fd,
       );
-      await refetch();
+      setDocumentOffset(0);
+      await queryClient.invalidateQueries({ queryKey: ['kb', id] });
       if (result.status === 'ERROR') toast.error(copy.uploadError);
       else toast.success(copy.uploadDone);
     } catch (error) {
       toast.error(errorMessage(error, copy.uploadFailed));
     } finally {
+      setUploading(false);
       e.target.value = '';
     }
   }
@@ -197,10 +220,10 @@ export default function KbDetailPage() {
   async function retryIndex(documentId: string) {
     try {
       await apiClient.post('/kb/index', { documentId });
-      await refetch();
+      await queryClient.invalidateQueries({ queryKey: ['kb', id] });
       toast.success(copy.indexed);
     } catch (error) {
-      await refetch();
+      await queryClient.invalidateQueries({ queryKey: ['kb', id] });
       toast.error(errorMessage(error, copy.reindexFailed));
     }
   }
@@ -209,7 +232,9 @@ export default function KbDetailPage() {
     setDeleting(true);
     try {
       await apiClient.del(`/kb/${id}/documents/${documentId}`);
-      await refetch();
+      if ((kb?.documents.length ?? 0) === 1 && documentOffset > 0)
+        setDocumentOffset(Math.max(0, documentOffset - DOCUMENT_PAGE_SIZE));
+      await queryClient.invalidateQueries({ queryKey: ['kb', id] });
       toast.success(copy.documentDeleted);
       setConfirmAction(null);
     } catch (error) {
@@ -238,28 +263,39 @@ export default function KbDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold">{kb?.name ?? copy.kbFallback}</h1>
-          {kb?.description && (
-            <p className="mt-1 text-sm text-muted-foreground">{kb.description}</p>
-          )}
-        </div>
-        <Button
-          variant="outline"
-          className="text-destructive"
-          onClick={() => setConfirmAction('kb')}
-          disabled={deleting}
-        >
-          <Trash2 className="h-4 w-4" /> {copy.deleteKb}
-        </Button>
-      </div>
-      <label className="surface-card flex cursor-pointer items-center justify-center gap-2 border-dashed p-5 text-sm font-semibold text-primary hover:border-primary/40">
-        <Upload className="h-4 w-4" /> {copy.upload}
+      <PageHeader
+        title={kb?.name ?? copy.kbFallback}
+        description={kb?.description}
+        actions={
+          <Button
+            variant="outline"
+            className="text-destructive"
+            onClick={() => setConfirmAction('kb')}
+            disabled={deleting}
+          >
+            <Trash2 className="h-4 w-4" /> {copy.deleteKb}
+          </Button>
+        }
+      />
+      <label
+        aria-busy={uploading}
+        className={`surface-card flex items-center justify-center gap-2 border-dashed p-5 text-sm font-semibold text-primary transition-[border-color,opacity] hover:border-primary/40 ${
+          uploading ? 'cursor-wait opacity-70' : 'cursor-pointer'
+        }`}
+      >
+        {uploading ? (
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+        ) : (
+          <Upload className="h-4 w-4" aria-hidden="true" />
+        )}{' '}
+        <span role={uploading ? 'status' : undefined}>
+          {uploading ? copy.uploading : copy.upload}
+        </span>
         <input
           type="file"
           accept=".pdf,.docx,.txt,.md,.csv"
           onChange={upload}
+          disabled={uploading}
           className="sr-only"
         />
       </label>
@@ -320,6 +356,18 @@ export default function KbDetailPage() {
             </span>
           </div>
         ))}
+        {kb?.documentsPage && (
+          <div className="mt-3">
+            <PaginationBar
+              offset={kb.documentsPage.offset}
+              limit={kb.documentsPage.limit}
+              total={kb.documentsPage.total}
+              nextOffset={kb.documentsPage.nextOffset}
+              busy={isFetching}
+              onChange={setDocumentOffset}
+            />
+          </div>
+        )}
       </div>
       <div className="space-y-2">
         <h2 className="text-sm font-semibold text-muted-foreground">{copy.rag}</h2>

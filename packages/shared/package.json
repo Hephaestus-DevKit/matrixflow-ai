@@ -1,6 +1,6 @@
 {
   "name": "@matrixflow/shared",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "MatrixFlow AI · 共享类型 / Zod schema / 常量",
   "main": "./dist/index.js",

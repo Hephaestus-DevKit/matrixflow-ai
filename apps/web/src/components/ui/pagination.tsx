@@ -27,12 +27,14 @@ export function PaginationBar({
   limit,
   total,
   nextOffset,
+  busy = false,
   onChange,
 }: {
   offset: number;
   limit: number;
   total: number;
   nextOffset: number | null;
+  busy?: boolean;
   onChange: (offset: number) => void;
 }) {
   const { locale } = useLocale();
@@ -44,6 +46,7 @@ export function PaginationBar({
   return (
     <nav
       aria-label={locale === 'en' ? 'Pagination' : locale === 'zh-TW' ? '分頁' : '分页'}
+      aria-busy={busy}
       className="surface-card flex flex-col gap-3 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
     >
       <p className="px-1 text-xs font-medium tabular-nums text-muted-foreground">
@@ -55,7 +58,7 @@ export function PaginationBar({
           variant="outline"
           size="sm"
           className="min-h-10 flex-1 gap-1.5 sm:flex-none"
-          disabled={offset === 0}
+          disabled={busy || offset === 0}
           onClick={() => onChange(Math.max(0, offset - limit))}
         >
           <ChevronLeft className="h-4 w-4" aria-hidden="true" />
@@ -66,7 +69,7 @@ export function PaginationBar({
           variant="outline"
           size="sm"
           className="min-h-10 flex-1 gap-1.5 sm:flex-none"
-          disabled={nextOffset === null}
+          disabled={busy || nextOffset === null}
           onClick={() => nextOffset !== null && onChange(nextOffset)}
         >
           {copy.next}

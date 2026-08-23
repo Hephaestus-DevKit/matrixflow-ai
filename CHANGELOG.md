@@ -2,6 +2,30 @@
 
 All notable MatrixFlow AI changes are documented here. Versions follow semantic versioning for the product shell; the Appwrite Function keeps its own compatible runtime version.
 
+## [0.3.0] - 2026-08-23
+
+### Added
+
+- Localized list toolbar with current-page filtering, clear actions, and live result counts for AI workers, knowledge bases, workflows, and background jobs.
+- Paginated knowledge documents, content projects, and workflow run history with navigation busy states.
+- Explicit knowledge upload and indexing progress feedback.
+- Background-job status filtering across all supported locales.
+
+### Improved
+
+- Limited knowledge-document and workflow-run aggregation to resources on the requested page, reducing unnecessary organization-wide reads.
+- Aligned content-project prefetch keys with paginated queries so navigation warming is reused by the destination page.
+- Standardized content, knowledge, and run-history headers, empty states, error states, status pills, and pagination surfaces.
+- Reset page-scoped filters and selections during pagination to prevent stale or invisible selections.
+- Kept server-rendered locale cookies authoritative over stale browser storage, preventing post-hydration language changes.
+- Corrected locale-specific dashboard greeting punctuation.
+
+### Accessibility and quality
+
+- Removed entry-opacity blending that temporarily reduced primary-button contrast below WCAG AA.
+- Verified the full public journey at 320 px and 390 px, across Simplified Chinese, Traditional Chinese, and English.
+- Passed type checking, linting, unit and production-audit tests, production build, and all 10 Playwright journeys.
+
 ## [0.2.0] - 2026-08-20
 
 ### Added
