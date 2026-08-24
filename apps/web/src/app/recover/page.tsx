@@ -27,6 +27,10 @@ export default function RecoverPage() {
     const params = new URLSearchParams(window.location.search);
     setUserId(params.get('userId') || '');
     setSecret(params.get('secret') || '');
+    // Keep the password-reset secret out of history and later same-origin
+    // referrers while retaining it in component state for the one reset call.
+    if (params.has('userId') || params.has('secret'))
+      window.history.replaceState(null, '', '/recover');
   }, []);
 
   const isReset = Boolean(userId && secret);

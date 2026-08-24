@@ -6,6 +6,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     ...localizedMetadata(locale, 'invite', 'MatrixFlow AI 团队邀请'),
     robots: { index: false, follow: false },
+    referrer: 'no-referrer',
   };
 }
 

@@ -33,7 +33,17 @@ const MEMBER_PERMISSIONS = ALL_PERMISSIONS.filter(
 
 function normalizeAvatarUrl(value: unknown) {
   if (typeof value !== 'string' || !value.trim()) return null;
-  if (value.startsWith('data:image/svg+xml,') && value.length <= 4_096) return value;
+  const dataPrefix = 'data:image/svg+xml;utf8,';
+  if (value.startsWith(dataPrefix) && value.length <= 4_096) {
+    try {
+      const markup = decodeURIComponent(value.slice(dataPrefix.length));
+      const presetPattern =
+        /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#[0-9a-f]{6}"\/><circle cx="50" cy="38" r="18" fill="white" opacity="0\.9"\/><path d="M18 80c0-12 12-20 32-20s32 8 32 20" fill="white" opacity="0\.9"\/><\/svg>$/i;
+      return presetPattern.test(markup) ? value : null;
+    } catch {
+      return null;
+    }
+  }
   try {
     const url = new URL(value);
     const allowed =

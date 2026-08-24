@@ -31,22 +31,18 @@ function summarizeAgent(row: Body) {
   };
 }
 
-function summarizeJob(row: Body) {
-  return {
-    id: row.id,
-    type: row.type,
-    status: row.status,
-    attempts: Number(row.attempts || 0),
-    maxAttempts: Number(row.maxAttempts || 3),
-    runAfter: row.runAfter,
-    startedAt: row.startedAt || null,
-    completedAt: row.completedAt || null,
-    cancelRequested: Boolean(row.cancelRequested),
-  };
-}
-
 function wantsPage(search: URLSearchParams) {
   return search.has('limit') || search.has('offset');
+}
+
+function pageLimit(search: URLSearchParams, fallback = 50) {
+  const value = Number(search.get('limit'));
+  return Number.isFinite(value) ? Math.min(100, Math.max(1, Math.floor(value))) : fallback;
+}
+
+function pageOffset(search: URLSearchParams) {
+  const value = Number(search.get('offset'));
+  return Number.isFinite(value) ? Math.min(10_000_000, Math.max(0, Math.floor(value))) : 0;
 }
 
 function chunks<T>(items: T[], size = 100) {
@@ -68,8 +64,8 @@ async function routeGet(path: string) {
     }
     if (wantsPage(search)) {
       const page = await listRowsPage(TABLES.agents, [], 'organizationId', {
-        limit: Number(search.get('limit') || 50),
-        offset: Number(search.get('offset') || 0),
+        limit: pageLimit(search),
+        offset: pageOffset(search),
       });
       return { ...page, data: page.data.map(summarizeAgent) };
     }
@@ -80,8 +76,8 @@ async function routeGet(path: string) {
       return listRows(TABLES.contentItems, [Query.equal('projectId', segments[2])]);
     if (wantsPage(search))
       return listRowsPage(TABLES.contentProjects, [], 'organizationId', {
-        limit: Number(search.get('limit') || 50),
-        offset: Number(search.get('offset') || 0),
+        limit: pageLimit(search),
+        offset: pageOffset(search),
       });
     return listRows(TABLES.contentProjects);
   }
@@ -94,8 +90,8 @@ async function routeGet(path: string) {
           [Query.equal('knowledgeBaseId', segments[1])],
           'organizationId',
           {
-            limit: Number(search.get('limit') || 20),
-            offset: Number(search.get('offset') || 0),
+            limit: pageLimit(search, 20),
+            offset: pageOffset(search),
           },
         );
         return {
@@ -112,8 +108,8 @@ async function routeGet(path: string) {
     }
     const basePage = wantsPage(search)
       ? await listRowsPage(TABLES.knowledgeBases, [], 'organizationId', {
-          limit: Number(search.get('limit') || 50),
-          offset: Number(search.get('offset') || 0),
+          limit: pageLimit(search),
+          offset: pageOffset(search),
         })
       : null;
     const bases = basePage?.data ?? (await listRows(TABLES.knowledgeBases));
@@ -136,8 +132,8 @@ async function routeGet(path: string) {
       const queries = [Query.equal('workflowId', segments[1])];
       if (wantsPage(search))
         return listRowsPage(TABLES.workflowRuns, queries, 'organizationId', {
-          limit: Number(search.get('limit') || 25),
-          offset: Number(search.get('offset') || 0),
+          limit: pageLimit(search, 25),
+          offset: pageOffset(search),
         });
       return listRows(TABLES.workflowRuns, queries);
     }
@@ -150,8 +146,8 @@ async function routeGet(path: string) {
     }
     const workflowPage = wantsPage(search)
       ? await listRowsPage(TABLES.workflows, [], 'organizationId', {
-          limit: Number(search.get('limit') || 50),
-          offset: Number(search.get('offset') || 0),
+          limit: pageLimit(search),
+          offset: pageOffset(search),
         })
       : null;
     const workflows = workflowPage?.data ?? (await listRows(TABLES.workflows));
@@ -178,8 +174,8 @@ async function routeGet(path: string) {
   }
   if (segments[0] === 'crm' && segments[1] === 'customers') {
     if (!segments[2]) {
-      const limit = Number(search.get('limit') || 50);
-      const offset = Number(search.get('offset') || 0);
+      const limit = pageLimit(search);
+      const offset = pageOffset(search);
       return listRowsPage(TABLES.customers, [], 'organizationId', { limit, offset });
     }
     const customer = await getRow(TABLES.customers, segments[2]);
@@ -217,8 +213,8 @@ async function routeGet(path: string) {
     return { ...customer, tags, notes, conversations: withMessages };
   }
   if (segments[0] === 'crm' && segments[1] === 'leads') {
-    const limit = Number(search.get('limit') || 50);
-    const offset = Number(search.get('offset') || 0);
+    const limit = pageLimit(search);
+    const offset = pageOffset(search);
     const page = await listRowsPage(TABLES.leads, [], 'organizationId', { limit, offset });
     const customerIds = [
       ...new Set(page.data.map((lead) => String(lead.customerId ?? '')).filter(Boolean)),
@@ -251,16 +247,6 @@ async function routeGet(path: string) {
       item: items.find((item) => item.id === purchase.itemId),
     }));
   }
-  if (segments[0] === 'jobs' && !segments[1]) {
-    if (wantsPage(search)) {
-      const page = await listRowsPage(TABLES.backgroundJobs, [], 'organizationId', {
-        limit: Number(search.get('limit') || 25),
-        offset: Number(search.get('offset') || 0),
-      });
-      return { ...page, data: page.data.map(summarizeJob) };
-    }
-    return (await listRows(TABLES.backgroundJobs)).map(summarizeJob);
-  }
   if (path === '/billing/plans') return executeCore('/billing/plans', {}, ExecutionMethod.GET);
   if (path === '/billing/config') return executeCore('/billing/config', {}, ExecutionMethod.GET);
   if (path === '/billing/current') return executeCore('/billing/current', {}, ExecutionMethod.GET);
@@ -274,6 +260,15 @@ async function routeGet(path: string) {
   if (path === '/health') return executeCore('/health', {}, ExecutionMethod.GET);
   if (path === '/account/export') return executeCore('/account/export', {}, ExecutionMethod.GET);
   if (path === '/api-keys') return executeCore('/api-keys', {}, ExecutionMethod.GET);
+  if (segments[0] === 'jobs' && !segments[1])
+    return executeCore(
+      '/jobs',
+      {
+        limit: pageLimit(search, 25),
+        offset: pageOffset(search),
+      },
+      ExecutionMethod.GET,
+    );
   if (path.startsWith('/jobs/')) return executeCore(path, {}, ExecutionMethod.GET);
   if (path === '/admin/health') return executeCore('/admin/health', {}, ExecutionMethod.GET);
   if (path.startsWith('/admin/'))
