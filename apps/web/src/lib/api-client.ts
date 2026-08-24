@@ -110,6 +110,12 @@ function guardedRequest<T>(task: Promise<T>, options: RequestOptions, timeoutMs:
   });
 }
 
+function createIdempotencyKey() {
+  const value = globalThis.crypto?.randomUUID?.();
+  if (!value) throw new ApiError('', 500, 'SECURE_RANDOM_UNAVAILABLE');
+  return `mf-${value}`;
+}
+
 async function call<T>(
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   path: string,
@@ -118,10 +124,7 @@ async function call<T>(
 ) {
   try {
     const idempotencyKey =
-      method === 'GET'
-        ? undefined
-        : options.idempotencyKey ||
-          `mf-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`}`;
+      method === 'GET' ? undefined : options.idempotencyKey || createIdempotencyKey();
     return (await guardedRequest(
       routeBackend(method, path, body, { idempotencyKey }),
       options,
@@ -151,9 +154,7 @@ export const apiClient = {
     call<T>('DELETE', path, body, options),
   upload: async <T = unknown>(path: string, body: FormData, options: RequestOptions = {}) => {
     try {
-      const idempotencyKey =
-        options.idempotencyKey ||
-        `mf-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`}`;
+      const idempotencyKey = options.idempotencyKey || createIdempotencyKey();
       return (await guardedRequest(
         routeUpload(path, body, { idempotencyKey }),
         options,

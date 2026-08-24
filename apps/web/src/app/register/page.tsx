@@ -146,11 +146,11 @@ export default function RegisterPage() {
             />
             <span>
               {t('auth.agreementPrefix')}{' '}
-              <Link href="/terms" target="_blank" className="auth-action-link">
+              <Link href="/terms" target="_blank" rel="noreferrer" className="auth-action-link">
                 {t('public.terms')}
               </Link>{' '}
               {t('auth.and')}{' '}
-              <Link href="/privacy" target="_blank" className="auth-action-link">
+              <Link href="/privacy" target="_blank" rel="noreferrer" className="auth-action-link">
                 {t('public.privacy')}
               </Link>
             </span>

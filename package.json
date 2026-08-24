@@ -1,6 +1,6 @@
 {
   "name": "matrixflow-ai",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "description": "MatrixFlow AI — AI 员工操作系统（跨境电商 AI 运营团队 SaaS 平台）",
   "packageManager": "pnpm@11.9.0",

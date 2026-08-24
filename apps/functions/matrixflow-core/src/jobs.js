@@ -1,4 +1,4 @@
-import { timingSafeEqual } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { ExecutionMethod, Query } from 'node-appwrite';
 import { generateAllContent, indexDocument, runAgent, runWorkflow } from './features.js';
 import {
@@ -9,7 +9,6 @@ import {
   decodeRow,
   encodeData,
   getOwned,
-  listRows,
   updateOwned,
 } from './runtime.js';
 
@@ -67,6 +66,13 @@ function publicJob(job) {
     result: job.status === 'SUCCEEDED' ? job.result || {} : undefined,
     cancelRequested: Boolean(job.cancelRequested),
   };
+}
+
+function publicJobSummary(job) {
+  const summary = publicJob(job);
+  delete summary.error;
+  delete summary.result;
+  return summary;
 }
 
 async function dispatchJob(services, job, scheduledAt) {
@@ -139,9 +145,7 @@ export async function claimJob(services, job, now = Date.now(), requestId = '') 
 }
 
 function cryptoRandomId() {
-  // Use the platform UUID source without exposing a secret or making the
-  // lease token predictable across concurrent executions.
-  return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+  return randomUUID();
 }
 
 async function updateWithLease(services, organizationId, jobId, leaseToken, data) {
@@ -322,12 +326,36 @@ export async function getJob(services, teamId, jobId) {
   return publicJob(await getOwned(services, TABLES.backgroundJobs, jobId, teamId));
 }
 
-export async function listJobs(services, teamId) {
-  const rows = await listRows(services, TABLES.backgroundJobs, teamId, [
-    Query.orderDesc('$createdAt'),
-    Query.limit(100),
-  ]);
-  return rows.map(publicJob);
+export async function listJobs(services, teamId, options = {}) {
+  const paged = Object.hasOwn(options, 'limit') || Object.hasOwn(options, 'offset');
+  const requestedLimit = Number(options.limit);
+  const requestedOffset = Number(options.offset);
+  const limit = Number.isFinite(requestedLimit)
+    ? Math.min(100, Math.max(1, Math.floor(requestedLimit)))
+    : 25;
+  const offset = Number.isFinite(requestedOffset)
+    ? Math.min(10_000_000, Math.max(0, Math.floor(requestedOffset)))
+    : 0;
+  const result = await services.tables.listRows({
+    databaseId: DATABASE_ID,
+    tableId: TABLES.backgroundJobs,
+    queries: [
+      Query.equal('organizationId', teamId),
+      Query.orderDesc('$createdAt'),
+      Query.limit(limit),
+      Query.offset(offset),
+    ],
+  });
+  const data = result.rows.map((row) => publicJobSummary(decodeRow(row)));
+  const total = Number(result.total || 0);
+  const page = {
+    data,
+    total,
+    limit,
+    offset,
+    nextOffset: offset + data.length < total ? offset + data.length : null,
+  };
+  return paged ? page : data;
 }
 
 export async function cancelJob(services, context, jobId, reason = '') {

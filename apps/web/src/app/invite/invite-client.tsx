@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
@@ -59,14 +59,21 @@ export function InviteClient() {
   const { locale } = useLocale();
   const copy = COPY[locale];
   const search = useSearchParams();
+  const processedRef = useRef(false);
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState(copy.loading);
 
   useEffect(() => {
+    if (processedRef.current) return;
+    processedRef.current = true;
     const teamId = search.get('teamId');
     const membershipId = search.get('membershipId');
     const userId = search.get('userId');
     const secret = search.get('secret');
+    // Invitation secrets are single-use URL credentials. Remove them from
+    // browser history and subsequent same-origin referrers immediately after
+    // reading them for the Appwrite confirmation call.
+    window.history.replaceState(null, '', '/invite');
     if (!teamId || !membershipId || !userId || !secret) {
       setStatus('error');
       setMessage(copy.invalid);

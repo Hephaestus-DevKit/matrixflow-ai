@@ -102,7 +102,7 @@ export async function handleSystemRoute({
 
   if (method === 'GET' && path === '/jobs') {
     requireCapability(membership, 'workflows.manage');
-    return listJobs(services, context.teamId);
+    return listJobs(services, context.teamId, body);
   }
 
   if (method === 'GET' && segments.length === 2 && segments[0] === 'jobs' && segments[1]) {

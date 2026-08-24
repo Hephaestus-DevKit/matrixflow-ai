@@ -2,12 +2,27 @@
 
 All notable MatrixFlow AI changes are documented here. Versions follow semantic versioning for the product shell; the Appwrite Function keeps its own compatible runtime version.
 
+## [0.3.2] - 2026-08-25
+
+### Security and reliability
+
+- Kept `background_jobs` on the Function-only permission boundary while adding server-side pagination and summary-field redaction; browser clients never read job payloads, results, errors, or worker leases directly.
+- Added finite bounds and safe fallbacks for malformed list pagination values to prevent invalid Appwrite queries and accidental resource pressure.
+- Replaced non-cryptographic random fallbacks for idempotency and worker lease identifiers with secure UUID generation.
+- Restricted avatar data URIs to the exact generated preset SVG shape, blocking arbitrary SVG markup from entering image rendering.
+- Removed invitation and password-reset secrets from browser history immediately after capture and set no-referrer metadata on those flows.
+- Added `noreferrer` to external-context registration links.
+
+### Verification
+
+- Function checks and 79 Function tests pass.
+- Type checking, linting, schema and i18n audits, production build, and dependency audits remain clean.
+
 ## [0.3.1] - 2026-08-23
 
 ### Improved
 
-- Replaced the task-center list Function invocation with tenant-scoped Appwrite row reads, avoiding Function cold-start latency on the main jobs view.
-- Added 25-row task pagination and aligned sidebar prefetching with the paginated cache.
+- Added a task-center list path with 25-row pagination and aligned sidebar prefetching with the paginated cache.
 - Kept task payloads, results, errors, worker leases, and internal execution fields out of browser list responses; cancellation and job-detail operations still use the protected Function.
 
 ## [0.3.0] - 2026-08-23

@@ -142,8 +142,14 @@ export async function listRowsPage(
   options: { limit?: number; offset?: number } = {},
 ) {
   const organizationId = getOrganizationContext();
-  const limit = Math.min(100, Math.max(1, Math.floor(Number(options.limit || 50))));
-  const offset = Math.max(0, Math.floor(Number(options.offset || 0)));
+  const requestedLimit = Number(options.limit);
+  const requestedOffset = Number(options.offset);
+  const limit = Number.isFinite(requestedLimit)
+    ? Math.min(100, Math.max(1, Math.floor(requestedLimit)))
+    : 50;
+  const offset = Number.isFinite(requestedOffset)
+    ? Math.min(10_000_000, Math.max(0, Math.floor(requestedOffset)))
+    : 0;
   const hasOrdering = queries.some((query) => query.includes('order'));
   try {
     const result = await tablesDB.listRows<Row>({

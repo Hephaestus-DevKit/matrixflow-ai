@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { claimJob, enqueueJob, verifyWorkerRequest } from '../src/jobs.js';
+import { claimJob, enqueueJob, listJobs, verifyWorkerRequest } from '../src/jobs.js';
 
 function withWorkerSecret(value) {
   const previous = process.env.MATRIXFLOW_WORKER_SECRET;
@@ -114,4 +114,78 @@ test('a duplicate delivery that loses the atomic claim does not receive a lease'
     'request-2',
   );
   assert.equal(claimed, null);
+});
+
+test('job lists are tenant-scoped, paginated, and exclude worker internals', async () => {
+  const calls = [];
+  const services = {
+    tables: {
+      listRows: async (input) => {
+        calls.push(input);
+        return {
+          total: 3,
+          rows: [
+            {
+              $id: 'job-1',
+              organizationId: 'team-1',
+              type: 'agent.run',
+              status: 'RUNNING',
+              attempts: 1,
+              maxAttempts: 3,
+              runAfter: '2026-08-25T00:00:00.000Z',
+              payload: JSON.stringify({ prompt: 'private' }),
+              result: JSON.stringify({ content: 'private' }),
+              error: 'private error',
+              leaseToken: 'private-lease',
+            },
+          ],
+        };
+      },
+    },
+  };
+
+  const page = await listJobs(services, 'team-1', { limit: 1, offset: 1 });
+  assert.equal(page.total, 3);
+  assert.equal(page.limit, 1);
+  assert.equal(page.offset, 1);
+  assert.equal(page.nextOffset, 2);
+  assert.equal(page.data[0].id, 'job-1');
+  assert.equal(Object.hasOwn(page.data[0], 'payload'), false);
+  assert.equal(Object.hasOwn(page.data[0], 'result'), false);
+  assert.equal(Object.hasOwn(page.data[0], 'error'), false);
+  assert.equal(Object.hasOwn(page.data[0], 'leaseToken'), false);
+  assert.ok(calls[0].queries.some((query) => query.includes('organizationId')));
+  assert.ok(calls[0].queries.some((query) => query.includes('limit')));
+  assert.ok(calls[0].queries.some((query) => query.includes('offset')));
+});
+
+test('job list pagination falls back safely for malformed values', async () => {
+  let request;
+  const services = {
+    tables: {
+      listRows: async (input) => {
+        request = input;
+        return { total: 0, rows: [] };
+      },
+    },
+  };
+  const page = await listJobs(services, 'team-1', { limit: 'nope', offset: 'nope' });
+  assert.equal(page.limit, 25);
+  assert.equal(page.offset, 0);
+  assert.ok(request.queries.some((query) => query.includes('limit')));
+  assert.ok(request.queries.some((query) => query.includes('offset')));
+});
+
+test('job lists preserve the legacy array response without pagination options', async () => {
+  const services = {
+    tables: {
+      listRows: async () => ({
+        total: 1,
+        rows: [{ $id: 'job-1', organizationId: 'team-1', type: 'agent.run', status: 'SUCCEEDED' }],
+      }),
+    },
+  };
+  const result = await listJobs(services, 'team-1');
+  assert.ok(Array.isArray(result));
+  assert.equal(result[0].id, 'job-1');
 });

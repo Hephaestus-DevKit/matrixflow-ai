@@ -28,3 +28,15 @@ test('unknown routes render the localized not-found experience', async ({ page }
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('這個頁面不存在');
 });
+
+test('password recovery removes reset credentials from the address bar', async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([
+    { name: 'matrixflow-locale', value: 'en', domain: '127.0.0.1', path: '/' },
+  ]);
+  await page.goto('/recover?userId=user-1&secret=one-time-secret');
+  await expect(page).toHaveURL(/\/recover$/);
+  await expect(page.getByLabel('New password', { exact: true })).toBeVisible();
+});
