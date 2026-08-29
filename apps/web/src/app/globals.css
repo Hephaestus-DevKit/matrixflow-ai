@@ -218,9 +218,40 @@
 }
 
 .pricing-page {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
   background:
     radial-gradient(circle at 8% 8%, rgb(204 196 255 / 0.18), transparent 31rem),
     radial-gradient(circle at 94% 32%, rgb(184 215 255 / 0.15), transparent 34rem), #f5f5f7;
+}
+
+.pricing-page::before {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  content: '';
+  pointer-events: none;
+  opacity: 0.62;
+  background-image:
+    linear-gradient(rgb(99 102 241 / 0.038) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(99 102 241 / 0.038) 1px, transparent 1px),
+    radial-gradient(circle, rgb(99 102 241 / 0.11) 1px, transparent 1.4px);
+  background-position:
+    0 0,
+    0 0,
+    48px 48px;
+  background-size:
+    96px 96px,
+    96px 96px,
+    96px 96px;
+  mask-image: linear-gradient(to bottom, black 4%, rgb(0 0 0 / 0.58) 58%, transparent 96%);
+  animation: landing-grid-drift 76s linear infinite;
+}
+
+.pricing-page > * {
+  position: relative;
+  z-index: 1;
 }
 
 .landing-hero {
@@ -243,7 +274,42 @@
 }
 
 .landing-grid {
+  opacity: 0.2;
+  background-image:
+    linear-gradient(rgb(99 102 241 / 0.058) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(99 102 241 / 0.058) 1px, transparent 1px),
+    radial-gradient(circle, rgb(99 102 241 / 0.14) 1px, transparent 1.5px);
+  background-position:
+    0 0,
+    0 0,
+    48px 48px;
+  background-size:
+    96px 96px,
+    96px 96px,
+    96px 96px;
+  mask-image: linear-gradient(to bottom, black 2%, rgb(0 0 0 / 0.52) 58%, transparent 94%);
+  will-change: background-position;
+  animation: landing-grid-drift 76s linear infinite;
+}
+
+.landing-sweep {
+  position: absolute;
+  top: -28%;
+  bottom: -28%;
+  left: -34%;
+  width: 18%;
+  transform: rotate(15deg);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.52) 46%,
+    rgb(167 139 250 / 0.12) 58%,
+    transparent
+  );
+  filter: blur(20px);
   opacity: 0;
+  will-change: transform, opacity;
+  animation: landing-sweep-drift 26s ease-in-out -8s infinite;
 }
 
 .landing-aurora {
@@ -346,7 +412,18 @@
 .landing-section {
   isolation: isolate;
   overflow: hidden;
-  background: linear-gradient(to bottom, #f5f5f7 0%, #f7f7f9 52%, #f5f5f7 100%);
+  background-image:
+    linear-gradient(rgb(99 102 241 / 0.026) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(99 102 241 / 0.026) 1px, transparent 1px),
+    linear-gradient(to bottom, #f5f5f7 0%, #f7f7f9 52%, #f5f5f7 100%);
+  background-position:
+    center top,
+    center top,
+    center;
+  background-size:
+    96px 96px,
+    96px 96px,
+    auto;
   content-visibility: auto;
   contain-intrinsic-size: auto 760px;
 }
@@ -400,7 +477,13 @@
 }
 
 .landing-feature-card::before {
-  display: none;
+  position: absolute;
+  inset: 0 auto auto 0;
+  height: 1px;
+  width: 52%;
+  content: '';
+  background: linear-gradient(90deg, rgb(99 102 241 / 0.72), rgb(125 211 252 / 0.24), transparent);
+  opacity: 0.68;
 }
 
 .landing-feature-card:hover {
@@ -414,7 +497,18 @@
 
 .landing-cta-section {
   isolation: isolate;
-  background: linear-gradient(to bottom, #f5f5f7 0%, #f2f3f6 100%);
+  background-image:
+    linear-gradient(rgb(99 102 241 / 0.024) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(99 102 241 / 0.024) 1px, transparent 1px),
+    linear-gradient(to bottom, #f5f5f7 0%, #f2f3f6 100%);
+  background-position:
+    center top,
+    center top,
+    center;
+  background-size:
+    96px 96px,
+    96px 96px,
+    auto;
   content-visibility: auto;
   contain-intrinsic-size: auto 460px;
 }
@@ -468,9 +562,18 @@
 }
 
 .auth-side-grid {
-  background:
-    radial-gradient(circle at 20% 42%, rgb(151 132 255 / 0.16), transparent 20rem),
-    radial-gradient(circle at 78% 58%, rgb(130 190 255 / 0.12), transparent 24rem);
+  opacity: 0.82;
+  background-image:
+    linear-gradient(to right, rgb(99 102 241 / 0.066) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(99 102 241 / 0.066) 1px, transparent 1px),
+    radial-gradient(circle at 20% 42%, rgb(151 132 255 / 0.17), transparent 20rem),
+    radial-gradient(circle at 78% 58%, rgb(130 190 255 / 0.13), transparent 24rem);
+  background-size:
+    56px 56px,
+    56px 56px,
+    auto,
+    auto;
+  mask-image: linear-gradient(to bottom, black 0%, rgb(0 0 0 / 0.7) 68%, transparent 96%);
   animation: auth-organic-drift 64s ease-in-out -17s infinite alternate;
 }
 
@@ -510,7 +613,22 @@
 }
 
 .dashboard-grid {
-  opacity: 0;
+  opacity: 0.36;
+  background-image:
+    linear-gradient(rgb(99 102 241 / 0.044) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(99 102 241 / 0.044) 1px, transparent 1px),
+    radial-gradient(circle, rgb(129 140 248 / 0.14) 1px, transparent 1.5px);
+  background-position:
+    0 0,
+    0 0,
+    28px 28px;
+  background-size:
+    56px 56px,
+    56px 56px,
+    56px 56px;
+  mask-image: linear-gradient(to bottom, black, rgb(0 0 0 / 0.48) 70%, transparent 100%);
+  will-change: background-position;
+  animation: dashboard-grid-drift 48s linear infinite;
 }
 
 .dashboard-glow {
@@ -541,7 +659,23 @@
 }
 
 .dashboard-sweep {
-  display: none;
+  position: absolute;
+  top: -45%;
+  bottom: -45%;
+  left: -38%;
+  width: 22%;
+  transform: rotate(16deg);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.46) 48%,
+    rgb(196 181 253 / 0.1),
+    transparent
+  );
+  filter: blur(24px);
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: dashboard-sweep-drift 26s ease-in-out -11s infinite;
 }
 
 .dashboard-topbar {
@@ -568,7 +702,7 @@
 }
 
 .dark .dashboard-grid {
-  opacity: 0.25;
+  opacity: 0.48;
 }
 
 .dark .surface-card {
@@ -591,6 +725,31 @@
   }
   100% {
     transform: translate3d(-1%, 10%, 0) scale(1);
+  }
+}
+
+@keyframes landing-grid-drift {
+  to {
+    background-position:
+      96px 96px,
+      96px 96px,
+      144px 144px;
+  }
+}
+
+@keyframes landing-sweep-drift {
+  0%,
+  28% {
+    transform: translate3d(0, 0, 0) rotate(15deg);
+    opacity: 0;
+  }
+  42% {
+    opacity: 0.46;
+  }
+  72%,
+  100% {
+    transform: translate3d(760%, 0, 0) rotate(15deg);
+    opacity: 0;
   }
 }
 
@@ -659,6 +818,31 @@
   }
 }
 
+@keyframes dashboard-grid-drift {
+  to {
+    background-position:
+      56px 56px,
+      56px 56px,
+      84px 84px;
+  }
+}
+
+@keyframes dashboard-sweep-drift {
+  0%,
+  30% {
+    transform: translate3d(0, 0, 0) rotate(16deg);
+    opacity: 0;
+  }
+  44% {
+    opacity: 0.44;
+  }
+  76%,
+  100% {
+    transform: translate3d(710%, 0, 0) rotate(16deg);
+    opacity: 0;
+  }
+}
+
 .dashboard-navigation-progress {
   transform-origin: left center;
   animation: dashboard-navigation-progress 10s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -716,6 +900,11 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+
+  .landing-sweep,
+  .dashboard-sweep {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-transparency: reduce) {
@@ -751,6 +940,17 @@
   .auth-card {
     border-width: 2px;
   }
+
+  .landing-grid,
+  .dashboard-grid,
+  .pricing-page::before {
+    opacity: 0.08;
+  }
+
+  .landing-sweep,
+  .dashboard-sweep {
+    display: none;
+  }
 }
 
 @media (max-width: 640px) {
@@ -766,9 +966,29 @@
     min-height: 2.75rem;
   }
 
+  .auth-action-link {
+    min-width: 2.75rem;
+    justify-content: center;
+  }
+
   .landing-aurora,
   .landing-ambient {
     filter: blur(82px);
+  }
+
+  .landing-grid {
+    opacity: 0.14;
+  }
+
+  .landing-grid,
+  .pricing-page::before,
+  .dashboard-grid {
+    animation: none;
+  }
+
+  .landing-sweep,
+  .dashboard-sweep {
+    display: none;
   }
 }
 

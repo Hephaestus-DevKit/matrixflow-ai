@@ -57,6 +57,7 @@ export default function LandingPage() {
         <section className="landing-hero relative flex min-h-[calc(100svh-3.75rem)] items-center overflow-hidden px-4 py-12 sm:px-6 sm:py-16 lg:py-20">
           <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
             <div className="landing-grid absolute inset-0" />
+            <div className="landing-sweep" />
             <div className="landing-aurora landing-aurora-violet" />
             <div className="landing-aurora landing-aurora-blue" />
             <div className="landing-aurora landing-aurora-cyan" />
