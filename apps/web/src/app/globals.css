@@ -760,6 +760,7 @@
 
   .public-header a,
   .public-header button,
+  .auth-action-link,
   .auth-page > section:last-child > a,
   .auth-page > section:last-child > div:first-of-type button {
     min-height: 2.75rem;
