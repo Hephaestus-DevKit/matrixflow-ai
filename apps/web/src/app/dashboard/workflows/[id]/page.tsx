@@ -648,7 +648,7 @@ export default function WorkflowEditorPage() {
           </Button>
           <Button
             size="sm"
-            className="text-xs gap-1.5 shadow-glow-sm hover:shadow-glow"
+            className="gap-1.5 text-xs"
             onClick={() => runMutation.mutate()}
             disabled={runMutation.isPending}
           >

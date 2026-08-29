@@ -14,14 +14,14 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="flex flex-col gap-4 border-b border-border/60 pb-5 sm:flex-row sm:items-end sm:justify-between sm:pb-6">
+    <header className="flex flex-col gap-4 border-b border-border/[0.55] pb-5 sm:flex-row sm:items-end sm:justify-between sm:pb-6">
       <div className="min-w-0">
         {eyebrow && (
           <p className="mb-2 text-2xs font-bold uppercase tracking-[0.16em] text-primary">
             {eyebrow}
           </p>
         )}
-        <h1 className="text-[1.625rem] font-bold leading-tight tracking-[-0.035em] text-foreground sm:text-[1.875rem]">
+        <h1 className="font-display text-[1.625rem] font-semibold leading-tight tracking-[-0.04em] text-foreground sm:text-[1.875rem]">
           {title}
         </h1>
         {description && (
@@ -61,7 +61,7 @@ export function StatCard({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-          <p className="mt-3 text-[1.875rem] font-bold leading-none tracking-[-0.045em] text-foreground sm:text-3xl">
+          <p className="font-display mt-3 text-[1.875rem] font-semibold leading-none tracking-[-0.045em] text-foreground sm:text-3xl">
             {value}
           </p>
         </div>

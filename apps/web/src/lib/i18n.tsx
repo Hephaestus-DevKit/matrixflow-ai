@@ -52,7 +52,7 @@ const messages = {
     'public.register': '免费开始',
     'public.registerLong': '免费开始体验',
     'public.capabilities': '查看产品能力',
-    'public.heroEyebrow': '跨境电商专属 · AI 员工操作系统',
+    'public.heroEyebrow': '跨境电商 AI 员工操作系统',
     'public.heroTitle': '把跨境运营流程，',
     'public.heroTitleAccent': '交给可控的 AI 团队',
     'public.heroDescription':
@@ -283,7 +283,7 @@ const messages = {
     'public.register': '免費開始',
     'public.registerLong': '免費開始體驗',
     'public.capabilities': '查看產品能力',
-    'public.heroEyebrow': '跨境電商專屬 · AI 員工作業系統',
+    'public.heroEyebrow': '跨境電商 AI 員工作業系統',
     'public.heroTitle': '把跨境營運流程，',
     'public.heroTitleAccent': '交給可控的 AI 團隊',
     'public.heroDescription':
@@ -514,7 +514,7 @@ const messages = {
     'public.register': 'Get started',
     'public.registerLong': 'Start for free',
     'public.capabilities': 'Explore capabilities',
-    'public.heroEyebrow': 'Built for cross-border commerce · AI workforce OS',
+    'public.heroEyebrow': 'AI workforce for cross-border commerce',
     'public.heroTitle': 'Put cross-border operations',
     'public.heroTitleAccent': 'in the hands of a controllable AI team',
     'public.heroDescription':

@@ -65,7 +65,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <section className="flex min-h-60 flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 bg-card/55 px-5 py-12 text-center backdrop-blur-sm sm:min-h-72 sm:px-6 sm:py-14">
+    <section className="flex min-h-60 flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 bg-card/[0.55] px-5 py-12 text-center backdrop-blur-sm sm:min-h-72 sm:px-6 sm:py-14">
       {Icon && (
         <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
           <Icon className="h-6 w-6" aria-hidden="true" />

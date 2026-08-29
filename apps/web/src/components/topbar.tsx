@@ -22,7 +22,7 @@ export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
   useEffect(() => setMounted(true), []);
 
   return (
-    <header className="dashboard-topbar sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border/60 px-4 backdrop-blur-2xl sm:px-6 lg:px-8">
+    <header className="dashboard-topbar sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border/[0.55] px-4 sm:px-6 lg:px-8">
       <div className="flex min-w-0 items-center gap-3">
         <Button
           variant="ghost"
@@ -33,7 +33,7 @@ export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
         >
           <Menu className="h-5 w-5" />
         </Button>
-        <span className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-primary/[0.07] text-primary sm:flex">
+        <span className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-primary/[0.065] text-primary sm:flex">
           <CurrentIcon className="h-4 w-4" aria-hidden="true" />
         </span>
         <div className="min-w-0">

@@ -2,6 +2,32 @@
 
 All notable MatrixFlow AI changes are documented here. Versions follow semantic versioning for the product shell; the Appwrite Function keeps its own compatible runtime version.
 
+## [0.4.0] - 2026-08-29
+
+### Visual system
+
+- Rebuilt the public, authentication, pricing, and dashboard visual language around a system-font hierarchy, restrained brand color, quiet material layers, consistent radii, and purpose-driven motion.
+- Replaced visible grids and sweep effects with slow, irregular ambient light that continues naturally between landing sections and remains subtle behind product content.
+- Simplified dashboard navigation to a single scannable label layer and aligned cards, status pills, controls, dialogs, empty states, and page headings with the shared component system.
+- Refined the locale switcher into a compact, consistent control for Simplified Chinese, Traditional Chinese, and English.
+
+### Interaction and accessibility
+
+- Raised tertiary and helper-copy size floors to 12px and standardized primary touch targets around 44px on narrow screens.
+- Added reduced-transparency handling alongside the existing reduced-motion and high-contrast behaviors.
+- Removed sticky hover translation on touch devices, improved focus treatment, and corrected icon/text and authentication-helper spacing.
+- Preserved the complete public journey at the 320px minimum width without horizontal overflow in every locale.
+
+### Product clarity
+
+- Shortened the landing eyebrow and replaced infrastructure-specific pricing copy with user-facing model-provider guidance.
+- Reduced excessive hero height and visual saturation while retaining the organic ambient background requested for the product.
+- Documented the UI tokens, hierarchy, motion, responsive, and accessibility rules for future maintenance.
+
+### Verification
+
+- Formatting, schema and i18n audits, type checking, linting, unit tests, production build, Axe accessibility checks, and Playwright public journeys pass.
+
 ## [0.3.2] - 2026-08-25
 
 ### Security and reliability

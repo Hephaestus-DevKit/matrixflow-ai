@@ -23,7 +23,7 @@ export default function DashboardRouteLoading() {
             <div className="mt-5 h-4 w-2/5 rounded bg-muted" />
             <div className="mt-2 h-3 w-3/5 rounded bg-muted/75" />
             <div className="mt-6 h-px bg-border" />
-            <div className="mt-3 h-3 w-1/4 rounded bg-muted/65" />
+            <div className="mt-3 h-3 w-1/4 rounded bg-muted/[0.65]" />
           </div>
         ))}
       </div>

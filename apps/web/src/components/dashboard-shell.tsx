@@ -107,7 +107,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           <button
             type="button"
             aria-label={t('dashboard.closeNavigation')}
-            className="absolute inset-0 bg-slate-950/55 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-950/[0.55] backdrop-blur-sm"
             onClick={() => setNavigationOpen(false)}
           />
           <div

@@ -5,24 +5,26 @@
 @layer base {
   :root {
     --font-sans:
-      'Segoe UI Variable', 'Avenir Next', 'MiSans', 'HarmonyOS Sans SC', 'PingFang SC',
-      'Microsoft YaHei UI', 'Microsoft YaHei', ui-sans-serif, system-ui, sans-serif;
+      -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'MiSans',
+      'HarmonyOS Sans SC', 'PingFang SC', 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui,
+      sans-serif;
     --font-display:
-      'Avenir Next', 'Segoe UI Variable', 'MiSans', 'HarmonyOS Sans SC', 'PingFang SC',
-      'Microsoft YaHei UI', 'Microsoft YaHei', ui-sans-serif, system-ui, sans-serif;
+      -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI Variable Display',
+      'Segoe UI Variable', 'MiSans', 'HarmonyOS Sans SC', 'PingFang SC', 'Microsoft YaHei UI',
+      'Microsoft YaHei', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
-    --background: 225 30% 97.2%;
-    --foreground: 230 32% 10%;
+    --background: 220 24% 97.2%;
+    --foreground: 224 36% 9.5%;
     --card: 0 0% 100%;
     --card-foreground: 224 71.4% 4.1%;
     --popover: 0 0% 100%;
     --popover-foreground: 224 71.4% 4.1%;
-    --primary: 262.1 83.3% 57.8%;
+    --primary: 251 67% 56%;
     --primary-foreground: 210 20% 98%;
     --secondary: 220 14.3% 95.9%;
     --secondary-foreground: 220.9 39.3% 11%;
     --muted: 220 14.3% 95.9%;
-    --muted-foreground: 222 10% 43%;
+    --muted-foreground: 222 10% 40%;
     --accent: 220 14.3% 95.9%;
     --accent-foreground: 220.9 39.3% 11%;
     --destructive: 0 72% 48%;
@@ -33,10 +35,10 @@
     --warning-foreground: 0 0% 100%;
     --info: 220 78% 45%;
     --info-foreground: 0 0% 100%;
-    --border: 225 20% 88%;
-    --input: 225 18% 83%;
-    --ring: 262.1 83.3% 57.8%;
-    --radius: 0.875rem;
+    --border: 220 16% 88%;
+    --input: 220 14% 80%;
+    --ring: 251 67% 56%;
+    --radius: 1rem;
     --surface: hsl(0 0% 100%);
     --surface-1: hsl(228 24% 98.5%);
     --surface-2: hsl(228 20% 96%);
@@ -83,6 +85,8 @@
   html {
     scroll-behavior: smooth;
     color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   html.dark {
     color-scheme: dark;
@@ -97,7 +101,7 @@
     font-variant-numeric: tabular-nums;
     font-family: var(--font-sans);
     font-size: 0.9375rem;
-    line-height: 1.65;
+    line-height: 1.6;
     background-image:
       radial-gradient(circle at 12% -10%, hsl(var(--primary) / 0.09), transparent 30rem),
       radial-gradient(circle at 95% 5%, hsl(210 90% 60% / 0.05), transparent 26rem);
@@ -108,7 +112,7 @@
   h3,
   h4 {
     font-family: var(--font-display);
-    letter-spacing: -0.025em;
+    letter-spacing: -0.032em;
   }
   h1,
   h2,
@@ -129,7 +133,7 @@
     scroll-margin: 6rem;
   }
 
-  /* Silky smooth custom scrollbar for sleek cyber look */
+  /* Quiet, platform-like scrollbar that does not compete with the content. */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -148,31 +152,37 @@
 
 @layer components {
   .brand-mark {
-    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/35 bg-gradient-to-br from-violet-500 via-primary to-indigo-700 text-sm font-bold text-white shadow-glow-sm;
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.45] bg-gradient-to-br from-[#8b7cf6] via-[#6556dd] to-[#4338a8] text-sm font-semibold text-white;
     box-shadow:
-      0 10px 24px -14px hsl(var(--primary) / 0.85),
-      inset 0 1px 0 rgb(255 255 255 / 0.35);
+      0 10px 28px -15px hsl(var(--primary) / 0.72),
+      inset 0 1px 0 rgb(255 255 255 / 0.46),
+      inset 0 -1px 0 rgb(30 27 75 / 0.16);
   }
 
   .surface-card {
-    @apply rounded-2xl border border-border/75 bg-card/85 backdrop-blur-xl;
+    @apply rounded-2xl border border-border/70 bg-card/90 backdrop-blur-xl;
     box-shadow:
-      0 1px 2px hsl(var(--foreground) / 0.025),
-      0 18px 44px -38px hsl(var(--foreground) / 0.32),
-      inset 0 1px 0 hsl(0 0% 100% / 0.72);
+      0 1px 2px hsl(var(--foreground) / 0.02),
+      0 18px 50px -38px hsl(var(--foreground) / 0.3),
+      inset 0 1px 0 hsl(0 0% 100% / 0.86);
   }
 
   .interactive-card {
-    @apply surface-card transition-[border-color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    @apply surface-card transition-[border-color,box-shadow,transform] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .interactive-card:hover {
     @apply border-primary/25 shadow-sm;
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(1.002);
     box-shadow:
       0 18px 38px -24px hsl(var(--foreground) / 0.3),
       0 8px 26px -22px hsl(var(--primary) / 0.45),
       inset 0 1px 0 hsl(0 0% 100% / 0.84);
+  }
+
+  .panel-card {
+    @apply surface-card;
   }
 
   .status-pill {
@@ -186,7 +196,7 @@
   }
 
   .auth-input {
-    @apply border-slate-200/90 bg-white/75 shadow-[0_5px_18px_-16px_rgb(30_41_59/0.55)] transition-[border-color,box-shadow,background-color] duration-200;
+    @apply border-slate-300/75 bg-white/[0.82] shadow-[0_5px_18px_-16px_rgb(30_41_59/0.45)] transition-[border-color,box-shadow,background-color] duration-200;
   }
 
   .auth-input:hover {
@@ -198,20 +208,32 @@
   }
 
   .auth-action-link {
-    @apply -mx-1 inline-flex min-h-8 items-center rounded-lg px-1 font-semibold text-primary transition-[color,background-color] hover:bg-primary/5 hover:text-primary/90 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+    @apply inline-flex min-h-8 items-center rounded-lg px-1 font-semibold text-primary transition-[color,background-color] hover:bg-primary/5 hover:text-primary/90 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
   }
 }
 
 .landing-page {
-  background: #f7f8fc;
-  color: #11152b;
+  background: #f5f5f7;
+  color: #111218;
+}
+
+.pricing-page {
+  background:
+    radial-gradient(circle at 8% 8%, rgb(204 196 255 / 0.18), transparent 31rem),
+    radial-gradient(circle at 94% 32%, rgb(184 215 255 / 0.15), transparent 34rem), #f5f5f7;
 }
 
 .landing-hero {
   background:
-    radial-gradient(circle at 16% 12%, rgb(196 181 253 / 0.32), transparent 27rem),
-    radial-gradient(circle at 84% 8%, rgb(147 197 253 / 0.28), transparent 30rem),
-    linear-gradient(145deg, #fcfdff 0%, #f7f4ff 48%, #f5f8ff 100%);
+    radial-gradient(circle at 14% 10%, rgb(204 196 255 / 0.24), transparent 29rem),
+    radial-gradient(circle at 88% 4%, rgb(184 215 255 / 0.2), transparent 32rem),
+    linear-gradient(155deg, #ffffff 0%, #f8f7fb 50%, #f5f7fb 100%);
+}
+
+@media (min-width: 1024px) {
+  .landing-hero {
+    min-height: clamp(44rem, calc(100svh - 3.75rem), 48rem);
+  }
 }
 
 .landing-hero > .relative,
@@ -221,23 +243,16 @@
 }
 
 .landing-grid {
-  opacity: 0.22;
-  background-image:
-    linear-gradient(rgb(99 102 241 / 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(99 102 241 / 0.055) 1px, transparent 1px);
-  background-size:
-    96px 96px,
-    96px 96px;
-  mask-image: linear-gradient(to bottom, black 2%, rgb(0 0 0 / 0.42) 52%, transparent 92%);
+  opacity: 0;
 }
 
 .landing-aurora {
   position: absolute;
   border-radius: 9999px;
-  filter: blur(84px);
-  opacity: 0.38;
+  filter: blur(104px);
+  opacity: 0.26;
   will-change: transform;
-  animation: landing-aurora-drift 38s ease-in-out infinite alternate;
+  animation: landing-aurora-drift 48s ease-in-out infinite alternate;
 }
 
 .landing-aurora-violet {
@@ -245,7 +260,7 @@
   top: 7%;
   height: 30rem;
   width: 30rem;
-  background: rgb(167 139 250 / 0.52);
+  background: rgb(160 143 255 / 0.42);
 }
 
 .landing-aurora-blue {
@@ -253,8 +268,8 @@
   top: -17%;
   height: 38rem;
   width: 38rem;
-  background: rgb(96 165 250 / 0.4);
-  animation-duration: 46s;
+  background: rgb(104 168 255 / 0.34);
+  animation-duration: 59s;
   animation-delay: -7s;
 }
 
@@ -263,19 +278,19 @@
   right: 25%;
   height: 27rem;
   width: 27rem;
-  background: rgb(103 232 249 / 0.22);
-  animation-duration: 54s;
+  background: rgb(103 232 249 / 0.18);
+  animation-duration: 67s;
   animation-delay: -12s;
 }
 
 .landing-ambient {
   position: absolute;
   border-radius: 9999px;
-  filter: blur(98px);
-  mix-blend-mode: multiply;
-  opacity: 0.34;
+  filter: blur(118px);
+  mix-blend-mode: normal;
+  opacity: 0.23;
   will-change: transform;
-  animation: landing-organic-drift 46s ease-in-out infinite alternate;
+  animation: landing-organic-drift 58s ease-in-out infinite alternate;
 }
 
 .landing-ambient-one {
@@ -283,7 +298,7 @@
   left: 4%;
   height: 38rem;
   width: 38rem;
-  background: rgb(167 139 250 / 0.44);
+  background: rgb(167 139 250 / 0.36);
 }
 
 .landing-ambient-two {
@@ -291,8 +306,8 @@
   right: -19rem;
   height: 42rem;
   width: 42rem;
-  background: rgb(96 165 250 / 0.34);
-  animation-duration: 54s;
+  background: rgb(96 165 250 / 0.28);
+  animation-duration: 69s;
   animation-delay: -17s;
 }
 
@@ -301,37 +316,37 @@
   bottom: -24rem;
   height: 34rem;
   width: 34rem;
-  background: rgb(103 232 249 / 0.2);
-  animation-duration: 62s;
+  background: rgb(103 232 249 / 0.16);
+  animation-duration: 77s;
   animation-delay: -29s;
 }
 
 .landing-hero-fade {
   pointer-events: none;
-  background: linear-gradient(to bottom, transparent 0%, rgb(248 249 253 / 0.46) 56%, #f8f9fd 100%);
+  background: linear-gradient(to bottom, transparent 0%, rgb(247 247 249 / 0.54) 56%, #f5f5f7 100%);
 }
 
 .landing-console-shell {
   will-change: transform;
-  animation: landing-console-float 8s ease-in-out infinite;
+  animation: landing-console-float 11s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 .landing-console {
   box-shadow:
-    0 34px 90px -46px rgb(79 70 229 / 0.48),
-    0 8px 26px -20px rgb(30 41 59 / 0.38),
+    0 40px 110px -55px rgb(60 52 140 / 0.34),
+    0 12px 34px -24px rgb(30 41 59 / 0.28),
     inset 0 1px 0 rgb(255 255 255 / 0.9);
 }
 
 .landing-console-glow {
-  background: radial-gradient(circle at center, rgb(139 92 246 / 0.25), transparent 68%);
-  filter: blur(36px);
+  background: radial-gradient(circle at center, rgb(139 120 246 / 0.18), transparent 70%);
+  filter: blur(48px);
 }
 
 .landing-section {
   isolation: isolate;
   overflow: hidden;
-  background: linear-gradient(to bottom, #f8f9fd 0%, #f7f8fc 100%);
+  background: linear-gradient(to bottom, #f5f5f7 0%, #f7f7f9 52%, #f5f5f7 100%);
   content-visibility: auto;
   contain-intrinsic-size: auto 760px;
 }
@@ -344,7 +359,7 @@
   content: '';
   border-radius: 9999px;
   filter: blur(110px);
-  opacity: 0.4;
+  opacity: 0.26;
   pointer-events: none;
   will-change: transform;
   animation: landing-organic-drift 52s ease-in-out -18s infinite alternate;
@@ -371,33 +386,27 @@
 .landing-feature-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgb(226 232 240 / 0.92);
-  border-radius: 1.25rem;
-  background: rgb(255 255 255 / 0.78);
+  border: 1px solid rgb(222 224 230 / 0.82);
+  border-radius: 1.5rem;
+  background: rgb(255 255 255 / 0.86);
   box-shadow:
-    0 16px 34px -30px rgb(30 41 59 / 0.42),
+    0 18px 46px -36px rgb(30 41 59 / 0.34),
     inset 0 1px 0 rgb(255 255 255 / 0.95);
   transition:
     border-color 220ms ease,
     background-color 220ms ease,
     box-shadow 220ms ease,
-    transform 220ms ease;
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .landing-feature-card::before {
-  position: absolute;
-  inset: 0 auto auto 0;
-  height: 2px;
-  width: 55%;
-  content: '';
-  background: linear-gradient(90deg, rgb(124 58 237 / 0.65), transparent);
-  opacity: 0.7;
+  display: none;
 }
 
 .landing-feature-card:hover {
   border-color: rgb(167 139 250 / 0.48);
   background: rgb(255 255 255 / 0.96);
-  transform: translateY(-3px);
+  transform: translateY(-3px) scale(1.004);
   box-shadow:
     0 22px 42px -30px rgb(79 70 229 / 0.38),
     inset 0 1px 0 rgb(255 255 255 / 0.98);
@@ -405,7 +414,7 @@
 
 .landing-cta-section {
   isolation: isolate;
-  background: linear-gradient(to bottom, #f7f8fc 0%, #f6f8fc 100%);
+  background: linear-gradient(to bottom, #f5f5f7 0%, #f2f3f6 100%);
   content-visibility: auto;
   contain-intrinsic-size: auto 460px;
 }
@@ -421,7 +430,7 @@
 }
 
 .landing-cta-panel {
-  background: linear-gradient(145deg, rgb(255 255 255 / 0.9), rgb(246 243 255 / 0.86));
+  background: linear-gradient(145deg, rgb(255 255 255 / 0.92), rgb(247 246 252 / 0.88));
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.95),
     0 30px 90px -56px rgb(79 70 229 / 0.45);
@@ -429,59 +438,63 @@
 }
 
 .landing-primary-action {
-  background-color: #6246d9;
-  background-image: linear-gradient(110deg, #7657e8, #4f46c8);
-  box-shadow: 0 16px 38px -18px rgb(79 70 229 / 0.75);
+  background-color: #6254d7;
+  background-image: linear-gradient(180deg, #7465e6, #5b4dcc);
+  box-shadow:
+    0 16px 34px -18px rgb(75 63 190 / 0.72),
+    inset 0 1px 0 rgb(255 255 255 / 0.2);
 }
 
 .landing-primary-action:hover {
-  background-color: #6d53df;
-  background-image: linear-gradient(110deg, #8469ef, #5a54d4);
-  box-shadow: 0 19px 44px -18px rgb(79 70 229 / 0.82);
+  background-color: #6a5bdb;
+  background-image: linear-gradient(180deg, #7d70e9, #6254d2);
+  box-shadow: 0 19px 42px -18px rgb(75 63 190 / 0.76);
 }
 
 .auth-page {
   background:
-    radial-gradient(circle at 8% 4%, rgb(196 181 253 / 0.3), transparent 30rem),
-    radial-gradient(circle at 95% 94%, rgb(147 197 253 / 0.22), transparent 32rem), #f7f8fc;
+    radial-gradient(circle at 6% 4%, rgb(202 194 255 / 0.22), transparent 32rem),
+    radial-gradient(circle at 96% 94%, rgb(177 214 255 / 0.17), transparent 34rem), #f5f5f7;
 }
 
 .auth-ambient {
   background:
-    radial-gradient(circle at 32% 28%, rgb(167 139 250 / 0.16), transparent 28rem),
-    radial-gradient(circle at 76% 75%, rgb(125 211 252 / 0.14), transparent 26rem);
+    radial-gradient(circle at 28% 31%, rgb(167 150 250 / 0.12), transparent 30rem),
+    radial-gradient(circle at 74% 73%, rgb(125 196 252 / 0.1), transparent 28rem);
 }
 
 .auth-side {
-  background: linear-gradient(155deg, rgb(255 255 255 / 0.58), rgb(245 243 255 / 0.5));
+  background: linear-gradient(155deg, rgb(255 255 255 / 0.68), rgb(246 245 250 / 0.58));
 }
 
 .auth-side-grid {
-  background-image:
-    linear-gradient(to right, rgb(99 102 241 / 0.075) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(99 102 241 / 0.075) 1px, transparent 1px);
-  background-size: 52px 52px;
-  mask-image: linear-gradient(to bottom, black 0%, rgb(0 0 0 / 0.65) 62%, transparent 94%);
+  background:
+    radial-gradient(circle at 20% 42%, rgb(151 132 255 / 0.16), transparent 20rem),
+    radial-gradient(circle at 78% 58%, rgb(130 190 255 / 0.12), transparent 24rem);
+  animation: auth-organic-drift 64s ease-in-out -17s infinite alternate;
 }
 
 .auth-highlight {
-  border: 1px solid rgb(226 232 240 / 0.88);
-  background: rgb(255 255 255 / 0.65);
-  box-shadow: 0 14px 30px -28px rgb(30 41 59 / 0.48);
-  backdrop-filter: blur(14px);
+  border: 1px solid rgb(222 224 230 / 0.72);
+  background: rgb(255 255 255 / 0.7);
+  box-shadow:
+    0 14px 34px -30px rgb(30 41 59 / 0.34),
+    inset 0 1px 0 rgb(255 255 255 / 0.82);
+  backdrop-filter: blur(20px) saturate(125%);
 }
 
 .auth-form-pane {
-  background: rgb(255 255 255 / 0.18);
+  background: rgb(255 255 255 / 0.26);
 }
 
 .auth-card {
-  border: 1px solid rgb(226 232 240 / 0.95);
-  background: rgb(255 255 255 / 0.84);
+  border: 1px solid rgb(220 222 228 / 0.8);
+  background: rgb(255 255 255 / 0.9);
   box-shadow:
-    0 28px 80px -44px rgb(30 41 59 / 0.35),
+    0 30px 90px -50px rgb(30 41 59 / 0.32),
+    0 8px 30px -26px rgb(75 63 190 / 0.18),
     inset 0 1px 0 rgb(255 255 255 / 0.95);
-  backdrop-filter: blur(22px);
+  backdrop-filter: blur(28px) saturate(130%);
 }
 
 .dashboard-shell {
@@ -491,36 +504,22 @@
 .dashboard-backdrop {
   overflow: hidden;
   background:
-    radial-gradient(circle at 8% 5%, rgb(196 181 253 / 0.25), transparent 27rem),
-    radial-gradient(circle at 92% 24%, rgb(147 197 253 / 0.2), transparent 31rem),
-    linear-gradient(150deg, #fbfcff 0%, #f6f7fc 50%, #f4f7fc 100%);
+    radial-gradient(circle at 8% 5%, rgb(204 196 255 / 0.19), transparent 30rem),
+    radial-gradient(circle at 92% 24%, rgb(174 211 255 / 0.15), transparent 34rem),
+    linear-gradient(150deg, #fbfbfd 0%, #f6f6f8 54%, #f4f6f9 100%);
 }
 
 .dashboard-grid {
-  opacity: 0.44;
-  background-image:
-    linear-gradient(rgb(99 102 241 / 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(99 102 241 / 0.045) 1px, transparent 1px),
-    radial-gradient(circle, rgb(129 140 248 / 0.14) 1px, transparent 1.5px);
-  background-position:
-    0 0,
-    0 0,
-    28px 28px;
-  background-size:
-    56px 56px,
-    56px 56px,
-    56px 56px;
-  mask-image: linear-gradient(to bottom, black, rgb(0 0 0 / 0.48) 68%, transparent 100%);
-  animation: dashboard-grid-drift 34s linear infinite;
+  opacity: 0;
 }
 
 .dashboard-glow {
   position: absolute;
   border-radius: 9999px;
-  filter: blur(90px);
-  opacity: 0.32;
+  filter: blur(118px);
+  opacity: 0.22;
   will-change: transform;
-  animation: dashboard-glow-drift 17s ease-in-out infinite alternate;
+  animation: dashboard-glow-drift 48s ease-in-out infinite alternate;
 }
 
 .dashboard-glow-violet {
@@ -528,7 +527,7 @@
   left: 9%;
   height: 28rem;
   width: 28rem;
-  background: rgb(167 139 250 / 0.4);
+  background: rgb(167 148 250 / 0.34);
 }
 
 .dashboard-glow-blue {
@@ -536,40 +535,25 @@
   bottom: 4%;
   height: 34rem;
   width: 34rem;
-  background: rgb(96 165 250 / 0.28);
-  animation-duration: 22s;
+  background: rgb(96 165 250 / 0.24);
+  animation-duration: 61s;
   animation-delay: -9s;
 }
 
 .dashboard-sweep {
-  position: absolute;
-  top: -45%;
-  bottom: -45%;
-  left: -38%;
-  width: 24%;
-  transform: rotate(16deg);
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgb(255 255 255 / 0.5) 48%,
-    rgb(196 181 253 / 0.08),
-    transparent
-  );
-  filter: blur(22px);
-  opacity: 0.62;
-  will-change: transform;
-  animation: dashboard-sweep-drift 18s ease-in-out infinite;
+  display: none;
 }
 
 .dashboard-topbar {
-  background: rgb(255 255 255 / 0.68);
+  background: rgb(255 255 255 / 0.72);
+  backdrop-filter: blur(28px) saturate(145%);
   box-shadow:
     0 1px 0 rgb(255 255 255 / 0.75) inset,
-    0 12px 38px -32px rgb(30 41 59 / 0.42);
+    0 12px 38px -34px rgb(30 41 59 / 0.32);
 }
 
 .dashboard-content {
-  animation: dashboard-content-in 180ms ease-out both;
+  animation: dashboard-content-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .dark .dashboard-shell {
@@ -628,6 +612,28 @@
   }
 }
 
+.public-header {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.72),
+    0 12px 36px -34px rgb(30 41 59 / 0.34);
+  backdrop-filter: blur(28px) saturate(145%);
+}
+
+@keyframes auth-organic-drift {
+  0% {
+    transform: translate3d(-2%, -2%, 0) scale(0.97);
+  }
+  38% {
+    transform: translate3d(4%, 2%, 0) scale(1.03);
+  }
+  71% {
+    transform: translate3d(-1%, 5%, 0) scale(1.01);
+  }
+  100% {
+    transform: translate3d(3%, -1%, 0) scale(0.99);
+  }
+}
+
 @keyframes landing-console-float {
   0%,
   100% {
@@ -638,37 +644,18 @@
   }
 }
 
-@keyframes dashboard-grid-drift {
-  to {
-    background-position:
-      56px 56px,
-      56px 56px,
-      84px 84px;
-  }
-}
-
 @keyframes dashboard-glow-drift {
   0% {
-    transform: translate3d(-3%, -2%, 0) scale(0.94);
+    transform: translate3d(-3%, -2%, 0) scale(0.95);
+  }
+  43% {
+    transform: translate3d(6%, 4%, 0) scale(1.04);
+  }
+  76% {
+    transform: translate3d(-1%, 8%, 0) scale(1.01);
   }
   100% {
-    transform: translate3d(9%, 7%, 0) scale(1.08);
-  }
-}
-
-@keyframes dashboard-sweep-drift {
-  0%,
-  24% {
-    transform: translate3d(0, 0, 0) rotate(16deg);
-    opacity: 0;
-  }
-  42% {
-    opacity: 0.62;
-  }
-  78%,
-  100% {
-    transform: translate3d(690%, 0, 0) rotate(16deg);
-    opacity: 0;
+    transform: translate3d(8%, 2%, 0) scale(1.06);
   }
 }
 
@@ -731,10 +718,26 @@
   }
 }
 
+@media (prefers-reduced-transparency: reduce) {
+  .public-header,
+  .auth-card,
+  .auth-highlight,
+  .landing-console,
+  .landing-feature-card,
+  .landing-cta-panel,
+  .surface-card,
+  .dashboard-topbar {
+    background-color: hsl(var(--card));
+    backdrop-filter: none;
+  }
+}
+
 @media (hover: none) {
+  button:hover,
+  a:hover,
   .interactive-card:hover,
   .landing-feature-card:hover {
-    transform: none;
+    transform: none !important;
   }
 }
 
@@ -753,6 +756,18 @@
 @media (max-width: 640px) {
   body {
     background-attachment: scroll;
+  }
+
+  .public-header a,
+  .public-header button,
+  .auth-page > section:last-child > a,
+  .auth-page > section:last-child > div:first-of-type button {
+    min-height: 2.75rem;
+  }
+
+  .landing-aurora,
+  .landing-ambient {
+    filter: blur(82px);
   }
 }
 

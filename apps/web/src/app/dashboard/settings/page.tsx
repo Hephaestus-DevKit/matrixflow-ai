@@ -651,11 +651,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex justify-end">
-            <Button
-              type="submit"
-              disabled={saving}
-              className="gap-1.5 text-xs font-bold px-5 shadow-glow-sm hover:shadow-glow"
-            >
+            <Button type="submit" disabled={saving} className="gap-1.5 px-5 text-xs font-bold">
               <Save className="h-3.5 w-3.5" />
               {saving ? copy.saving : copy.save}
             </Button>
