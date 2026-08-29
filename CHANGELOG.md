@@ -2,6 +2,13 @@
 
 All notable MatrixFlow AI changes are documented here. Versions follow semantic versioning for the product shell; the Appwrite Function keeps its own compatible runtime version.
 
+## [0.4.1] - 2026-08-29
+
+### Interaction polish
+
+- Expanded authentication helper, recovery, registration, and legal-link touch targets to the 44px mobile baseline.
+- Aligned the registration agreement control with the same minimum touch-target rule.
+
 ## [0.4.0] - 2026-08-29
 
 ### Visual system

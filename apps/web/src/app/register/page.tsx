@@ -136,7 +136,7 @@ export default function RegisterPage() {
           </div>
 
           <AuthMessage tone="info">{t('auth.otpInfoRegister')}</AuthMessage>
-          <label className="flex min-h-10 cursor-pointer items-start gap-2.5 py-1 text-xs leading-5 text-muted-foreground">
+          <label className="flex min-h-11 cursor-pointer items-start gap-2.5 py-1 text-xs leading-5 text-muted-foreground">
             <input
               type="checkbox"
               checked={accepted}
