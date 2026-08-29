@@ -85,13 +85,38 @@ export function validateSchema(tables) {
   return { ok: errors.length === 0, errors, count: tables.length };
 }
 
+export function validateFunctionDefinitions(functions) {
+  const errors = [];
+  for (const definition of functions) {
+    const label = definition.$id || '<unknown-function>';
+    if (Object.hasOwn(definition, 'vars'))
+      errors.push(
+        `${label}: tracked vars are forbidden; deploy.mjs manages runtime variables without replacing Console secrets`,
+      );
+    if (!Array.isArray(definition.ignore))
+      errors.push(`${label}: ignore must be an array understood by the current Appwrite CLI`);
+    for (const requiredEntry of ['node_modules', '.git']) {
+      if (!definition.ignore?.includes(requiredEntry))
+        errors.push(`${label}: ignore must include ${requiredEntry}`);
+    }
+  }
+  return { ok: errors.length === 0, errors, count: functions.length };
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   const tables = JSON.parse(await readFile(new URL('infra/appwrite/tables.json', root), 'utf8'));
-  const result = validateSchema(tables);
-  if (!result.ok) {
-    for (const error of result.errors) process.stderr.write(`ERROR ${error}\n`);
+  const functions = JSON.parse(
+    await readFile(new URL('infra/appwrite/functions.json', root), 'utf8'),
+  );
+  const schemaResult = validateSchema(tables);
+  const functionResult = validateFunctionDefinitions(functions);
+  const errors = [...schemaResult.errors, ...functionResult.errors];
+  if (errors.length) {
+    for (const error of errors) process.stderr.write(`ERROR ${error}\n`);
     process.exitCode = 1;
   } else {
-    process.stdout.write(`Appwrite schema valid: ${result.count} tables\n`);
+    process.stdout.write(
+      `Appwrite schema valid: ${schemaResult.count} tables, ${functionResult.count} function definition\n`,
+    );
   }
 }

@@ -1,7 +1,7 @@
 import { pathToFileURL } from 'node:url';
 
 const ROUTES = [
-  { path: '/', marker: '跨境电商专属 · AI 员工操作系统' },
+  { path: '/', marker: '跨境电商 AI 员工操作系统' },
   { path: '/login', marker: '欢迎回来', canonical: false },
   { path: '/register', marker: '创建你的 AI 团队', canonical: false },
   { path: '/pricing', marker: '从可验证的免费版本开始' },
@@ -12,17 +12,17 @@ const ROUTES = [
 const LOCALE_PROBES = [
   {
     locale: 'zh-CN',
-    marker: '跨境电商专属 · AI 员工操作系统',
+    marker: '跨境电商 AI 员工操作系统',
     title: 'MatrixFlow AI — AI 员工操作系统',
   },
   {
     locale: 'zh-TW',
-    marker: '跨境電商專屬 · AI 員工作業系統',
+    marker: '跨境電商 AI 員工作業系統',
     title: 'MatrixFlow AI — AI 員工作業系統',
   },
   {
     locale: 'en',
-    marker: 'Built for cross-border commerce · AI workforce OS',
+    marker: 'AI workforce for cross-border commerce',
     title: 'MatrixFlow AI — AI Workforce OS',
   },
 ];
