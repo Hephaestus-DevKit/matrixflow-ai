@@ -2,6 +2,22 @@
 
 All notable MatrixFlow AI changes are documented here. Versions follow semantic versioning for the product shell; the Appwrite Function keeps its own compatible runtime version.
 
+## [0.5.1] - 2026-08-30
+
+### Product reliability
+
+- Corrected CRM pagination ownership so customer and lead controls remain inside their respective, accessible regions at production-scale row counts.
+- Updated production smoke markers to the current Simplified Chinese, Traditional Chinese, and English landing copy, eliminating false release-monitor failures.
+- Removed tracked Function variables from the Appwrite CLI definition and switched the deployment ignore list to the current array format, preventing routine pushes from replacing Console-managed secrets or packaging local dependencies.
+- Added a release gate that rejects future Function definitions containing tracked variables or invalid deployment-ignore configuration.
+
+### Expanded verification
+
+- Added authenticated browser coverage for every primary dashboard surface at the mobile breakpoint.
+- Added tenant-scoped creation-flow coverage for AI workers, content projects, knowledge bases, workflows, and CRM customers.
+- Added successful password, email-code, registration, and recovery journey coverage using isolated Appwrite simulations.
+- Added CRM high-volume pagination placement coverage and revalidated the full 16-journey browser suite, 79 Function tests, production build, security audits, three locales, and the production public route baseline.
+
 ## [0.5.0] - 2026-08-29
 
 ### Structured visual motion
