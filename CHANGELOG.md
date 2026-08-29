@@ -2,6 +2,15 @@
 
 All notable MatrixFlow AI changes are documented here. Versions follow semantic versioning for the product shell; the Appwrite Function keeps its own compatible runtime version.
 
+## [0.5.0] - 2026-08-29
+
+### Structured visual motion
+
+- Restored the product's large-scale coordinate grids and low-frequency sweep lighting while preserving the quieter typography, materials, and information hierarchy introduced in v0.4.
+- Combined the restored structure with continuous purple-blue ambient light across the landing, pricing, authentication, and dashboard surfaces.
+- Reintroduced fine feature-card edge accents to strengthen the product's technical identity without increasing content density.
+- Slowed grid and sweep cycles, added long idle phases, and disabled sweep lighting on mobile, high-contrast, and reduced-motion experiences.
+
 ## [0.4.1] - 2026-08-29
 
 ### Interaction polish

@@ -90,6 +90,38 @@ test('does not overflow a narrow mobile viewport', async ({ page }) => {
   await expect(page.getByRole('link', { name: '免费开始', exact: true })).toBeVisible();
 });
 
+test('keeps structured motion expressive on desktop and quiet on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/');
+
+  const desktop = await page.evaluate(() => {
+    const grid = document.querySelector<HTMLElement>('.landing-grid');
+    const sweep = document.querySelector<HTMLElement>('.landing-sweep');
+    return {
+      gridOpacity: Number.parseFloat(getComputedStyle(grid!).opacity),
+      gridAnimation: getComputedStyle(grid!).animationName,
+      sweepDisplay: getComputedStyle(sweep!).display,
+      sweepAnimation: getComputedStyle(sweep!).animationName,
+    };
+  });
+  expect(desktop.gridOpacity).toBeGreaterThan(0);
+  expect(desktop.gridAnimation).toContain('landing-grid-drift');
+  expect(desktop.sweepDisplay).not.toBe('none');
+  expect(desktop.sweepAnimation).toContain('landing-sweep-drift');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobile = await page.evaluate(() => {
+    const grid = document.querySelector<HTMLElement>('.landing-grid');
+    const sweep = document.querySelector<HTMLElement>('.landing-sweep');
+    return {
+      gridAnimation: getComputedStyle(grid!).animationName,
+      sweepDisplay: getComputedStyle(sweep!).display,
+    };
+  });
+  expect(mobile.gridAnimation).toBe('none');
+  expect(mobile.sweepDisplay).toBe('none');
+});
+
 test('keeps authentication helper actions touch friendly', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
 
@@ -103,8 +135,8 @@ test('keeps authentication helper actions touch friendly', async ({ page }) => {
     );
     expect(actions.length, `${path} should expose helper actions`).toBeGreaterThan(0);
     for (const action of actions) {
-      expect(action.height, `${path} helper action is too short`).toBeGreaterThanOrEqual(32);
-      expect(action.width, `${path} helper action is too narrow`).toBeGreaterThanOrEqual(32);
+      expect(action.height, `${path} helper action is too short`).toBeGreaterThanOrEqual(44);
+      expect(action.width, `${path} helper action is too narrow`).toBeGreaterThanOrEqual(44);
     }
   }
 });
