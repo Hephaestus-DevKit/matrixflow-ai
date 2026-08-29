@@ -27,17 +27,17 @@ export function AuthShell({ title, description, children, footer, step }: AuthSh
   return (
     <main
       id="main-content"
-      className="auth-page relative grid min-h-screen overflow-hidden lg:grid-cols-[minmax(0,1.05fr)_minmax(430px,0.95fr)]"
+      className="auth-page relative grid min-h-screen overflow-hidden lg:grid-cols-[minmax(0,1.02fr)_minmax(430px,0.98fr)]"
     >
       <div className="auth-ambient pointer-events-none absolute inset-0" />
 
-      <section className="auth-side relative hidden min-h-screen overflow-hidden border-r border-slate-200/80 p-12 lg:flex lg:flex-col lg:justify-between xl:p-16">
+      <section className="auth-side relative hidden min-h-screen overflow-hidden border-r border-slate-200/70 p-11 lg:flex lg:flex-col lg:justify-between xl:p-14">
         <div className="auth-side-grid absolute inset-0" />
         <Link
           href="/"
           className="relative flex w-fit items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          <span className="brand-mark h-11 w-11 rounded-[0.9rem] text-base">M</span>
+          <span className="brand-mark h-10 w-10 rounded-[0.8rem] text-sm">M</span>
           <span>
             <span className="font-display block text-sm font-semibold tracking-[-0.015em]">
               MatrixFlow AI
@@ -48,26 +48,24 @@ export function AuthShell({ title, description, children, footer, step }: AuthSh
           </span>
         </Link>
 
-        <div className="relative max-w-xl space-y-9">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white/70 px-3 py-1.5 text-xs font-semibold text-primary shadow-[0_8px_24px_-20px_rgb(79_70_229/0.65)] backdrop-blur-sm">
-            <Sparkles className="h-3.5 w-3.5" /> {t('auth.badge')}
+        <div className="relative max-w-[34rem] space-y-7">
+          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/75 bg-white/[0.68] px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-[0_8px_24px_-20px_rgb(30_41_59/0.3)] backdrop-blur-xl">
+            <Sparkles className="h-3.5 w-3.5 text-primary" /> {t('auth.badge')}
           </div>
-          <div className="space-y-5">
-            <h2 className="font-display max-w-lg text-[clamp(2rem,3.4vw,3.25rem)] font-semibold leading-[1.12] tracking-[-0.035em]">
+          <div className="space-y-4">
+            <h2 className="font-display max-w-[34rem] text-[clamp(2rem,2.8vw,2.8rem)] font-semibold leading-[1.08] tracking-[-0.045em]">
               {t('auth.title')}{' '}
-              <span className="mt-1 block bg-gradient-to-r from-violet-500 via-primary to-indigo-500 bg-clip-text text-transparent">
-                {t('auth.titleAccent')}
-              </span>
+              <span className="mt-1 block text-primary">{t('auth.titleAccent')}</span>
             </h2>
             <p className="max-w-lg text-[0.9375rem] leading-7 text-slate-600">
               {t('auth.description')}
             </p>
           </div>
-          <ul className="grid gap-3 text-[0.8125rem]">
+          <ul className="grid gap-2.5 text-[0.8125rem]">
             {highlights.map((item) => (
               <li
                 key={item}
-                className="auth-highlight flex items-center gap-3 rounded-xl px-4 py-3"
+                className="auth-highlight flex items-center gap-3 rounded-2xl px-4 py-3"
               >
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
                 <span className="font-medium text-slate-700">{t(item)}</span>
@@ -82,7 +80,7 @@ export function AuthShell({ title, description, children, footer, step }: AuthSh
         </div>
       </section>
 
-      <section className="auth-form-pane relative flex min-h-screen items-center justify-center px-4 py-10 sm:px-8 lg:px-12">
+      <section className="auth-form-pane relative flex min-h-screen items-center justify-center px-4 py-12 sm:px-8 lg:px-12">
         <div className="absolute right-5 top-5">
           <LocaleSwitcher compact />
         </div>
@@ -93,7 +91,7 @@ export function AuthShell({ title, description, children, footer, step }: AuthSh
           <ArrowLeft className="h-3.5 w-3.5" /> {t('auth.backHome')}
         </Link>
 
-        <div className="w-full max-w-md animate-slide-up">
+        <div className="w-full max-w-[27rem] animate-slide-up">
           <div className="mb-7 text-center lg:text-left">
             <div className="mx-auto mb-5 flex items-center justify-center lg:hidden">
               <span className="brand-mark h-11 w-11 text-base">M</span>
@@ -103,7 +101,7 @@ export function AuthShell({ title, description, children, footer, step }: AuthSh
                 {step}
               </p>
             )}
-            <h1 className="font-display text-[1.75rem] font-semibold tracking-[-0.03em] text-slate-950 sm:text-[2rem]">
+            <h1 className="font-display text-[1.75rem] font-semibold tracking-[-0.04em] text-slate-950 sm:text-[2rem]">
               {title}
             </h1>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-600 lg:mx-0">
@@ -111,7 +109,7 @@ export function AuthShell({ title, description, children, footer, step }: AuthSh
             </p>
           </div>
 
-          <div className="auth-card rounded-[1.5rem] p-5 sm:p-7">{children}</div>
+          <div className="auth-card rounded-[1.75rem] p-5 sm:p-7">{children}</div>
           <div className="mt-5 flex min-h-8 items-center justify-center text-center text-xs text-slate-500 sm:mt-6">
             {footer}
           </div>

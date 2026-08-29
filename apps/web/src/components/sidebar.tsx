@@ -22,7 +22,7 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
   return (
     <aside
       className={cn(
-        'inset-y-0 left-0 flex w-64 flex-col border-r border-border/70 bg-card/90 shadow-[12px_0_40px_-34px_hsl(var(--foreground)/0.24)] backdrop-blur-2xl',
+        'inset-y-0 left-0 flex w-64 flex-col border-r border-border/60 bg-card/[0.82] shadow-[12px_0_44px_-38px_hsl(var(--foreground)/0.2)] backdrop-blur-2xl',
         mobile ? 'h-full' : 'fixed z-40 hidden lg:flex',
       )}
     >
@@ -60,7 +60,7 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
 
       <nav
         aria-label={t('common.mainNavigation')}
-        className="flex-1 space-y-5 overflow-y-auto px-3 py-4"
+        className="flex-1 space-y-5 overflow-y-auto px-3 py-5"
       >
         {DASHBOARD_NAVIGATION.map((group) => (
           <div key={group.label}>
@@ -86,18 +86,18 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
                       onTouchStart={() => warmRoute(item.href)}
                       aria-current={isActive ? 'page' : undefined}
                       className={cn(
-                        'group relative flex items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 text-sm font-medium transition-[color,background-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        'group relative flex min-h-11 items-center gap-3 overflow-hidden rounded-xl px-3 py-2 text-sm font-medium transition-[color,background-color,box-shadow,transform] duration-300 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                         isActive
-                          ? 'bg-gradient-to-r from-primary/14 to-primary/[0.055] text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.08)]'
-                          : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+                          ? 'bg-primary/[0.095] text-foreground shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.07)]'
+                          : 'text-muted-foreground hover:translate-x-0.5 hover:bg-muted/60 hover:text-foreground',
                       )}
                     >
                       <span
                         className={cn(
                           'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors',
                           isActive
-                            ? 'bg-primary text-primary-foreground shadow-glow-sm'
-                            : 'bg-muted/70',
+                            ? 'bg-primary/[0.12] text-primary'
+                            : 'bg-muted/60 text-muted-foreground group-hover:text-foreground',
                         )}
                       >
                         <Icon className="h-4 w-4" aria-hidden="true" />
@@ -108,12 +108,7 @@ export function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose
                           className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary"
                         />
                       )}
-                      <span className="min-w-0">
-                        <span className="block truncate leading-4">{t(item.labelKey)}</span>
-                        <span className="mt-0.5 block truncate text-xs font-normal leading-4 text-muted-foreground">
-                          {t(item.descriptionKey)}
-                        </span>
-                      </span>
+                      <span className="min-w-0 truncate leading-5">{t(item.labelKey)}</span>
                     </Link>
                   );
                 })}

@@ -69,9 +69,10 @@ const config: Config = {
         display: ['var(--font-display)', 'var(--font-sans)', 'system-ui', 'sans-serif'],
       },
       fontSize: {
-        // 11px is the minimum supporting-text size in the product UI. The old
-        // 10px token was difficult to scan on Windows and high-DPI displays.
-        '2xs': ['0.6875rem', { lineHeight: '1rem' }],
+        // Keep supporting copy legible on high-DPI desktop displays and phones.
+        // 12px is reserved for tertiary metadata; normal helper text starts at 13px.
+        '2xs': ['0.75rem', { lineHeight: '1.0625rem' }],
+        xs: ['0.8125rem', { lineHeight: '1.125rem' }],
       },
       boxShadow: {
         xs: '0 1px 2px 0 rgb(0 0 0 / 0.03)',

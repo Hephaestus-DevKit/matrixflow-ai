@@ -272,7 +272,7 @@ export default function NewAgentPage() {
                   </p>
                 </div>
                 <Button
-                  className="mt-6 w-full text-xs shadow-glow-sm hover:shadow-glow"
+                  className="mt-6 w-full text-xs"
                   size="sm"
                   onClick={() => createFromTemplate(t.id, t.names[locale])}
                   disabled={loading}

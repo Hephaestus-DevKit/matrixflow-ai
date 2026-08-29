@@ -490,11 +490,7 @@ export default function ContentFactoryPage() {
       {projectId && (
         <div className="space-y-6 animate-slide-up">
           <div className="flex items-center gap-3 border-t border-border/40 pt-6">
-            <Button
-              onClick={generateAll}
-              disabled={!!generating}
-              className="gap-2 text-xs shadow-glow-sm hover:shadow-glow"
-            >
+            <Button onClick={generateAll} disabled={!!generating} className="gap-2 text-xs">
               {generating === 'all' ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />

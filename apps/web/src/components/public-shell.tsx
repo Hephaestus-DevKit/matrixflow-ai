@@ -9,13 +9,13 @@ export function PublicHeader() {
   const { t } = useLocale();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/85 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-3 sm:px-6">
+    <header className="public-header sticky top-0 z-50 border-b border-border/[0.55] bg-background/75 backdrop-blur-2xl">
+      <div className="mx-auto flex h-[3.75rem] max-w-6xl items-center justify-between gap-2 px-3 sm:px-6">
         <Link
           href="/"
-          className="flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg py-1 font-bold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-xl py-1 font-semibold tracking-[-0.02em] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          <span className="brand-mark h-8 w-8 rounded-lg" aria-hidden="true">
+          <span className="brand-mark h-8 w-8 rounded-[0.65rem]" aria-hidden="true">
             M
           </span>
           <span className="sr-only">MatrixFlow AI</span>
@@ -28,18 +28,27 @@ export function PublicHeader() {
           className="flex min-w-0 items-center gap-0.5 sm:gap-2"
         >
           <LocaleSwitcher compact />
-          <Button asChild variant="ghost" size="sm" className="hidden h-10 min-[360px]:inline-flex">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="hidden rounded-full min-[360px]:inline-flex"
+          >
             <Link href="/pricing">{t('public.pricing')}</Link>
           </Button>
           <Button
             asChild
             variant="ghost"
             size="sm"
-            className="h-10 px-2 text-xs min-[420px]:px-3 sm:text-sm"
+            className="rounded-full px-2.5 text-xs min-[420px]:px-3.5 sm:text-sm"
           >
             <Link href="/login">{t('public.login')}</Link>
           </Button>
-          <Button asChild size="sm" className="h-10 px-2 text-xs min-[420px]:px-3 sm:text-sm">
+          <Button
+            asChild
+            size="sm"
+            className="rounded-full px-2.5 text-xs min-[420px]:px-3.5 sm:text-sm"
+          >
             <Link href="/register">{t('public.register')}</Link>
           </Button>
         </nav>
@@ -52,7 +61,7 @@ export function PublicFooter() {
   const { t } = useLocale();
 
   return (
-    <footer className="border-t border-border/60 px-4 py-8 text-xs text-muted-foreground">
+    <footer className="border-t border-border/[0.55] bg-white/35 px-4 py-8 text-xs text-muted-foreground backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
         <span>{t('public.footer')}</span>
         <nav

@@ -13,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="pricing-page min-h-screen text-foreground">
       <PublicHeader />
       <PricingContent />
       <PublicFooter />

@@ -13,7 +13,7 @@ test('server-renders the persisted locale before hydration', async ({ context })
   const body = await response.text();
   expect(response.status()).toBe(200);
   expect(body).toMatch(/<html\b[^>]*\blang=["']en["']/i);
-  expect(body).toContain('Built for cross-border commerce · AI workforce OS');
+  expect(body).toContain('AI workforce for cross-border commerce');
   expect(body).toContain('<title>MatrixFlow AI — AI Workforce OS</title>');
 });
 
