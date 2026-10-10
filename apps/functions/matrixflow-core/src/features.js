@@ -232,6 +232,7 @@ export async function indexDocument(services, context, body) {
     } else if (mimeType.includes('wordprocessingml') || title.endsWith('.docx')) {
       text = (await mammoth.extractRawText({ buffer })).value;
     } else text = buffer.toString('utf8');
+    // eslint-disable-next-line no-control-regex -- Strip null bytes from extracted document text.
     const normalizedText = text.replace(/\u0000/g, '').trim();
     const truncated = normalizedText.length > MAX_INDEX_TEXT_CHARS;
     text = normalizedText.slice(0, MAX_INDEX_TEXT_CHARS);

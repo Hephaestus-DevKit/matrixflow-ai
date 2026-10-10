@@ -100,7 +100,7 @@ export function evaluateCondition(config = {}, values = {}) {
     case 'contains':
       return String(actual ?? '').includes(String(expected ?? ''));
     case 'falsy':
-      return !Boolean(actual);
+      return !actual;
     case 'truthy':
       return Boolean(actual);
     default:
@@ -112,6 +112,6 @@ export function edgeAllows(edge, sourceOutput) {
   const condition = edge?.condition || 'always';
   if (condition === 'always') return true;
   if (condition === 'true' || condition === 'truthy') return Boolean(sourceOutput);
-  if (condition === 'false' || condition === 'falsy') return !Boolean(sourceOutput);
+  if (condition === 'false' || condition === 'falsy') return !sourceOutput;
   throw new DagValidationError(`不支持的连接条件：${condition}`);
 }

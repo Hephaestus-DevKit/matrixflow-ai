@@ -442,6 +442,7 @@ async function generateWithProvider(
   if (
     !requestedModel ||
     requestedModel.length > 100 ||
+    // eslint-disable-next-line no-control-regex -- Reject non-printable model identifiers.
     /[\u0000-\u001f\u007f]/.test(requestedModel)
   )
     throw new ProviderError('AI 模型标识无效', 400, 'AI_MODEL_INVALID');

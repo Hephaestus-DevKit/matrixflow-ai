@@ -22,6 +22,32 @@ export default [
   js.configs.recommended,
   ...nextConfigs,
   {
+    files: ['apps/functions/matrixflow-core/src/**/*.js'],
+    languageOptions: {
+      globals: Object.fromEntries(
+        [
+          'process',
+          'Buffer',
+          'console',
+          'URL',
+          'URLSearchParams',
+          'fetch',
+          'AbortController',
+          'setTimeout',
+          'clearTimeout',
+          'setInterval',
+          'clearInterval',
+          'TextEncoder',
+          'TextDecoder',
+          'crypto',
+          'performance',
+          'structuredClone',
+        ].map((name) => [name, 'readonly']),
+      ),
+    },
+    rules: { 'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }] },
+  },
+  {
     files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {
       parser: tsParser,

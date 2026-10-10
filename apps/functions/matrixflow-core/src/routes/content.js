@@ -73,6 +73,7 @@ export async function handleContentRoute({
   ) {
     requireCapability(membership, 'content.manage');
     await getOwned(services, TABLES.contentProjects, segments[2], context.teamId);
+    const input = parse(schemas.contentGenerate, body);
     if (input.mode === 'async')
       return new HttpResult(
         await enqueueJob(services, context, 'content.generate', {
@@ -85,7 +86,7 @@ export async function handleContentRoute({
       );
     return generateContent(services, context, {
       projectId: segments[2],
-      ...parse(schemas.contentGenerate, body),
+      ...input,
     });
   }
 
