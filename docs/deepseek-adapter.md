@@ -31,3 +31,22 @@ HTTP 402 显示余额不足；401/403、400 等返回稳定错误，且不重试
 本地 `pnpm verify` 通过：共享包 12、前端 20、脚本 12、云函数 93，共 137 项单元/脚本测试，并完成格式、类型、lint、schema、i18n 和生产构建。真实低 Token 调用已返回 READY，17 个输入 Token、2 个输出 Token，约 1.524 秒。
 
 覆盖 DeepSeek 独立凭据、端点规范化、关闭思考、三种思考强度、租户匿名标识、缓存用量、缓存价格、旧模型迁移、余额与鉴权错误、禁止重定向等回归。流式输出、工具循环和多轮 thinking 历史尚未在 MatrixFlow 产品中开放；本次适配不宣称实现这些功能。
+
+## 实际云端发布记录
+
+2026-10-10 已在既有 MatrixFlow AI 项目启用部署 `6ac9b81f6e08c4d6411c`，运行版本为 `4744e256e925e07ae449ea4aa1cd9d98abe320e2`。未新建 Appwrite 项目，也未写入 GitHub Secrets。
+
+- `DEEPSEEK_API_KEY` 已存为 Function Secret，Worker Secret 和 API Key pepper 保留。
+- Provider、端点、模型和思考强度已经切换；原有配置变量的 Secret 标记保留。部署脚本同样保留现有 Secret 属性，避免 Appwrite 拒绝将 Secret 降级为非 Secret。
+- 现有 AI 员工的模型由旧网关别名更新为 `deepseek-flash`，其 ACTIVE 状态、提示词和团队归属保持原值。
+- 新代码云端构建成功，耗时 4 秒；活动部署 ID 核对正确。
+- 实际 `/readyz` 返回 HTTP 200，Provider 和 Worker 均就绪。
+- 隔离临时账号/团队的受保护 `/health` 确认 Provider=deepseek、model=deepseek-flash、release 与发布版本一致。
+- 浏览器等价会话直接创建 Agent 行被拒绝；经 Function 创建成功并自动选用 Flash。
+- 云端 Agent 运行状态 COMPLETED，实际返回 READY，协议为 anthropic-messages；单次运行约 1.553 秒。该测量是低 Token 验证结果，不代表持续性能保证。
+- 测试后清理 13 条临时业务行，删除临时团队、用户与会话；安全审计按既有保留策略留存。
+- 本地 14 项 Chromium 回归全部通过。
+
+激活前的生产部署为 `6aa4f1dfcd45d526778f`。如需回滚代码，可通过 `appwrite functions update-function-deployment` 切回该 ID；配置回滚需同步恢复当时的 Provider 变量，并重新构建以应用配置。该旧版本的 AI Provider 原本未就绪，回滚不能替代有效供应商密钥配置。
+
+本次核对常见 DeepSeek 钥匙串条目未发现匹配项，最终使用用户提供的凭据，通过不回显的内存输入完成验证和 Secret 配置。密钥没有写入源码、环境文件、部署包或本报告。

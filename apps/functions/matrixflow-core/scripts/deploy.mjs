@@ -81,7 +81,7 @@ for (const [variableKey, value, secret = false] of managedVariables) {
       variableId: existing.$id,
       key: variableKey,
       value,
-      secret,
+      secret: existing.secret || secret,
     });
   } else {
     await functions.createVariable({
