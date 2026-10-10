@@ -64,29 +64,69 @@ function slugify(value: string, fallback: string) {
   return slug || fallback;
 }
 
-export async function getCurrentIdentity(): Promise<MatrixFlowUser> {
+let identityRequest: Promise<MatrixFlowUser> | null = null;
+let identityRequestVersion = 0;
+
+export function invalidateIdentityRequest() {
+  identityRequestVersion += 1;
+  identityRequest = null;
+}
+
+export function getCurrentIdentity(): Promise<MatrixFlowUser> {
+  // Strict Mode and simultaneous route guards must not create duplicate teams.
+  if (!identityRequest) {
+    const pending: Promise<MatrixFlowUser> = loadCurrentIdentity(identityRequestVersion).finally(
+      () => {
+        if (identityRequest === pending) identityRequest = null;
+      },
+    );
+    identityRequest = pending;
+  }
+  return identityRequest;
+}
+
+async function listTeams() {
+  const result: Awaited<ReturnType<typeof teams.list>>['teams'] = [];
+  for (let offset = 0; offset < 10_000; offset += 100) {
+    const page = await teams.list({ queries: [Query.limit(100), Query.offset(offset)] });
+    result.push(...page.teams);
+    if (page.teams.length < 100 || result.length >= page.total) return result;
+  }
+  throw new Error('团队数量超过可加载上限');
+}
+
+async function loadCurrentIdentity(version: number): Promise<MatrixFlowUser> {
   // These two independent reads can share one network round trip. This is
   // especially noticeable on a cold dashboard load over a distant region.
-  const [current, initialTeamList] = await Promise.all([account.get(), teams.list()]);
+  const [current, initialTeams] = await Promise.all([account.get(), listTeams()]);
+  if (version !== identityRequestVersion) throw new Error('AUTH_REQUEST_SUPERSEDED');
   if (!current.emailVerification) throw new Error('邮箱尚未完成验证，请使用邮箱验证码登录');
 
-  let teamList = initialTeamList;
-  if (teamList.teams.length === 0) {
+  let teamList = initialTeams;
+  if (teamList.length === 0) {
     await teams.create({
       teamId: ID.unique(),
       name: `${current.name || current.email.split('@')[0]} 的团队`,
       roles: ['owner', 'admin'],
     });
-    teamList = await teams.list();
+    teamList = await listTeams();
   }
 
   const memberships = await Promise.all(
-    teamList.teams.map(async (team) => {
+    teamList.map(async (team) => {
       const result = await teams.listMemberships({
         teamId: team.$id,
-        queries: [Query.equal('userId', current.$id), Query.limit(1)],
+        queries: [Query.equal('userId', current.$id), Query.equal('confirm', true), Query.limit(1)],
       });
-      const roles = result.memberships[0]?.roles ?? ['member'];
+      const membership = result.memberships[0];
+      if (
+        !membership ||
+        membership.confirm !== true ||
+        membership.userId !== current.$id ||
+        membership.teamId !== team.$id
+      )
+        return null;
+      const roles = membership.roles;
       const role = roles.includes('owner')
         ? 'owner'
         : roles.includes('admin')
@@ -97,7 +137,7 @@ export async function getCurrentIdentity(): Promise<MatrixFlowUser> {
         organizationName: team.name,
         slug: slugify(team.name, team.$id.slice(0, 8)),
         role,
-        permissions: role === 'member' ? MEMBER_PERMISSIONS : ALL_PERMISSIONS,
+        permissions: role === 'owner' || role === 'admin' ? ALL_PERMISSIONS : MEMBER_PERMISSIONS,
       };
     }),
   );
@@ -108,7 +148,7 @@ export async function getCurrentIdentity(): Promise<MatrixFlowUser> {
     email: current.email,
     name: current.name || current.email.split('@')[0],
     avatarUrl: normalizeAvatarUrl(prefs.avatarUrl),
-    memberships,
+    memberships: memberships.filter((membership) => membership !== null),
   };
 }
 

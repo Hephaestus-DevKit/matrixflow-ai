@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test, { beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   API_KEY_SCOPES,
@@ -8,6 +8,34 @@ import {
   validateApiKeySecret,
 } from '../src/api-keys.js';
 import { pbkdf2Sync } from 'node:crypto';
+
+const initialNodeEnv = process.env.NODE_ENV;
+beforeEach(() => {
+  process.env.NODE_ENV = 'test';
+});
+afterEach(() => {
+  if (initialNodeEnv === undefined) delete process.env.NODE_ENV;
+  else process.env.NODE_ENV = initialNodeEnv;
+});
+
+test('an unset runtime environment and a release SHA never permit the development pepper', () => {
+  const previousPepper = process.env.MATRIXFLOW_API_KEY_PEPPER;
+  const previousRelease = process.env.MATRIXFLOW_RELEASE;
+  try {
+    delete process.env.NODE_ENV;
+    delete process.env.MATRIXFLOW_API_KEY_PEPPER;
+    process.env.MATRIXFLOW_RELEASE = '6a08092';
+    assert.throws(
+      () => generateApiKey(),
+      (error) => error.code === 'API_KEY_NOT_CONFIGURED',
+    );
+  } finally {
+    if (previousPepper === undefined) delete process.env.MATRIXFLOW_API_KEY_PEPPER;
+    else process.env.MATRIXFLOW_API_KEY_PEPPER = previousPepper;
+    if (previousRelease === undefined) delete process.env.MATRIXFLOW_RELEASE;
+    else process.env.MATRIXFLOW_RELEASE = previousRelease;
+  }
+});
 
 test('generated API keys are high entropy and never return the hash as the secret', () => {
   const generated = generateApiKey();

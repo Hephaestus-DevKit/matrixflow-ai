@@ -36,7 +36,9 @@ function wantsPage(search: URLSearchParams) {
 }
 
 function pageLimit(search: URLSearchParams, fallback = 50) {
-  const value = Number(search.get('limit'));
+  const raw = search.get('limit');
+  if (raw === null || !raw.trim()) return fallback;
+  const value = Number(raw);
   return Number.isFinite(value) ? Math.min(100, Math.max(1, Math.floor(value))) : fallback;
 }
 

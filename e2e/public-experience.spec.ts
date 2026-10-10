@@ -17,6 +17,42 @@ test('server-renders the persisted locale before hydration', async ({ context })
   expect(body).toContain('<title>MatrixFlow AI — AI Workforce OS</title>');
 });
 
+test('a locale cookie wins over stale localStorage during hydration', async ({ page, context }) => {
+  await context.addCookies([
+    { name: 'matrixflow-locale', value: 'zh-TW', domain: '127.0.0.1', path: '/' },
+  ]);
+  await context.addInitScript(() => localStorage.setItem('matrixflow-locale', 'en'));
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('把跨境營運流程');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
+  expect(
+    (await context.cookies()).find((cookie) => cookie.name === 'matrixflow-locale')?.value,
+  ).toBe('zh-TW');
+});
+
+test('locale switching works when browser privacy settings block localStorage', async ({
+  page,
+  context,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await context.addInitScript(() => {
+    Object.defineProperty(window, 'localStorage', {
+      get() {
+        throw new DOMException('Storage disabled', 'SecurityError');
+      },
+    });
+  });
+  await page.goto('/');
+  await chooseLocale(page, 'en');
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(
+    'Put cross-border operations',
+  );
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  expect(errors).toEqual([]);
+});
+
 test('switches among all three locales and persists the choice', async ({ page }) => {
   await page.goto('/');
 

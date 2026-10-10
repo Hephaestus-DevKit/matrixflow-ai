@@ -27,6 +27,10 @@ API Key 只允许访问创建时授予的作用域：
 
 成功响应统一包含 `data` 和 `meta.requestId`；错误响应包含稳定的 `error.code`、用户可读的 `error.message` 和 `error.requestId`。所有写请求建议通过标准 `Idempotency-Key` 请求头携带客户端生成的幂等键（8–128 个安全字符）；Web 客户端也可使用内部请求体字段 `__idempotencyKey`。两者同时存在时必须一致。Function 会先通过唯一索引原子占用该 Key，再执行业务并提交响应；并发重复请求会返回 `IDEMPOTENCY_IN_PROGRESS`，等价 JSON 不受字段顺序影响，完成后的同一团队、方法、路径和请求指纹在 24 小时内会重放成功响应。
 
+请求指纹包含调用者身份和当前角色/作用域。其他用户、其他 API Key 或权限变更后的请求不能重放旧响应。API Key 创建是一次性密钥响应的例外：首次请求返回完整密钥，但幂等记录只保存 `API_KEY_SECRET_UNAVAILABLE` 错误；同一幂等键重试返回 HTTP 409，且不会重复创建密钥。如首次响应丢失，应撤销已创建的密钥后重新创建。
+
+成功响应超过幂等记录大小上限时仍保留完成标记，同一请求重试返回 HTTP 409 和 `IDEMPOTENCY_REPLAY_UNAVAILABLE`，不会再次执行。此时应读取资源状态核实结果。
+
 ## 长任务
 
 Agent、工作流、批量内容和知识索引支持 `mode: "async"`。服务器返回 HTTP 202 和 `jobId`，任务状态通过以下端点查询：

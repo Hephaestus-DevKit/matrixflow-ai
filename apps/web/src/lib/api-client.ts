@@ -71,7 +71,7 @@ function normalizeError(error: unknown): never {
   );
 }
 
-function guardedRequest<T>(task: Promise<T>, options: RequestOptions, timeoutMs: number) {
+function guardedRequest<T>(task: () => Promise<T>, options: RequestOptions, timeoutMs: number) {
   const timeout = Math.max(1_000, options.timeoutMs ?? timeoutMs);
   if (options.signal?.aborted)
     return Promise.reject(new ApiError('', 499, 'REQUEST_ABORTED')) as Promise<T>;
@@ -91,7 +91,7 @@ function guardedRequest<T>(task: Promise<T>, options: RequestOptions, timeoutMs:
       reject(new ApiError('', 499, 'REQUEST_ABORTED'));
     };
     options.signal?.addEventListener('abort', abort, { once: true });
-    task.then(
+    task().then(
       (value) => {
         if (settled) return;
         settled = true;
@@ -123,10 +123,12 @@ async function call<T>(
   options: RequestOptions = {},
 ) {
   try {
-    const idempotencyKey =
-      method === 'GET' ? undefined : options.idempotencyKey || createIdempotencyKey();
     return (await guardedRequest(
-      routeBackend(method, path, body, { idempotencyKey }),
+      () => {
+        const idempotencyKey =
+          method === 'GET' ? undefined : options.idempotencyKey || createIdempotencyKey();
+        return routeBackend(method, path, body, { idempotencyKey });
+      },
       options,
       method === 'GET' ? 20_000 : 30_000,
     )) as T;
@@ -154,9 +156,11 @@ export const apiClient = {
     call<T>('DELETE', path, body, options),
   upload: async <T = unknown>(path: string, body: FormData, options: RequestOptions = {}) => {
     try {
-      const idempotencyKey = options.idempotencyKey || createIdempotencyKey();
       return (await guardedRequest(
-        routeUpload(path, body, { idempotencyKey }),
+        () =>
+          routeUpload(path, body, {
+            idempotencyKey: options.idempotencyKey || createIdempotencyKey(),
+          }),
         options,
         60_000,
       )) as T;

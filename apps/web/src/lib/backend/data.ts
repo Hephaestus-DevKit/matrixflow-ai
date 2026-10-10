@@ -100,6 +100,11 @@ function assertOwned(row: Data, organizationId: string, field = 'organizationId'
   if (row[field] !== organizationId) throw new BackendError('无权访问该团队资源', 403, 'FORBIDDEN');
 }
 
+function assertOrganizationContext(organizationId: string) {
+  if (getOrganizationContext() !== organizationId)
+    throw new BackendError('团队空间已切换，请重试', 409, 'ORGANIZATION_CHANGED');
+}
+
 export async function listRows(
   tableId: string,
   queries: string[] = [],
@@ -126,6 +131,7 @@ export async function listRows(
     } catch (error) {
       throw normalizeAppwriteError(error);
     }
+    assertOrganizationContext(organizationId);
     total = result.total;
     rows.push(...result.rows.map(decodeRow));
     if (result.rows.length < PAGE_SIZE || rows.length >= result.total) break;
@@ -163,6 +169,7 @@ export async function listRowsPage(
         Query.offset(offset),
       ],
     });
+    assertOrganizationContext(organizationId);
     const rows = result.rows.map(decodeRow);
     return {
       data: rows,
@@ -188,6 +195,7 @@ export async function countRows(
       tableId,
       queries: [Query.equal(organizationField, organizationId), ...queries, Query.limit(1)],
     });
+    assertOrganizationContext(organizationId);
     return Number(result.total || 0);
   } catch (error) {
     throw normalizeAppwriteError(error);
@@ -202,6 +210,7 @@ export async function getRow(tableId: string, rowId: string, organizationField =
   } catch (error) {
     throw normalizeAppwriteError(error);
   }
+  assertOrganizationContext(organizationId);
   const row = decodeRow(rawRow);
   assertOwned(row, organizationId, organizationField);
   return row;
@@ -212,12 +221,13 @@ export async function uploadKnowledgeFile(
   form: FormData,
   options: { idempotencyKey?: string } = {},
 ) {
+  const organizationId = getOrganizationContext();
   await getRow(TABLES.knowledgeBases, knowledgeBaseId);
   const file = form.get('file');
   if (!(file instanceof File)) throw new BackendError('请选择要上传的文件', 400, 'FILE_REQUIRED');
   if (file.size > 20 * 1024 * 1024)
     throw new BackendError('文件不能超过 20 MB', 400, 'FILE_TOO_LARGE');
-  const organizationId = getOrganizationContext();
+  assertOrganizationContext(organizationId);
   const permissions = teamPermissions(organizationId);
   const deterministicFileId = options.idempotencyKey
     ? await scopedUploadFileId(organizationId, options.idempotencyKey, file)
@@ -257,34 +267,26 @@ export async function uploadKnowledgeFile(
       throw normalizeAppwriteError(error, '文件上传失败，请稍后重试');
     }
   }
-  let document: Data | undefined;
   const baseKey = options.idempotencyKey;
+  // An unknown network outcome may already have created the document.
+  // Preserve the file so a retry can resume with the same idempotency key.
+  const document = await executeCore<Data>(
+    '/kb/documents',
+    {
+      knowledgeBaseId,
+      title: file.name.slice(0, 255),
+      fileId: uploaded.$id,
+      mimeType: file.type || 'application/octet-stream',
+      size: file.size,
+    },
+    ExecutionMethod.POST,
+    { organizationId, ...(baseKey ? { idempotencyKey: `${baseKey}:document` } : {}) },
+  );
   try {
-    document = await executeCore<Data>(
-      '/kb/documents',
-      {
-        knowledgeBaseId,
-        title: file.name.slice(0, 255),
-        fileId: uploaded.$id,
-        mimeType: file.type || 'application/octet-stream',
-        size: file.size,
-      },
-      ExecutionMethod.POST,
-      baseKey ? { idempotencyKey: `${baseKey}:document` } : {},
-    );
-  } catch (error) {
-    await storage
-      .deleteFile({ bucketId: KNOWLEDGE_BUCKET_ID, fileId: uploaded.$id })
-      .catch(() => undefined);
-    throw error;
-  }
-  try {
-    return await executeCore<Data>(
-      '/kb/index',
-      { documentId: document.id },
-      ExecutionMethod.POST,
-      baseKey ? { idempotencyKey: `${baseKey}:index` } : {},
-    );
+    return await executeCore<Data>('/kb/index', { documentId: document.id }, ExecutionMethod.POST, {
+      organizationId,
+      ...(baseKey ? { idempotencyKey: `${baseKey}:index` } : {}),
+    });
   } catch (error) {
     return {
       ...document,
@@ -298,7 +300,7 @@ export async function executeCore<T>(
   path: string,
   body: Data,
   method = ExecutionMethod.POST,
-  options: { idempotencyKey?: string } = {},
+  options: { idempotencyKey?: string; organizationId?: string } = {},
 ) {
   let execution: Models.Execution;
   try {
@@ -306,7 +308,7 @@ export async function executeCore<T>(
       functionId: CORE_FUNCTION_ID,
       body: JSON.stringify({
         ...body,
-        organizationId: getOrganizationContext(),
+        organizationId: options.organizationId ?? getOrganizationContext(),
       }),
       async: false,
       xpath: path,

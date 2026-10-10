@@ -15,7 +15,7 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'corepack pnpm --filter @matrixflow/web exec next dev -p 3100',
+    command: 'pnpm --filter @matrixflow/web exec next dev -p 3100',
     url: 'http://127.0.0.1:3100',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

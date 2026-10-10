@@ -4,6 +4,7 @@ import { clearAppwriteCache, clearOrganizationContext } from '@/lib/api-client';
 import { setOrganizationContext } from '@/lib/backend/organization-context';
 import {
   getCurrentIdentity,
+  invalidateIdentityRequest,
   createOrganization,
   inviteOrganizationMember,
   updateCurrentProfile,
@@ -48,6 +49,7 @@ interface MfaRequiredError extends Error {
 }
 
 const AUTH_BOOTSTRAP_TIMEOUT_MS = 4_000;
+let identityVersion = 0;
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -73,6 +75,7 @@ function isExistingAccount(error: unknown): boolean {
 }
 
 async function clearSession() {
+  invalidateIdentityRequest();
   clearAppwriteCache();
   await account.deleteSession({ sessionId: 'current' }).catch(() => undefined);
 }
@@ -94,6 +97,7 @@ export const useAuth = create<AuthState>()(
       loading: false,
 
       login: async (email, password) => {
+        identityVersion += 1;
         set({ loading: true });
         try {
           await clearSession();
@@ -147,6 +151,7 @@ export const useAuth = create<AuthState>()(
       },
 
       registerWithOtp: async (email, password, name) => {
+        identityVersion += 1;
         set({ loading: true });
         try {
           await clearSession();
@@ -168,6 +173,7 @@ export const useAuth = create<AuthState>()(
       },
 
       sendOtp: async (email) => {
+        identityVersion += 1;
         set({ loading: true });
         try {
           await clearSession();
@@ -189,6 +195,7 @@ export const useAuth = create<AuthState>()(
       },
 
       verifyOtp: async (userId, code, name) => {
+        identityVersion += 1;
         set({ loading: true });
         try {
           clearAppwriteCache();
@@ -216,9 +223,11 @@ export const useAuth = create<AuthState>()(
       },
 
       updateProfile: async (name, avatarUrl) => {
+        const version = identityVersion;
         set({ loading: true });
         try {
           const updatedUser = await updateCurrentProfile(name, avatarUrl);
+          if (version !== identityVersion) throw new Error('AUTH_REQUEST_SUPERSEDED');
           set({ user: updatedUser });
         } finally {
           set({ loading: false });
@@ -226,14 +235,17 @@ export const useAuth = create<AuthState>()(
       },
 
       logout: async () => {
-        await clearSession();
+        identityVersion += 1;
         clearOrganizationContext();
         set({ user: null, organizationId: null, pendingMfaChallengeId: null });
+        await clearSession();
       },
 
       fetchMe: async (timeoutMs = AUTH_BOOTSTRAP_TIMEOUT_MS) => {
+        const version = ++identityVersion;
         try {
           const me = await withTimeout(getCurrentIdentity(), timeoutMs);
+          if (version !== identityVersion) throw new Error('AUTH_REQUEST_SUPERSEDED');
           const persisted = get().organizationId;
           const orgId = me.memberships.some((membership) => membership.organizationId === persisted)
             ? persisted
@@ -242,8 +254,10 @@ export const useAuth = create<AuthState>()(
           set({ user: me, organizationId: orgId });
           return me;
         } catch (error) {
-          clearOrganizationContext();
-          set({ user: null, organizationId: null, pendingMfaChallengeId: null });
+          if (version === identityVersion) {
+            clearOrganizationContext();
+            set({ user: null, organizationId: null, pendingMfaChallengeId: null });
+          }
           throw error;
         }
       },

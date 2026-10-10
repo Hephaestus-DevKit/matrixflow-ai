@@ -53,6 +53,8 @@ jobs:
             echo "smoke=true" >> "$GITHUB_OUTPUT"
           else
             echo "smoke=false" >> "$GITHUB_OUTPUT"
+            echo "::error title=Appwrite smoke test blocked::MATRIXFLOW_TEST_EMAIL and MATRIXFLOW_TEST_PASSWORD must be configured before publishing a production Function."
+            exit 1
           fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: steps.credential.outputs.enabled == 'true'

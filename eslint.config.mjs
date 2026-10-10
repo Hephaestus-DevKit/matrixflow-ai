@@ -3,11 +3,16 @@ import js from '@eslint/js';
 import { FlatCompat } from '@eslint/eslintrc';
 import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
+import { fileURLToPath } from 'node:url';
 
 const compat = new FlatCompat({ baseDirectory: import.meta.dirname });
 const nextConfigs = compat.extends('next/core-web-vitals').map((config) => ({
   ...config,
   files: ['apps/web/**/*.{js,jsx,ts,tsx}'],
+  settings: {
+    ...config.settings,
+    next: { rootDir: fileURLToPath(new URL('./apps/web/', import.meta.url)) },
+  },
 }));
 
 export default [

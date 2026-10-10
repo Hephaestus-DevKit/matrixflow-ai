@@ -73,3 +73,15 @@ test('requires the selected locale in server-rendered content and metadata', () 
   assert.ok(failures.some((failure) => failure.includes('content marker')));
   assert.ok(failures.some((failure) => failure.includes('localized title')));
 });
+
+test('localized text in hydration scripts cannot disguise a missing page body', () => {
+  const marker = 'AI workforce for cross-border commerce';
+  const failures = validateLocalePage({
+    locale: 'en',
+    marker,
+    title: 'MatrixFlow AI',
+    status: 200,
+    body: `<html lang="en"><head><title>MatrixFlow AI</title></head><body><script>const dictionary = "${marker}";</script><p>Loading</p></body></html>`,
+  });
+  assert.ok(failures.some((failure) => failure.includes('content marker')));
+});

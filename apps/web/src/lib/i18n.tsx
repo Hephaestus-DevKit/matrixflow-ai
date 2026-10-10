@@ -751,18 +751,29 @@ export function LocaleProvider({
   initialLocale?: Locale;
 }) {
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
+  const [localeReady, setLocaleReady] = useState(false);
   const pathname = usePathname();
   const titleRef = useRef('');
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    const hasLocaleCookie = document.cookie
-      .split(';')
-      .some((entry) => entry.trim().startsWith(`${LOCALE_COOKIE}=`));
+    const cookieValue =
+      document.cookie
+        .split(';')
+        .map((entry) => entry.trim())
+        .find((entry) => entry.startsWith(`${LOCALE_COOKIE}=`))
+        ?.slice(LOCALE_COOKIE.length + 1) ?? null;
+    let saved = cookieValue;
+    if (!isLocale(saved)) {
+      try {
+        saved = window.localStorage.getItem(STORAGE_KEY);
+      } catch {
+        // Storage can be disabled by browser privacy settings.
+      }
+    }
     // The cookie is the server-rendering source of truth. Only fall back to
     // legacy localStorage when no locale cookie exists, otherwise hydration
     // can visibly switch the language back to a stale local value.
-    if (!hasLocaleCookie && isLocale(saved)) {
+    if (isLocale(saved)) {
       setLocaleState(saved);
       // Update the document metadata in the same pass as the persisted locale.
       // This avoids the first render's observer briefly restoring the default
@@ -772,13 +783,22 @@ export function LocaleProvider({
       document.documentElement.lang = saved;
       document.title = title;
     }
+    setLocaleReady(true);
   }, []);
 
   useEffect(() => {
-    document.documentElement.lang = locale;
-    window.localStorage.setItem(STORAGE_KEY, locale);
+    if (!localeReady) return;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, locale);
+    } catch {
+      // The cookie still preserves the selection without localStorage.
+    }
     const secureCookie = window.location.protocol === 'https:' ? '; Secure' : '';
     document.cookie = `${LOCALE_COOKIE}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax${secureCookie}`;
+  }, [locale, localeReady]);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
     // `usePathname()` can briefly be null during a direct App Router boot;
     // the browser pathname is the safe fallback for that first title commit.
     const currentPathname = pathname ?? window.location.pathname;

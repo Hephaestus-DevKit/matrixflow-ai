@@ -52,13 +52,22 @@ export async function claimIdempotency(services, teamId, { key, fingerprint, met
 }
 
 export async function completeIdempotency(services, teamId, claimId, response, status) {
-  const serialized = JSON.stringify(response);
+  let serialized = JSON.stringify(response);
+  let replayStatus = status;
   if (Buffer.byteLength(serialized, 'utf8') > MAX_REPLAY_BYTES) {
-    await releaseIdempotency(services, teamId, claimId);
-    return false;
+    // Keep a completion marker even when the full result cannot fit in a row.
+    // Releasing the claim here would execute the successful write again.
+    serialized = JSON.stringify({
+      error: {
+        code: 'IDEMPOTENCY_REPLAY_UNAVAILABLE',
+        message: '请求已完成，响应过大无法重放；请读取资源状态',
+        requestId: response.meta?.requestId,
+      },
+    });
+    replayStatus = 409;
   }
   await updateOwned(services, TABLES.idempotencyKeys, claimId, teamId, {
-    status,
+    status: replayStatus,
     response: serialized,
     expiresAt: new Date(Date.now() + REPLAY_TTL_MS).toISOString(),
   });

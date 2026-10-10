@@ -23,6 +23,9 @@ const GENERIC_ERROR_COPY: Record<
     aiInvalid: string;
     quotaExceeded: string;
     planLimit: string;
+    activeJobs: string;
+    secretUnavailable: string;
+    organizationChanged: string;
   }
 > = {
   'zh-CN': {
@@ -45,6 +48,9 @@ const GENERIC_ERROR_COPY: Record<
     aiInvalid: 'AI 请求或模型响应无效，请调整输入后重试',
     quotaExceeded: '本月 AI 额度已用尽，请升级套餐或下月再试',
     planLimit: '已达到当前套餐的资源上限，请升级套餐后继续',
+    activeJobs: '请先取消后台任务并等待执行结束，再删除数据',
+    secretUnavailable: '密钥已创建，无法再次显示完整密钥；请撤销后重新创建',
+    organizationChanged: '团队空间已切换，请重试',
   },
   'zh-TW': {
     operationFailed: '操作失敗，請稍後再試',
@@ -66,6 +72,9 @@ const GENERIC_ERROR_COPY: Record<
     aiInvalid: 'AI 請求或模型回應無效，請調整輸入後再試',
     quotaExceeded: '本月 AI 額度已用盡，請升級方案或下月再試',
     planLimit: '已達到目前方案的資源上限，請升級方案後繼續',
+    activeJobs: '請先取消背景任務並等待執行結束，再刪除資料',
+    secretUnavailable: '密鑰已建立，無法再次顯示完整密鑰；請撤銷後重新建立',
+    organizationChanged: '團隊空間已切換，請重試',
   },
   en: {
     operationFailed: 'Something went wrong. Try again shortly.',
@@ -89,6 +98,10 @@ const GENERIC_ERROR_COPY: Record<
     aiInvalid: 'The AI request or model response was invalid. Adjust the input and try again.',
     quotaExceeded: 'This month’s AI quota is used up. Upgrade the plan or try again next month.',
     planLimit: 'This plan has reached its resource limit. Upgrade to continue.',
+    activeJobs: 'Cancel background jobs and wait for them to finish before deleting data.',
+    secretUnavailable:
+      'The key was created and cannot be shown again. Revoke it and create a new key.',
+    organizationChanged: 'The team workspace changed. Try again.',
   },
 };
 
@@ -101,6 +114,9 @@ const ERROR_COPY_BY_CODE: Record<string, keyof (typeof GENERIC_ERROR_COPY)['en']
   RESOURCE_NOT_FOUND: 'notFound',
   ROUTE_NOT_FOUND: 'notFound',
   CONFLICT: 'conflict',
+  ACTIVE_JOBS_EXIST: 'activeJobs',
+  API_KEY_SECRET_UNAVAILABLE: 'secretUnavailable',
+  ORGANIZATION_CHANGED: 'organizationChanged',
   IDEMPOTENCY_CONFLICT: 'conflict',
   IDEMPOTENCY_IN_PROGRESS: 'conflict',
   IDEMPOTENCY_REPLAY_UNAVAILABLE: 'conflict',
