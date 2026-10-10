@@ -131,8 +131,10 @@ export function validateLocalePage({ locale, marker, title, status, body }) {
 }
 
 export async function runProductionSmoke({
-  baseUrl = process.env.MATRIXFLOW_PRODUCTION_URL || 'https://matrixflow-ai.vercel.app',
-  canonicalOrigin = process.env.MATRIXFLOW_CANONICAL_URL || 'https://matrixflow-ai.vercel.app',
+  baseUrl = process.env.MATRIXFLOW_PRODUCTION_URL ||
+    'https://matrixflow-ai-sycamore-tree.vercel.app',
+  canonicalOrigin = process.env.MATRIXFLOW_CANONICAL_URL ||
+    'https://matrixflow-ai-sycamore-tree.vercel.app',
   fetchPage = fetch,
   timeoutMs = 15_000,
 } = {}) {

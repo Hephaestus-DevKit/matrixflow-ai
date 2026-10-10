@@ -35,7 +35,7 @@
 - 组织可导出脱敏数据，或在精确确认后删除业务数据；安全审计、订阅、发票、交易与计费事件按保留策略留存。
 - AI 用量会按调用、输入/输出 Token、供应商/模型与可选价格表记录；成本缺少价格配置时显示为 0，不会推测或虚构费用。
 
-生产环境：<https://matrixflow-ai.vercel.app>。生产前端部署在 Vercel，数据与 Function 部署在 Appwrite Cloud Singapore；生产 Function 的部署保留策略为 5 天，便于回滚同时避免无界堆积。
+生产环境：<https://matrixflow-ai-sycamore-tree.vercel.app>。生产前端部署在 Vercel，数据与 Function 部署在 Appwrite Cloud Singapore；生产 Function 的部署保留策略为 5 天，便于回滚同时避免无界堆积。
 
 ## 架构
 
