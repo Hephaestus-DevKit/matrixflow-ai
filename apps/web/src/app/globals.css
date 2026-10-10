@@ -1025,6 +1025,15 @@
     padding: 0.7rem;
   }
 
+  /* Give the three-step preview full text width on the smallest phones. */
+  .landing-hero .landing-console > div:nth-child(2) > div > div > span:first-child {
+    display: none;
+  }
+
+  .landing-hero .landing-console > div:nth-child(2) > div > div:nth-child(2) {
+    margin-left: 1rem;
+  }
+
   .landing-trust-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
