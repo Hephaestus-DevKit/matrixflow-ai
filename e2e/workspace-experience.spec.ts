@@ -147,3 +147,13 @@ test('knowledge answers run in the background and retain cited source material',
   await expect(page.getByText('Capacity: 20 liters', { exact: false }).first()).toBeVisible();
   expect(calls.find((call) => call.path.endsWith('/ask'))?.body.mode).toBe('async');
 });
+
+test('an active worker task can be canceled from its progress card', async ({ page }) => {
+  const { calls } = await mockWorkspace(page, { keepJobsRunning: true });
+  await page.goto('/dashboard/agents/agent-1');
+  await page.getByLabel('Task to run').fill('Draft a product support answer');
+  await page.getByRole('button', { name: 'Start run', exact: true }).click();
+  await page.getByRole('button', { name: 'Cancel task', exact: true }).click();
+  await expect(page.getByText('Task canceled', { exact: true })).toBeVisible();
+  expect(calls.find((call) => call.path.endsWith('/cancel'))?.body.reason).toBe('user_requested');
+});

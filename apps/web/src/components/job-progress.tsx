@@ -135,7 +135,9 @@ export function JobProgress({
           <p className="font-semibold">{job ? copy.statuses[job.status] : copy.statuses.QUEUED}</p>
           <p className="mt-1 text-muted-foreground">
             {active
-              ? copy.active
+              ? job?.cancelRequested
+                ? cancelPending
+                : copy.active
               : job?.status === 'FAILED'
                 ? copy.failed
                 : job?.status === 'CANCELED'

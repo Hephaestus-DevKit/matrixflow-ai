@@ -21,6 +21,7 @@ export function Providers({
       new QueryClient({
         defaultOptions: {
           queries: {
+            meta: { organizationId, userId },
             staleTime: 30_000,
             retry: (failureCount, error) => {
               if (failureCount >= 2) return false;

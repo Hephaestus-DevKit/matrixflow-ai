@@ -79,7 +79,7 @@ export default function LandingPage() {
                   <LocalizedText id="public.heroTitleAccent" />
                 </span>
               </h1>
-              <p className="mx-auto mt-5 max-w-[33rem] text-[0.9375rem] leading-6 text-slate-600 sm:mt-7 sm:text-base sm:leading-7 lg:mx-0">
+              <p className="landing-hero-description mx-auto mt-5 max-w-[33rem] text-[0.9375rem] leading-6 text-slate-600 sm:mt-7 sm:text-base sm:leading-7 lg:mx-0">
                 <LocalizedText id="public.heroDescription" />
               </p>
               <div className="mt-7 flex flex-col items-center gap-3 sm:mt-8 sm:flex-row sm:justify-center lg:justify-start">

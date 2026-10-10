@@ -220,3 +220,24 @@ test('keeps the complete public journey inside the 320px minimum width in every 
     }
   }
 });
+
+test('narrow English hero remains readable with fallback system fonts', async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([
+    { name: 'matrixflow-locale', value: 'en', domain: '127.0.0.1', path: '/' },
+  ]);
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto('/');
+  await page.addStyleTag({
+    content: ':root { --font-sans: Arial, sans-serif; --font-display: Arial, sans-serif; }',
+  });
+  const layout = await page.locator('.landing-hero').evaluate((hero) => ({
+    height: hero.getBoundingClientRect().height,
+    headingSize: Number.parseFloat(getComputedStyle(hero.querySelector('h1')!).fontSize),
+  }));
+  expect(layout.height).toBeLessThanOrEqual(1250);
+  expect(layout.headingSize).toBeGreaterThanOrEqual(26);
+  await expect(page.locator('.landing-primary-action').first()).toBeInViewport();
+});

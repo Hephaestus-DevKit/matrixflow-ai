@@ -2,7 +2,11 @@ import { type Page } from '@playwright/test';
 
 export async function mockWorkspace(
   page: Page,
-  options: { slowIdentity?: boolean; identityUnavailable?: boolean } = {},
+  options: {
+    slowIdentity?: boolean;
+    identityUnavailable?: boolean;
+    keepJobsRunning?: boolean;
+  } = {},
 ) {
   const calls: Array<{ path: string; method: string; body: Record<string, unknown> }> = [];
   let items = [
@@ -24,6 +28,7 @@ export async function mockWorkspace(
     skills: '[]',
   };
   let jobReads = 0;
+  let canceled = false;
   let jobType = 'agent.run';
   const row = (value: Record<string, unknown>, org = 'team-1') => ({
     $createdAt: '2026-10-10T01:00:00Z',
@@ -185,12 +190,22 @@ export async function mockWorkspace(
         jobReads = 0;
         data = { id: 'job-1', type: jobType, status: 'QUEUED', attempts: 0, maxAttempts: 3 };
       }
+      if (request.path === '/jobs/job-1/cancel') {
+        canceled = true;
+        data = { id: 'job-1', type: jobType, status: 'CANCELED', attempts: 1, maxAttempts: 3 };
+      }
       if (request.path === '/jobs/job-1') {
         jobReads++;
         data = {
           id: 'job-1',
           type: jobType,
-          status: jobReads > 1 ? 'SUCCEEDED' : 'RUNNING',
+          status: canceled
+            ? 'CANCELED'
+            : options.keepJobsRunning
+              ? 'RUNNING'
+              : jobReads > 1
+                ? 'SUCCEEDED'
+                : 'RUNNING',
           attempts: 1,
           maxAttempts: 3,
           result:
