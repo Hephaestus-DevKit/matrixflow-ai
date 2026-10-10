@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import {
   Ban,
@@ -289,7 +290,50 @@ export default function JobsPage() {
                   </span>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="truncate text-sm font-bold text-foreground">{job.type}</h2>
+                      <h2 className="truncate text-sm font-bold text-foreground">
+                        <Link href={`/dashboard/jobs/${job.id}`} className="hover:underline">
+                          {(
+                            {
+                              'agent.run':
+                                locale === 'en'
+                                  ? 'AI worker'
+                                  : locale === 'zh-TW'
+                                    ? 'AI 員工'
+                                    : 'AI 员工',
+                              'workflow.run':
+                                locale === 'en'
+                                  ? 'Workflow'
+                                  : locale === 'zh-TW'
+                                    ? '工作流程'
+                                    : '工作流',
+                              'knowledge.index':
+                                locale === 'en'
+                                  ? 'Knowledge indexing'
+                                  : locale === 'zh-TW'
+                                    ? '知識索引'
+                                    : '知识索引',
+                              'content.generate':
+                                locale === 'en'
+                                  ? 'Content generation'
+                                  : locale === 'zh-TW'
+                                    ? '內容產生'
+                                    : '内容生成',
+                              'knowledge.ask':
+                                locale === 'en'
+                                  ? 'Knowledge answer'
+                                  : locale === 'zh-TW'
+                                    ? '知識問答'
+                                    : '知识问答',
+                              'content.generate-all':
+                                locale === 'en'
+                                  ? 'Content generation'
+                                  : locale === 'zh-TW'
+                                    ? '內容產生'
+                                    : '内容生成',
+                            } as Record<string, string>
+                          )[job.type] || job.type}
+                        </Link>
+                      </h2>
                       <span className="status-pill">{copy.status[job.status]}</span>
                     </div>
                     <p className="mt-1 truncate font-mono text-2xs text-muted-foreground">
@@ -315,7 +359,7 @@ export default function JobsPage() {
                     ) : (
                       <Ban className="h-4 w-4" aria-hidden="true" />
                     )}
-                    {canceling === job.id ? copy.canceling : copy.cancel}
+                    {canceling === job.id || job.cancelRequested ? copy.canceling : copy.cancel}
                   </Button>
                 )}
               </article>

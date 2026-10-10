@@ -73,3 +73,15 @@ test('a read completing after a team switch cannot populate the new team cache',
   resolve({ $id: 'agent-1', organizationId: 'team-1' } as never);
   await expect(pending).rejects.toMatchObject({ code: 'ORGANIZATION_CHANGED' });
 });
+
+test('uploads enqueue indexing with the original team and stable idempotency key', async () => {
+  await uploadKnowledgeFile('base-1', uploadForm(), { idempotencyKey: 'upload-once' });
+  const [input] = jest.mocked(appwriteFunctions.createExecution).mock.calls[1];
+  const execution = input as unknown as { body: string; headers: Record<string, string> };
+  expect(JSON.parse(execution.body)).toMatchObject({
+    documentId: 'document-1',
+    mode: 'async',
+    organizationId: 'team-1',
+  });
+  expect(execution.headers['idempotency-key']).toBe('upload-once:index');
+});

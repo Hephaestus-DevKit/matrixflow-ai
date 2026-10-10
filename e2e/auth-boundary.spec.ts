@@ -6,6 +6,13 @@ async function chooseLocale(page: Page, locale: 'zh-CN' | 'zh-TW' | 'en') {
 }
 
 test('protected dashboard routes fail closed to the localized login screen', async ({ page }) => {
+  await page.route('https://sgp.cloud.appwrite.io/v1/**', async (route) => {
+    await route.fulfill({
+      status: 401,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 401, type: 'user_unauthorized', message: 'No active session' }),
+    });
+  });
   await page.goto('/');
   await chooseLocale(page, 'en');
   for (const path of [
@@ -15,7 +22,7 @@ test('protected dashboard routes fail closed to the localized login screen', asy
     '/dashboard/jobs',
   ]) {
     await page.goto(path);
-    await expect(page).toHaveURL(/\/login$/);
+    await expect(page).toHaveURL(/\/login(?:\?next=.+)?$/);
     await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   }

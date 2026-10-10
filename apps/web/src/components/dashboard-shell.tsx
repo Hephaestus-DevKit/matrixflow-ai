@@ -5,9 +5,11 @@ import { usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/sidebar';
 import { Topbar } from '@/components/topbar';
 import { useLocale } from '@/lib/i18n';
+import { useAuth } from '@/lib/auth-store';
 
 export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const organizationId = useAuth((state) => state.organizationId);
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [navigationPending, setNavigationPending] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -129,7 +131,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           }}
         />
         <main id="main-content" className="px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
-          <div key={pathname} className="dashboard-content mx-auto w-full max-w-[1520px]">
+          <div
+            key={`${organizationId}:${pathname}`}
+            className="dashboard-content mx-auto w-full max-w-[1520px]"
+          >
             {children}
           </div>
         </main>

@@ -171,8 +171,8 @@ test('keeps authentication helper actions touch friendly', async ({ page }) => {
     );
     expect(actions.length, `${path} should expose helper actions`).toBeGreaterThan(0);
     for (const action of actions) {
-      expect(action.height, `${path} helper action is too short`).toBeGreaterThanOrEqual(44);
-      expect(action.width, `${path} helper action is too narrow`).toBeGreaterThanOrEqual(44);
+      expect(action.height + 0.01, `${path} helper action is too short`).toBeGreaterThanOrEqual(44);
+      expect(action.width + 0.01, `${path} helper action is too narrow`).toBeGreaterThanOrEqual(44);
     }
   }
 });

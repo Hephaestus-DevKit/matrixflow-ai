@@ -136,6 +136,7 @@ const ERROR_COPY_BY_CODE: Record<string, keyof (typeof GENERIC_ERROR_COPY)['en']
   METHOD_NOT_ALLOWED: 'invalidRequest',
   UNSUPPORTED_MEDIA_TYPE: 'invalidRequest',
   INVALID_REQUEST: 'invalidRequest',
+  VALIDATION_ERROR: 'invalidRequest',
   FILE_REQUIRED: 'invalidRequest',
   FILE_TOO_LARGE: 'tooLarge',
   FILE_NOT_FOUND: 'notFound',
@@ -152,6 +153,7 @@ const ERROR_COPY_BY_CODE: Record<string, keyof (typeof GENERIC_ERROR_COPY)['en']
   JOB_WORKER_UNAUTHORIZED: 'forbidden',
   JOB_CONTEXT_INVALID: 'invalidRequest',
   JOB_TYPE_INVALID: 'invalidRequest',
+  JOB_WORKER_TIMEOUT: 'timeout',
   JOB_PAYLOAD_TOO_LARGE: 'tooLarge',
   CONNECTOR_NOT_CONFIGURED: 'preview',
   CONNECTOR_URL_INVALID: 'invalidRequest',
@@ -188,6 +190,7 @@ const ERROR_COPY_BY_CODE: Record<string, keyof (typeof GENERIC_ERROR_COPY)['en']
   AI_SYSTEM_TOO_LARGE: 'tooLarge',
   AI_MONTHLY_QUOTA_EXCEEDED: 'quotaExceeded',
   AI_RATE_LIMITED: 'rateLimited',
+  AI_PROVIDER_RATE_LIMITED: 'rateLimited',
   PLAN_LIMIT_EXCEEDED: 'planLimit',
 };
 

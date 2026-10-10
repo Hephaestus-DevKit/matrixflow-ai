@@ -15,12 +15,7 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react';
-import type {
-  AgentSummary,
-  ContentProjectSummary,
-  KnowledgeBaseSummary,
-  UsageSummary,
-} from '@matrixflow/shared';
+import type { UsageSummary } from '@matrixflow/shared';
 import { useAuth } from '@/lib/auth-store';
 import { apiClient } from '@/lib/api-client';
 import { ErrorState, LoadingCards } from '@/components/ui/states';
@@ -56,17 +51,15 @@ const QUICK_ACTIONS = [
 export default function DashboardPage() {
   const { user } = useAuth();
   const { t, locale } = useLocale();
-  const agents = useQuery({
-    queryKey: ['agents'],
-    queryFn: () => apiClient.get<AgentSummary[]>('/agents'),
-  });
-  const projects = useQuery({
-    queryKey: ['content-projects'],
-    queryFn: () => apiClient.get<ContentProjectSummary[]>('/content/projects'),
-  });
-  const knowledge = useQuery({
-    queryKey: ['kb'],
-    queryFn: () => apiClient.get<KnowledgeBaseSummary[]>('/kb'),
+  const summary = useQuery({
+    queryKey: ['dashboard-summary'],
+    queryFn: () =>
+      apiClient.get<{
+        agents: number;
+        activeAgents: number;
+        contentProjects: number;
+        knowledgeBases: number;
+      }>('/dashboard/summary'),
   });
   const usage = useQuery({
     queryKey: ['usage'],
@@ -82,11 +75,11 @@ export default function DashboardPage() {
       }>('/health'),
     staleTime: 60_000,
   });
-  const queries = [agents, projects, knowledge, usage, health];
+  const queries = [summary, usage, health];
   const isLoading = queries.some((query) => query.isLoading);
   const hasError = queries.some((query) => query.isError);
   const retry = () => void Promise.all(queries.map((query) => query.refetch()));
-  const activeAgents = agents.data?.filter((agent) => agent.status === 'ACTIVE').length ?? 0;
+  const activeAgents = summary.data?.activeAgents;
   const aiCalls = usage.data?.ai_call ?? 0;
   const onboarding = [
     {
@@ -96,17 +89,17 @@ export default function DashboardPage() {
     },
     {
       label: t('dashboard.createKnowledge'),
-      done: Boolean(knowledge.data?.length),
+      done: Boolean(summary.data?.knowledgeBases),
       href: '/dashboard/knowledge/new',
     },
     {
       label: t('dashboard.createAgent'),
-      done: Boolean(agents.data?.length),
+      done: Boolean(summary.data?.agents),
       href: '/dashboard/agents/new',
     },
     {
       label: t('dashboard.createProject'),
-      done: Boolean(projects.data?.length),
+      done: Boolean(summary.data?.contentProjects),
       href: '/dashboard/content',
     },
   ] as const;
@@ -155,7 +148,7 @@ export default function DashboardPage() {
               </p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 {health.data.ai.ready
-                  ? `${health.data.ai.provider} · ${health.data.ai.protocol || t('dashboard.unifiedProtocol')} · ${health.data.ai.model} · ${health.data.limits.monthlyAiCalls} ${t('dashboard.monthlyQuota')}`
+                  ? `${health.data.ai.model || 'AI'} · ${health.data.limits.monthlyAiCalls.toLocaleString(locale)} ${t('dashboard.monthlyQuota')}`
                   : t('dashboard.aiPendingDescription')}
               </p>
             </div>
@@ -163,7 +156,7 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {!isLoading && !onboardingComplete && (
+      {!isLoading && !hasError && !onboardingComplete && (
         <section className="surface-card p-5 sm:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -201,35 +194,34 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {hasError ? (
-        <ErrorState message={t('dashboard.metricsError')} onRetry={retry} />
-      ) : isLoading ? (
+      {hasError && <ErrorState message={t('dashboard.metricsError')} onRetry={retry} />}
+      {isLoading ? (
         <LoadingCards count={4} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             label={t('dashboard.activeAgents')}
-            value={activeAgents}
-            detail={`${agents.data?.length ?? 0} ${t('dashboard.roles')}`}
+            value={activeAgents ?? '—'}
+            detail={`${summary.data?.agents ?? '—'} ${t('dashboard.roles')}`}
             icon={Bot}
           />
           <StatCard
             label={t('dashboard.contentProjects')}
-            value={projects.data?.length ?? 0}
+            value={summary.data?.contentProjects ?? '—'}
             detail={t('dashboard.contentProjectDetail')}
             icon={Factory}
             tone="success"
           />
           <StatCard
             label={t('dashboard.aiCalls')}
-            value={aiCalls.toLocaleString()}
+            value={usage.data ? aiCalls.toLocaleString(locale) : '—'}
             detail={t('dashboard.currentOrganization')}
             icon={Zap}
             tone="warning"
           />
           <StatCard
             label={t('dashboard.knowledgeBases')}
-            value={knowledge.data?.length ?? 0}
+            value={summary.data?.knowledgeBases ?? '—'}
             detail={t('dashboard.knowledgeDetail')}
             icon={FolderOpen}
             tone="info"

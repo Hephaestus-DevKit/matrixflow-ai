@@ -283,10 +283,15 @@ export async function uploadKnowledgeFile(
     { organizationId, ...(baseKey ? { idempotencyKey: `${baseKey}:document` } : {}) },
   );
   try {
-    return await executeCore<Data>('/kb/index', { documentId: document.id }, ExecutionMethod.POST, {
-      organizationId,
-      ...(baseKey ? { idempotencyKey: `${baseKey}:index` } : {}),
-    });
+    return await executeCore<Data>(
+      '/kb/index',
+      { documentId: document.id, mode: 'async' },
+      ExecutionMethod.POST,
+      {
+        organizationId,
+        ...(baseKey ? { idempotencyKey: `${baseKey}:index` } : {}),
+      },
+    );
   } catch (error) {
     return {
       ...document,

@@ -4,6 +4,7 @@ import {
   getRow,
   listRows,
   listRowsPage,
+  countRows,
   uploadKnowledgeFile,
   BackendError,
 } from './data';
@@ -56,6 +57,15 @@ function chunks<T>(items: T[], size = 100) {
 
 async function routeGet(path: string) {
   const { segments, search } = parts(path);
+  if (path === '/dashboard/summary') {
+    const [agents, activeAgents, contentProjects, knowledgeBases] = await Promise.all([
+      countRows(TABLES.agents),
+      countRows(TABLES.agents, [Query.equal('status', 'ACTIVE')]),
+      countRows(TABLES.contentProjects),
+      countRows(TABLES.knowledgeBases),
+    ]);
+    return { agents, activeAgents, contentProjects, knowledgeBases };
+  }
   if (segments[0] === 'agents') {
     if (segments[1]) {
       const [agent, runs] = await Promise.all([
@@ -201,7 +211,7 @@ async function routeGet(path: string) {
     }
     const withMessages = conversations.map((conversation) => ({
       ...conversation,
-      messages: messagesByConversation.get(String(conversation.id)) ?? [],
+      messages: (messagesByConversation.get(String(conversation.id)) ?? []).reverse(),
     }));
     const tags = Array.isArray(customer.tags)
       ? customer.tags.map((tag) => ({ tag: String(tag) }))

@@ -189,3 +189,134 @@ test('job lists preserve the legacy array response without pagination options', 
   assert.ok(Array.isArray(result));
   assert.equal(result[0].id, 'job-1');
 });
+
+test('a retryable worker failure persists a retry and dispatches it instead of crashing', async () => {
+  const { executeJob } = await import('../src/jobs.js');
+  const restore = withWorkerSecret('z'.repeat(40));
+  const executions = [];
+  let job = {
+    $id: 'retry-job',
+    organizationId: 'team-1',
+    type: 'agent.run',
+    status: 'QUEUED',
+    attempts: 0,
+    maxAttempts: 3,
+    runAfter: new Date(0).toISOString(),
+    payload: JSON.stringify({ agentId: 'agent-1' }),
+  };
+  const services = {
+    tables: {
+      getRow: async ({ tableId }) => {
+        if (tableId === 'agents')
+          throw Object.assign(new Error('upstream private details'), { code: 'AI_NETWORK_ERROR' });
+        return job;
+      },
+      updateRows: async ({ data }) => {
+        job = { ...job, ...data };
+        return { rows: [job] };
+      },
+    },
+    functions: {
+      createExecution: async (input) => {
+        executions.push(input);
+        return { $id: 'next-attempt' };
+      },
+    },
+  };
+  try {
+    const result = await executeJob(services, { jobId: 'retry-job', organizationId: 'team-1' });
+    assert.equal(result.status, 'RETRY_WAIT');
+    assert.equal(result.attempts, 1);
+    assert.deepEqual(result.error, { code: 'AI_NETWORK_ERROR' });
+    assert.equal(executions.length, 1);
+    assert.ok(new Date(executions[0].scheduledAt).getTime() > Date.now());
+    assert.equal(JSON.stringify(result).includes('upstream private details'), false);
+  } finally {
+    restore();
+  }
+});
+
+test('a failure after cancellation becomes canceled and never dispatches another attempt', async () => {
+  const { executeJob } = await import('../src/jobs.js');
+  let job = {
+    $id: 'cancel-job',
+    organizationId: 'team-1',
+    type: 'agent.run',
+    status: 'QUEUED',
+    attempts: 0,
+    maxAttempts: 3,
+    runAfter: new Date(0).toISOString(),
+    payload: JSON.stringify({ agentId: 'agent-1' }),
+  };
+  let dispatches = 0;
+  const services = {
+    tables: {
+      getRow: async ({ tableId }) => {
+        if (tableId === 'agents') {
+          job.cancelRequested = true;
+          throw Object.assign(new Error('temporary failure'), { code: 'AI_NETWORK_ERROR' });
+        }
+        return job;
+      },
+      updateRows: async ({ data }) => {
+        job = { ...job, ...data };
+        return { rows: [job] };
+      },
+    },
+    functions: {
+      createExecution: async () => {
+        dispatches++;
+      },
+    },
+  };
+  const result = await executeJob(services, { jobId: 'cancel-job', organizationId: 'team-1' });
+  assert.equal(result.status, 'CANCELED');
+  assert.equal(dispatches, 0);
+});
+
+test('task reads atomically recover an expired worker lease and bound recovery attempts', async () => {
+  const { recoverStaleJob } = await import('../src/jobs.js');
+  const restore = withWorkerSecret('r'.repeat(40));
+  let dispatches = 0;
+  const updates = [];
+  const expired = {
+    id: 'expired',
+    organizationId: 'team-1',
+    type: 'agent.run',
+    status: 'RUNNING',
+    leaseToken: 'expired-lease',
+    leaseExpiresAt: new Date(0).toISOString(),
+    attempts: 1,
+    maxAttempts: 3,
+  };
+  const services = {
+    tables: {
+      updateRows: async (input) => {
+        updates.push(input);
+        return { rows: [{ $id: expired.id, ...expired, ...input.data }] };
+      },
+    },
+    functions: {
+      createExecution: async () => {
+        dispatches++;
+      },
+    },
+  };
+  try {
+    const recovered = await recoverStaleJob(services, expired);
+    assert.equal(recovered.status, 'RETRY_WAIT');
+    assert.equal(dispatches, 1);
+    assert.ok(updates[0].queries.some((query) => query.includes('leaseToken')));
+    const terminal = await recoverStaleJob(services, { ...expired, attempts: 3 });
+    assert.equal(terminal.status, 'FAILED');
+    assert.equal(dispatches, 1);
+    const live = await recoverStaleJob(services, {
+      ...expired,
+      leaseExpiresAt: new Date(Date.now() + 60_000).toISOString(),
+    });
+    assert.equal(live.status, 'RUNNING');
+    assert.equal(updates.length, 2);
+  } finally {
+    restore();
+  }
+});

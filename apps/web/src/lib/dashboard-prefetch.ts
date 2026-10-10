@@ -8,9 +8,7 @@ type PrefetchTarget = {
 
 const ROUTE_DATA: Record<string, PrefetchTarget[]> = {
   '/dashboard': [
-    { queryKey: ['agents'], path: '/agents' },
-    { queryKey: ['content-projects'], path: '/content/projects' },
-    { queryKey: ['kb'], path: '/kb' },
+    { queryKey: ['dashboard-summary'], path: '/dashboard/summary' },
     { queryKey: ['usage'], path: '/billing/usage' },
     { queryKey: ['system-health'], path: '/health' },
   ],

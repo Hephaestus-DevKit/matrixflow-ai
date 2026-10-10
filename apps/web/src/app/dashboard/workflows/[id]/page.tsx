@@ -24,16 +24,13 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { PageLoader } from '@/components/ui/states';
 import { Plus, Save, Play, Trash2, ArrowLeft, Settings2, HelpCircle } from 'lucide-react';
-import type {
-  WorkflowDetail,
-  WorkflowDSL,
-  WorkflowEdge,
-  WorkflowNode,
-  WorkflowRunAccepted,
-} from '@matrixflow/shared';
+import type { WorkflowDetail, WorkflowDSL, WorkflowEdge, WorkflowNode } from '@matrixflow/shared';
 import { errorMessage } from '@/lib/errors';
 import { toast } from 'sonner';
 import { useLocale, type Locale } from '@/lib/i18n';
+import { JobProgress } from '@/components/job-progress';
+import { type BackgroundJob } from '@/lib/jobs';
+import { ErrorState } from '@/components/ui/states';
 
 interface EditorNodeData {
   label: string;
@@ -379,6 +376,29 @@ export default function WorkflowEditorPage() {
     { type: 'condition', label: copy.nodes.condition, desc: copy.nodes.conditionDesc },
   ];
   const [mounted, setMounted] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [jobActive, setJobActive] = useState(false);
+  const [runInput, setRunInput] = useState('{}');
+  const runCopy = {
+    'zh-CN': {
+      start: '保存并运行',
+      input: '运行输入（JSON 对象）',
+      invalid: '请输入有效的 JSON 对象，例如 {"product":"旅行背包"}',
+      hint: 'AI 或转换节点可通过 {{input.product}} 引用字段。保存后运行当前画布。',
+    },
+    'zh-TW': {
+      start: '儲存並執行',
+      input: '執行輸入（JSON 物件）',
+      invalid: '請輸入有效的 JSON 物件，例如 {"product":"旅行背包"}',
+      hint: 'AI 或轉換節點可透過 {{input.product}} 引用欄位。儲存後執行目前畫布。',
+    },
+    en: {
+      start: 'Save and run',
+      input: 'Run input (JSON object)',
+      invalid: 'Enter a valid JSON object, e.g. {"product":"Travel backpack"}',
+      hint: 'AI and transform nodes can reference {{input.product}}. Runs save and use the current canvas.',
+    },
+  }[locale];
 
   // ReactFlow Nodes and Edges State
   const [nodes, setNodes, onNodesChange] = useNodesState<EditorNodeData>([]);
@@ -393,7 +413,12 @@ export default function WorkflowEditorPage() {
     setMounted(true);
   }, []);
 
-  const { data: wf } = useQuery({
+  const {
+    data: wf,
+    isLoading: workflowLoading,
+    isError: workflowError,
+    refetch: refetchWorkflow,
+  } = useQuery({
     queryKey: ['wf', id],
     queryFn: () => apiClient.get<WorkflowDetail>(`/workflows/${id}`),
     enabled: !!id,
@@ -404,12 +429,12 @@ export default function WorkflowEditorPage() {
     if (wf?.versions?.[0]?.dsl) {
       const dsl = wf.versions[0].dsl;
       const initialNodes =
-        dsl.nodes?.map((node) => ({
+        dsl.nodes?.map((node, index) => ({
           id: node.id,
           type: 'default',
           position: {
-            x: node.position?.x ?? Math.random() * 300 + 100,
-            y: node.position?.y ?? Math.random() * 300 + 100,
+            x: node.position?.x ?? 100 + index * 140,
+            y: node.position?.y ?? 100 + (index % 3) * 100,
           },
           data: {
             label: `${node.type.toUpperCase()}: ${configLabel(node.config) || copy.unconfigured}`,
@@ -467,8 +492,33 @@ export default function WorkflowEditorPage() {
 
   // Trigger executing the workflow run
   const runMutation = useMutation({
-    mutationFn: () => apiClient.post<WorkflowRunAccepted>(`/workflows/${id}/run`, {}),
-    onSuccess: (result) => toast.success(copy.runSubmitted(result.status, result.runId)),
+    mutationFn: async () => {
+      let input: unknown;
+      try {
+        input = JSON.parse(runInput);
+      } catch {
+        throw new Error(runCopy.invalid);
+      }
+      if (!input || typeof input !== 'object' || Array.isArray(input))
+        throw new Error(runCopy.invalid);
+      // Save the graph shown to the user before queueing; never run an older version silently.
+      await apiClient.post(`/workflows/${id}/versions`, {
+        dsl: compileWorkflow(),
+        changeNote: copy.changedAt(new Date().toLocaleTimeString()),
+      });
+      await queryClient.invalidateQueries({ queryKey: ['wf', id] });
+      return apiClient.post<BackgroundJob>(`/workflows/${id}/run`, { input, mode: 'async' });
+    },
+    onSuccess: (result) => {
+      setJobId(result.id);
+      setJobActive(true);
+    },
+    onError: (error: unknown) =>
+      toast.error(
+        error instanceof Error && error.message === runCopy.invalid
+          ? runCopy.invalid
+          : errorMessage(error),
+      ),
   });
 
   // Save new workflow DSL version back to database
@@ -506,7 +556,7 @@ export default function WorkflowEditorPage() {
 
   // Add a new node to the canvas
   const addNode = (type: WorkflowNode['type']) => {
-    const newId = `${type}_${Date.now().toString().slice(-4)}`;
+    const newId = `${type}_${crypto.randomUUID().slice(0, 8)}`;
     const newNode: EditorNode = {
       id: newId,
       type: 'default',
@@ -560,13 +610,13 @@ export default function WorkflowEditorPage() {
   };
 
   // Compile and save workflow version
-  const handleSaveWorkflow = () => {
+  function compileWorkflow(): WorkflowDSL {
     const dslNodes = nodes.map((n) => {
       const raw = n.data.rawNode || {};
       return {
         id: n.id,
         type: raw.type || 'ai',
-        config: raw.config || {},
+        config: selectedNode?.id === n.id ? editConfig : raw.config || {},
         position: { x: Math.round(n.position.x), y: Math.round(n.position.y) },
       };
     });
@@ -577,13 +627,16 @@ export default function WorkflowEditorPage() {
       condition: e.data?.condition,
     }));
 
+    return { nodes: dslNodes, edges: dslEdges };
+  }
+  const handleSaveWorkflow = () =>
     saveMutation.mutate({
-      dsl: { nodes: dslNodes, edges: dslEdges },
+      dsl: compileWorkflow(),
       changeNote: copy.changedAt(new Date().toLocaleTimeString()),
     });
-  };
 
-  if (!mounted) {
+  if (workflowError) return <ErrorState onRetry={() => void refetchWorkflow()} />;
+  if (!mounted || workflowLoading) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between border-b border-border/40 pb-5">
@@ -642,7 +695,7 @@ export default function WorkflowEditorPage() {
             size="sm"
             className="text-xs border-primary/20 text-primary hover:bg-primary/5 gap-1.5"
             onClick={handleSaveWorkflow}
-            disabled={saveMutation.isPending}
+            disabled={saveMutation.isPending || runMutation.isPending || jobActive}
           >
             <Save className="h-3.5 w-3.5" /> {saveMutation.isPending ? copy.saving : copy.save}
           </Button>
@@ -650,14 +703,39 @@ export default function WorkflowEditorPage() {
             size="sm"
             className="gap-1.5 text-xs"
             onClick={() => runMutation.mutate()}
-            disabled={runMutation.isPending}
+            disabled={runMutation.isPending || saveMutation.isPending || jobActive || !nodes.length}
           >
             <Play className="h-3.5 w-3.5 fill-current" />{' '}
-            {runMutation.isPending ? copy.running : copy.run}
+            {runMutation.isPending ? copy.running : runCopy.start}
           </Button>
         </div>
       </div>
 
+      <details className="surface-card shrink-0 p-4">
+        <summary className="cursor-pointer text-sm font-semibold">{runCopy.input}</summary>
+        <label htmlFor="workflow-input" className="mt-3 block text-xs text-muted-foreground">
+          {runCopy.hint}
+        </label>
+        <Textarea
+          id="workflow-input"
+          aria-label={runCopy.input}
+          value={runInput}
+          onChange={(event) => setRunInput(event.target.value)}
+          rows={3}
+          className="mt-2 font-mono"
+        />
+      </details>
+      {jobId && (
+        <div className="max-h-72 shrink-0 overflow-auto">
+          <JobProgress
+            jobId={jobId}
+            onSettled={() => {
+              setJobActive(false);
+              void queryClient.invalidateQueries({ queryKey: ['wf-logs', id] });
+            }}
+          />
+        </div>
+      )}
       {/* Editor Body */}
       <div className="flex min-h-0 grow flex-col gap-4 lg:flex-row">
         {/* Canvas Area */}

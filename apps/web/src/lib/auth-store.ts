@@ -48,7 +48,7 @@ interface MfaRequiredError extends Error {
   challengeId: string;
 }
 
-const AUTH_BOOTSTRAP_TIMEOUT_MS = 4_000;
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 15_000;
 let identityVersion = 0;
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {

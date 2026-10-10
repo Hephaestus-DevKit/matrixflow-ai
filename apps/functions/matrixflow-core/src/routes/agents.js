@@ -59,6 +59,8 @@ export async function handleAgentRoute({
   if (method === 'POST' && segments.length === 1) {
     requireCapability(membership, 'agents.manage');
     const input = parse(schemas.agentCreate, body);
+    if (input.knowledgeBaseId)
+      await getOwned(services, TABLES.knowledgeBases, input.knowledgeBaseId, context.teamId);
     const reservation = await enforceAgentLimit(services, context.teamId);
     let agent;
     try {
@@ -71,6 +73,7 @@ export async function handleAgentRoute({
         skills: input.skills,
         configuration: {
           tools: input.tools,
+          ...(input.knowledgeBaseId ? { knowledgeBaseId: input.knowledgeBaseId } : {}),
           ...(input.temperature === undefined ? {} : { temperature: input.temperature }),
           ...(input.maxTokens === undefined ? {} : { maxTokens: input.maxTokens }),
           ...(input.topP === undefined ? {} : { topP: input.topP }),
@@ -136,7 +139,10 @@ export async function handleAgentRoute({
     requireCapability(membership, 'agents.manage');
     const input = parse(schemas.agentUpdate, body);
     const current = await getOwned(services, TABLES.agents, segments[1], context.teamId);
+    if (input.knowledgeBaseId)
+      await getOwned(services, TABLES.knowledgeBases, input.knowledgeBaseId, context.teamId);
     const configuration =
+      input.knowledgeBaseId === undefined &&
       input.tools === undefined &&
       input.temperature === undefined &&
       input.maxTokens === undefined &&
@@ -144,12 +150,17 @@ export async function handleAgentRoute({
         ? undefined
         : {
             ...(current.configuration || {}),
+            ...(input.knowledgeBaseId === undefined
+              ? {}
+              : { knowledgeBaseId: input.knowledgeBaseId }),
             ...(input.tools === undefined ? {} : { tools: input.tools }),
             ...(input.temperature === undefined ? {} : { temperature: input.temperature }),
             ...(input.maxTokens === undefined ? {} : { maxTokens: input.maxTokens }),
             ...(input.topP === undefined ? {} : { topP: input.topP }),
           };
-    const requestedStatus = input.status === 'ACTIVE' && !ai.ready ? 'DRAFT' : input.status;
+    if (input.status === 'ACTIVE' && !ai.ready)
+      throw new HttpError('AI 服务未就绪', 503, 'AI_PROVIDER_UNAVAILABLE');
+    const requestedStatus = input.status;
     const updated = await updateOwned(services, TABLES.agents, segments[1], context.teamId, {
       name: input.name,
       role: input.role,

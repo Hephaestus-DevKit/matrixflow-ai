@@ -20,6 +20,10 @@ import { useLocale } from '@/lib/i18n';
 import { PageHeader } from '@/components/ui/page';
 import { EmptyState, ErrorState, LoadingCards } from '@/components/ui/states';
 import { PaginationBar } from '@/components/ui/pagination';
+import { Select } from '@/components/ui/select';
+import { JobProgress } from '@/components/job-progress';
+import { ResultText } from '@/components/ui/result-text';
+import { type BackgroundJob } from '@/lib/jobs';
 
 const PROJECT_PAGE_SIZE = 12;
 
@@ -250,6 +254,49 @@ export default function ContentFactoryPage() {
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, ContentGenerationView>>({});
   const [isCreating, setIsCreating] = useState(false);
+  const [batchActive, setBatchActive] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [language, setLanguage] = useState('en');
+  const [market, setMarket] = useState('');
+  const [tone, setTone] = useState('');
+  const controls = {
+    'zh-CN': {
+      language: '输出语言',
+      market: '目标市场',
+      marketHint: '例如：美国 / Amazon',
+      tone: '文风与受众',
+      toneHint: '例如：简洁友好，面向新手',
+      loading: '正在加载历史内容…',
+      generate: '生成',
+      productHint: '填写材质、尺寸、卖点与限制等已确认事实；信息不足的部分会标注待补充。',
+    },
+    'zh-TW': {
+      language: '輸出語言',
+      market: '目標市場',
+      marketHint: '例如：美國 / Amazon',
+      tone: '文風與受眾',
+      toneHint: '例如：簡潔友善，面向新手',
+      loading: '正在載入歷史內容…',
+      generate: '產生',
+      productHint: '填寫材質、尺寸、賣點與限制等已確認事實；資訊不足的部分會標示待補充。',
+    },
+    en: {
+      language: 'Output language',
+      market: 'Target market',
+      marketHint: 'e.g. US / Amazon',
+      tone: 'Tone and audience',
+      toneHint: 'e.g. Clear and friendly, for beginners',
+      loading: 'Loading saved content…',
+      generate: 'Generate',
+      productHint:
+        'Include confirmed materials, dimensions, benefits and limitations. Missing information will be marked for completion.',
+    },
+  }[locale];
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('create') === '1') setIsCreating(true);
+    if (params.get('project')) setProjectId(params.get('project'));
+  }, []);
   const [projectName, setProjectName] = useState('');
   const [productDesc, setProductDesc] = useState('');
 
@@ -269,7 +316,12 @@ export default function ContentFactoryPage() {
   });
   const projects = projectPage?.data;
 
-  const { data: items, refetch: refetchItems } = useQuery({
+  const {
+    data: items,
+    isLoading: itemsLoading,
+    isError: itemsError,
+    refetch: refetchItems,
+  } = useQuery({
     queryKey: ['content-items', projectId],
     queryFn: () => apiClient.get<ContentItemSummary[]>(`/content/projects/${projectId}/items`),
     enabled: !!projectId,
@@ -279,6 +331,7 @@ export default function ContentFactoryPage() {
     if (Array.isArray(items)) {
       const mappedResults: Record<string, ContentGenerationView> = {};
       items.forEach((item) => {
+        if (mappedResults[item.type]) return;
         mappedResults[item.type] = {
           itemId: item.id,
           content: item.body?.parsed ?? item.body?.raw ?? '',
@@ -296,11 +349,14 @@ export default function ContentFactoryPage() {
     if (!projectId) return;
     setGenerating(type);
     try {
-      await apiClient.post(`/content/projects/${projectId}/generate`, {
+      const job = await apiClient.post<BackgroundJob>(`/content/projects/${projectId}/generate`, {
+        mode: 'async',
         type,
-        variables: { language: 'en' },
+        language,
+        variables: { targetMarket: market.trim(), tone: tone.trim() },
       });
-      await refetchItems();
+      setJobId(job.id);
+      setBatchActive(true);
     } catch (error: unknown) {
       toast.error(errorMessage(error));
     } finally {
@@ -312,13 +368,12 @@ export default function ContentFactoryPage() {
     if (!projectId) return;
     setGenerating('all');
     try {
-      const result = await apiClient.post<{ completed: number; failed: number }>(
+      const result = await apiClient.post<BackgroundJob>(
         `/content/projects/${projectId}/generate-all`,
-        { language: 'en' },
+        { language, variables: { targetMarket: market.trim(), tone: tone.trim() }, mode: 'async' },
       );
-      await refetchItems();
-      if (result.failed) toast.warning(copy.generatePartial(result.completed, result.failed));
-      else toast.success(copy.generateComplete);
+      setJobId(result.id);
+      setBatchActive(true);
     } catch (error: unknown) {
       toast.error(errorMessage(error));
     } finally {
@@ -407,6 +462,7 @@ export default function ContentFactoryPage() {
             <Label htmlFor="projDesc" className="text-2xs font-semibold">
               {copy.productDescription}
             </Label>
+            <p className="text-xs leading-5 text-muted-foreground">{controls.productHint}</p>
             <Textarea
               id="projDesc"
               value={productDesc}
@@ -446,7 +502,13 @@ export default function ContentFactoryPage() {
                 }`}
               >
                 <button
-                  onClick={() => setProjectId(project.id)}
+                  disabled={!!generating}
+                  onClick={() => {
+                    setProjectId(project.id);
+                    setResults({});
+                    setJobId(null);
+                    setBatchActive(false);
+                  }}
                   className="min-h-9 px-3.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted/80 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                 >
                   {project.name}
@@ -489,8 +551,68 @@ export default function ContentFactoryPage() {
 
       {projectId && (
         <div className="space-y-6 animate-slide-up">
-          <div className="flex items-center gap-3 border-t border-border/40 pt-6">
-            <Button onClick={generateAll} disabled={!!generating} className="gap-2 text-xs">
+          <div className="grid gap-3 border-t border-border/40 pt-6 sm:grid-cols-3">
+            <div className="space-y-1">
+              <Label htmlFor="content-language">{controls.language}</Label>
+              <Select
+                id="content-language"
+                value={language}
+                onChange={(event) => setLanguage(event.target.value)}
+              >
+                <option value="en">English</option>
+                <option value="zh-CN">简体中文</option>
+                <option value="zh-TW">繁體中文</option>
+                <option value="ja">日本語</option>
+                <option value="de">Deutsch</option>
+                <option value="fr">Français</option>
+                <option value="es">Español</option>
+                <option value="pt">Português</option>
+                <option value="ar">العربية</option>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="content-market">{controls.market}</Label>
+              <Input
+                id="content-market"
+                value={market}
+                maxLength={160}
+                onChange={(event) => setMarket(event.target.value)}
+                placeholder={controls.marketHint}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="content-tone">{controls.tone}</Label>
+              <Input
+                id="content-tone"
+                value={tone}
+                maxLength={200}
+                onChange={(event) => setTone(event.target.value)}
+                placeholder={controls.toneHint}
+              />
+            </div>
+          </div>
+          {jobId && (
+            <JobProgress
+              jobId={jobId}
+              showResult={false}
+              onSettled={() => {
+                setBatchActive(false);
+                void refetchItems();
+              }}
+            />
+          )}
+          {itemsLoading && (
+            <p role="status" className="text-sm text-muted-foreground">
+              {controls.loading}
+            </p>
+          )}
+          {itemsError && <ErrorState onRetry={() => void refetchItems()} />}
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={generateAll}
+              disabled={!!generating || batchActive}
+              className="gap-2 text-xs"
+            >
               {generating === 'all' ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -518,13 +640,15 @@ export default function ContentFactoryPage() {
                       size="sm"
                       variant="outline"
                       onClick={() => generate(ct.key)}
-                      disabled={!!generating}
+                      disabled={!!generating || batchActive}
                       className="h-8 border-border/60 px-2.5 text-2xs hover:bg-muted"
                     >
                       {generating === ct.key ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
+                      ) : results[ct.key] ? (
                         copy.regenerate
+                      ) : (
+                        controls.generate
                       )}
                     </Button>
                   </div>
@@ -538,9 +662,11 @@ export default function ContentFactoryPage() {
                     <span className="text-2xs font-semibold uppercase text-muted-foreground">
                       {copy.output}
                     </span>
-                    <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-lg border border-border/40 bg-muted/40 p-3 font-mono text-2xs leading-relaxed">
-                      {formatContent(results[ct.key].content)}
-                    </pre>
+                    <ResultText
+                      compact
+                      text={formatContent(results[ct.key].content)}
+                      filename={`${ct.key}-${results[ct.key].itemId}.txt`}
+                    />
                   </div>
                 )}
               </div>

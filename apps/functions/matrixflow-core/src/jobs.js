@@ -1,6 +1,13 @@
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { ExecutionMethod, Query } from 'node-appwrite';
-import { generateAllContent, indexDocument, runAgent, runWorkflow } from './features.js';
+import {
+  askKnowledgeBase,
+  generateContent,
+  generateAllContent,
+  indexDocument,
+  runAgent,
+  runWorkflow,
+} from './features.js';
 import {
   DATABASE_ID,
   HttpError,
@@ -52,6 +59,12 @@ function heartbeatIntervalMs(env = process.env) {
 }
 
 function publicJob(job) {
+  let errorCode = 'BACKEND_ERROR';
+  try {
+    errorCode = JSON.parse(job.error || '{}').code || errorCode;
+  } catch {
+    /* legacy plain text */
+  }
   return {
     id: job.id,
     type: job.type,
@@ -62,9 +75,22 @@ function publicJob(job) {
     startedAt: job.startedAt || null,
     heartbeatAt: job.heartbeatAt || null,
     completedAt: job.completedAt || null,
-    error: job.error || null,
+    error: job.error ? { code: errorCode } : null,
     result: job.status === 'SUCCEEDED' ? job.result || {} : undefined,
     cancelRequested: Boolean(job.cancelRequested),
+    resourceHref:
+      job.type === 'agent.run' && job.payload?.agentId
+        ? `/dashboard/agents/${encodeURIComponent(job.payload.agentId)}`
+        : job.type === 'workflow.run' && job.payload?.workflowId
+          ? `/dashboard/workflows/${encodeURIComponent(job.payload.workflowId)}/runs`
+          : ['content.generate', 'content.generate-all'].includes(job.type) &&
+              job.payload?.projectId
+            ? `/dashboard/content?project=${encodeURIComponent(job.payload.projectId)}`
+            : job.type === 'knowledge.ask' && job.payload?.knowledgeBaseId
+              ? `/dashboard/knowledge/${encodeURIComponent(job.payload.knowledgeBaseId)}`
+              : job.type === 'knowledge.index'
+                ? '/dashboard/knowledge'
+                : undefined,
   };
 }
 
@@ -72,6 +98,7 @@ function publicJobSummary(job) {
   const summary = publicJob(job);
   delete summary.error;
   delete summary.result;
+  delete summary.resourceHref;
   return summary;
 }
 
@@ -165,7 +192,16 @@ async function updateWithLease(services, organizationId, jobId, leaseToken, data
 }
 
 export async function enqueueJob(services, context, type, payload, options = {}) {
-  if (!['agent.run', 'workflow.run', 'content.generate-all', 'knowledge.index'].includes(type))
+  if (
+    ![
+      'agent.run',
+      'workflow.run',
+      'content.generate',
+      'content.generate-all',
+      'knowledge.index',
+      'knowledge.ask',
+    ].includes(type)
+  )
     throw new HttpError('不支持的后台任务类型', 400, 'JOB_TYPE_INVALID');
   const serialized = JSON.stringify(payload || {});
   if (Buffer.byteLength(serialized, 'utf8') > MAX_PAYLOAD_BYTES)
@@ -199,6 +235,8 @@ async function runPayload(services, job, context) {
   const payload = job.payload && typeof job.payload === 'object' ? job.payload : {};
   if (job.type === 'agent.run') return runAgent(services, context, payload);
   if (job.type === 'workflow.run') return runWorkflow(services, context, payload);
+  if (job.type === 'content.generate') return generateContent(services, context, payload);
+  if (job.type === 'knowledge.ask') return askKnowledgeBase(services, context, payload);
   if (job.type === 'content.generate-all') return generateAllContent(services, context, payload);
   if (job.type === 'knowledge.index') return indexDocument(services, context, payload);
   throw new HttpError('后台任务类型不存在', 400, 'JOB_TYPE_INVALID');
@@ -285,12 +323,14 @@ export async function executeJob(services, { jobId, organizationId, requestId })
     if (heartbeatLost) {
       return publicJob(await getOwned(services, TABLES.backgroundJobs, job.id, organizationId));
     }
-    const retry = canRetry(error, running);
-    const delay = Math.min(15 * 60_000, 30_000 * 2 ** (attempts - 1));
+    const latest = await getOwned(services, TABLES.backgroundJobs, job.id, organizationId);
+    const canceled = isCanceled(latest);
+    const retry = !canceled && canRetry(error, running);
+    const delay = Math.min(15 * 60_000, 30_000 * 2 ** (Number(running.attempts || 1) - 1));
     const nextRun = new Date(Math.ceil((Date.now() + delay) / 60_000) * 60_000);
     const failed = await updateWithLease(services, organizationId, job.id, running.leaseToken, {
-      status: retry ? 'RETRY_WAIT' : 'FAILED',
-      error: String(error?.message || '后台任务失败').slice(0, 1_000),
+      status: canceled ? 'CANCELED' : retry ? 'RETRY_WAIT' : 'FAILED',
+      error: JSON.stringify({ code: error?.code || 'BACKEND_ERROR' }),
       runAfter: retry ? nextRun.toISOString() : running.runAfter,
       completedAt: retry ? undefined : new Date().toISOString(),
       heartbeatAt: new Date().toISOString(),
@@ -322,8 +362,58 @@ export async function executeJob(services, { jobId, organizationId, requestId })
   }
 }
 
+// A crashed Appwrite execution may never be delivered again. Task-center reads
+// recover expired leases atomically so users do not see a permanent RUNNING job.
+export async function recoverStaleJob(services, job, now = Date.now()) {
+  if (
+    job.status !== 'RUNNING' ||
+    !job.leaseExpiresAt ||
+    new Date(job.leaseExpiresAt).getTime() > now
+  )
+    return job;
+  const exhausted = Number(job.attempts || 0) >= Number(job.maxAttempts || 3);
+  const canceled = isCanceled(job);
+  const status = canceled ? 'CANCELED' : exhausted ? 'FAILED' : 'RETRY_WAIT';
+  const response = await services.tables.updateRows({
+    databaseId: DATABASE_ID,
+    tableId: TABLES.backgroundJobs,
+    queries: [
+      Query.equal('$id', job.id),
+      Query.equal('organizationId', job.organizationId),
+      Query.equal('status', 'RUNNING'),
+      Query.equal('leaseToken', job.leaseToken || ''),
+      Query.lessThanEqual('leaseExpiresAt', new Date(now).toISOString()),
+    ],
+    data: encodeData({
+      status,
+      error: JSON.stringify({ code: 'JOB_WORKER_TIMEOUT' }),
+      runAfter: new Date(now).toISOString(),
+      completedAt: status === 'RETRY_WAIT' ? undefined : new Date(now).toISOString(),
+      leaseToken: '',
+      leaseExpiresAt: new Date(0).toISOString(),
+    }),
+  });
+  const updated = response?.rows?.[0];
+  if (!updated) return getOwned(services, TABLES.backgroundJobs, job.id, job.organizationId);
+  const recovered = decodeRow(updated);
+  if (status === 'RETRY_WAIT') {
+    try {
+      await dispatchJob(services, recovered);
+    } catch {
+      return updateOwned(services, TABLES.backgroundJobs, job.id, job.organizationId, {
+        status: 'FAILED',
+        error: JSON.stringify({ code: 'ASYNC_WORKER_NOT_CONFIGURED' }),
+        completedAt: new Date(now).toISOString(),
+      });
+    }
+  }
+  return recovered;
+}
+
 export async function getJob(services, teamId, jobId) {
-  return publicJob(await getOwned(services, TABLES.backgroundJobs, jobId, teamId));
+  return publicJob(
+    await recoverStaleJob(services, await getOwned(services, TABLES.backgroundJobs, jobId, teamId)),
+  );
 }
 
 export async function listJobs(services, teamId, options = {}) {
@@ -346,7 +436,11 @@ export async function listJobs(services, teamId, options = {}) {
       Query.offset(offset),
     ],
   });
-  const data = result.rows.map((row) => publicJobSummary(decodeRow(row)));
+  const data = await Promise.all(
+    result.rows.map(async (row) =>
+      publicJobSummary(await recoverStaleJob(services, decodeRow(row))),
+    ),
+  );
   const total = Number(result.total || 0);
   const page = {
     data,

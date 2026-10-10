@@ -10,6 +10,7 @@ export const schemas = {
     .object({
       name: trimmed(100),
       role: trimmed(100),
+      knowledgeBaseId: trimmed(36).optional(),
       systemPrompt: jsonRecord.default({}),
       skills: z
         .array(z.union([z.string(), jsonRecord]))
@@ -29,6 +30,7 @@ export const schemas = {
     .object({
       name: trimmed(100).optional(),
       role: trimmed(100).optional(),
+      knowledgeBaseId: trimmed(36).nullable().optional(),
       systemPrompt: jsonRecord.optional(),
       skills: z
         .array(z.union([z.string(), jsonRecord]))
@@ -84,7 +86,9 @@ export const schemas = {
       mode: z.enum(['sync', 'async']).default('sync'),
     })
     .strict(),
-  knowledgeAsk: z.object({ question: trimmed(4_000) }).strict(),
+  knowledgeAsk: z
+    .object({ question: trimmed(4_000), mode: z.enum(['sync', 'async']).default('sync') })
+    .strict(),
   workflowCreate: z
     .object({
       name: trimmed(180),

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { LogOut, Menu, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/lib/auth-store';
+import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { navigationItemForPath } from '@/components/dashboard-navigation';
 import { useLocale } from '@/lib/i18n';
@@ -12,12 +13,12 @@ import { LocaleSwitcher } from '@/components/locale-switcher';
 
 export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { logout, user, organizationId, setOrg } = useAuth();
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const current = navigationItemForPath(pathname);
   const CurrentIcon = current.icon;
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
 
   useEffect(() => setMounted(true), []);
 
@@ -44,6 +45,22 @@ export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
         </div>
       </div>
       <div className="flex items-center gap-1.5">
+        {!!user && user.memberships.length > 1 && (
+          <Select
+            aria-label={
+              locale === 'en' ? 'Team workspace' : locale === 'zh-TW' ? '團隊空間' : '团队空间'
+            }
+            className="max-w-28 sm:max-w-48 text-xs"
+            value={organizationId || ''}
+            onChange={(event) => setOrg(event.target.value)}
+          >
+            {user.memberships.map((membership) => (
+              <option key={membership.organizationId} value={membership.organizationId}>
+                {membership.organizationName}
+              </option>
+            ))}
+          </Select>
+        )}
         <LocaleSwitcher compact />
         {mounted && (
           <Button

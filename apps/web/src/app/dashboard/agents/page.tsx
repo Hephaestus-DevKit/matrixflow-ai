@@ -27,6 +27,7 @@ const COPY: Record<
     deploy: string;
     active: string;
     draft: string;
+    paused: string;
     archived: string;
     noSkills: string;
     noMatches: string;
@@ -42,7 +43,8 @@ const COPY: Record<
     empty: '暂无 AI 员工',
     emptyDescription: '从岗位模板创建第一个 AI 员工，并为其配置模型、技能和知识库。',
     deploy: '从模板部署',
-    active: '运行中',
+    active: '已启用',
+    paused: '已暂停',
     draft: '草稿',
     archived: '已归档',
     noSkills: '暂无绑定技能',
@@ -58,7 +60,8 @@ const COPY: Record<
     empty: '暫無 AI 員工',
     emptyDescription: '從職位模板建立第一個 AI 員工，並為其設定模型、技能與知識庫。',
     deploy: '從模板部署',
-    active: '執行中',
+    active: '已啟用',
+    paused: '已暫停',
     draft: '草稿',
     archived: '已封存',
     noSkills: '暫無綁定技能',
@@ -75,7 +78,8 @@ const COPY: Record<
     emptyDescription:
       'Deploy your first worker from a role template, then configure its model, skills, and knowledge.',
     deploy: 'Deploy from template',
-    active: 'Running',
+    active: 'Active',
+    paused: 'Paused',
     draft: 'Draft',
     archived: 'Archived',
     noSkills: 'No skills linked',
@@ -187,9 +191,11 @@ export default function AgentListPage() {
                   >
                     {a.status === 'ACTIVE'
                       ? copy.active
-                      : a.status === 'DRAFT'
-                        ? copy.draft
-                        : copy.archived}
+                      : a.status === 'PAUSED'
+                        ? copy.paused
+                        : a.status === 'DRAFT'
+                          ? copy.draft
+                          : copy.archived}
                   </span>
                 </div>
                 <h3 className="mt-4 font-bold text-foreground text-sm group-hover:text-primary transition-colors">

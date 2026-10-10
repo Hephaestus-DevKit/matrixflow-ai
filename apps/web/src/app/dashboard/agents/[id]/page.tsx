@@ -3,14 +3,22 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, type ListPage } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Bot, ArrowLeft, Loader2, Sparkles, Cpu, Clock, DollarSign, Zap } from 'lucide-react';
-import type { AgentSummary } from '@matrixflow/shared';
+import type { AgentSummary, KnowledgeBaseSummary } from '@matrixflow/shared';
 import { toast } from 'sonner';
 import { errorMessage } from '@/lib/errors';
 import { useLocale, type Locale } from '@/lib/i18n';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { ErrorState } from '@/components/ui/states';
+import { ResultSources } from '@/components/ui/result-sources';
+import { ResultText } from '@/components/ui/result-text';
+import { JobProgress } from '@/components/job-progress';
+import { type BackgroundJob } from '@/lib/jobs';
 
 const COPY: Record<
   Locale,
@@ -56,7 +64,7 @@ const COPY: Record<
     missing: '未找到该 AI 员工',
     missingDescription: '该员工可能已被删除，或您没有访问权限。',
     back: '返回员工列表',
-    running: '运行中',
+    running: '已启用',
     draft: '草稿',
     archived: '已归档',
     config: '运行配置',
@@ -71,13 +79,13 @@ const COPY: Record<
     placeholder: '例如：根据产品资料写一段面向美国市场的广告文案。',
     runningNow: '运行中…',
     start: '开始运行',
-    notReady: 'AI 服务未就绪',
+    notReady: '请先启用员工',
     persona: '岗位人设（System Instructions）',
     noPersona: '未配置详细人设。',
     history: '最近调用明细',
     noHistory: '暂无调用运行记录。一旦工作流或内容工厂触发该角色，记录将自动在此汇总。',
     consumed: '消耗',
-    cost: '计费金额',
+    cost: '参考成本',
     success: '成功',
     failed: '失败',
   },
@@ -89,7 +97,7 @@ const COPY: Record<
     missing: '找不到該 AI 員工',
     missingDescription: '該員工可能已被刪除，或您沒有存取權限。',
     back: '返回員工列表',
-    running: '執行中',
+    running: '已啟用',
     draft: '草稿',
     archived: '已封存',
     config: '執行設定',
@@ -104,13 +112,13 @@ const COPY: Record<
     placeholder: '例如：根據產品資料撰寫一段面向美國市場的廣告文案。',
     runningNow: '執行中…',
     start: '開始執行',
-    notReady: 'AI 服務未就緒',
+    notReady: '請先啟用員工',
     persona: '職位人設（System Instructions）',
     noPersona: '尚未設定詳細人設。',
     history: '最近呼叫明細',
     noHistory: '暫無執行記錄。工作流或內容工廠觸發此角色後，記錄會自動彙總。',
     consumed: '消耗',
-    cost: '計費金額',
+    cost: '參考成本',
     success: '成功',
     failed: '失敗',
   },
@@ -122,7 +130,7 @@ const COPY: Record<
     missing: 'AI worker not found',
     missingDescription: 'This worker may have been deleted, or you may not have access.',
     back: 'Back to workers',
-    running: 'Running',
+    running: 'Active',
     draft: 'Draft',
     archived: 'Archived',
     config: 'Run configuration',
@@ -137,14 +145,14 @@ const COPY: Record<
     placeholder: 'e.g. Write an ad for the US market from the product material.',
     runningNow: 'Running…',
     start: 'Start run',
-    notReady: 'AI service not ready',
+    notReady: 'Activate worker first',
     persona: 'Role persona (System Instructions)',
     noPersona: 'No detailed persona configured.',
     history: 'Recent run details',
     noHistory:
       'No runs yet. Records appear after a workflow or content factory triggers this role.',
     consumed: 'Consumed',
-    cost: 'Cost',
+    cost: 'Estimated cost',
     success: 'Success',
     failed: 'Failed',
   },
@@ -157,25 +165,111 @@ export default function AgentDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [prompt, setPrompt] = useState('');
-  const [latestOutput, setLatestOutput] = useState('');
-  const { data: agent, isLoading } = useQuery({
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [activeJob, setActiveJob] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editRole, setEditRole] = useState('');
+  const [editPersona, setEditPersona] = useState('');
+  const [editKnowledge, setEditKnowledge] = useState('');
+  const knowledge = useQuery({
+    queryKey: ['agent-knowledge-options'],
+    queryFn: () => apiClient.get<ListPage<KnowledgeBaseSummary>>('/kb?limit=100'),
+    enabled: editing,
+  });
+  const knowledgeLabel =
+    locale === 'en' ? 'Reference knowledge base' : locale === 'zh-TW' ? '參考知識庫' : '参考知识库';
+  const noKnowledge =
+    locale === 'en'
+      ? 'No knowledge base linked'
+      : locale === 'zh-TW'
+        ? '未連結知識庫'
+        : '未关联知识库';
+  const actions = {
+    'zh-CN': {
+      edit: '编辑配置',
+      name: '员工名称',
+      role: '岗位',
+      persona: '工作指令',
+      save: '保存配置',
+      cancel: '取消',
+      saved: '配置已保存',
+      pause: '暂停员工',
+      activate: '启用员工',
+      paused: '已暂停',
+      output: '查看运行结果',
+      historyPrompt: '任务',
+      saveFailed: '配置保存失败',
+    },
+    'zh-TW': {
+      edit: '編輯設定',
+      name: '員工名稱',
+      role: '職位',
+      persona: '工作指令',
+      save: '儲存設定',
+      cancel: '取消',
+      saved: '設定已儲存',
+      pause: '暫停員工',
+      activate: '啟用員工',
+      paused: '已暫停',
+      output: '檢視執行結果',
+      historyPrompt: '任務',
+      saveFailed: '設定儲存失敗',
+    },
+    en: {
+      edit: 'Edit configuration',
+      name: 'Worker name',
+      role: 'Role',
+      persona: 'Instructions',
+      save: 'Save configuration',
+      cancel: 'Cancel',
+      saved: 'Configuration saved',
+      pause: 'Pause worker',
+      activate: 'Activate worker',
+      paused: 'Paused',
+      output: 'View output',
+      historyPrompt: 'Task',
+      saveFailed: 'Could not save configuration',
+    },
+  }[locale];
+  const {
+    data: agent,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ['agent', id],
     queryFn: () => apiClient.get<AgentSummary>(`/agents/${id}`),
     enabled: !!id,
   });
   const runMutation = useMutation({
     mutationFn: () =>
-      apiClient.post<{ output?: { text?: string } }>(`/agents/${id}/run`, {
+      apiClient.post<BackgroundJob>(`/agents/${id}/run`, {
         input: { prompt: prompt.trim() },
+        mode: 'async',
       }),
     onSuccess: async (result) => {
-      setLatestOutput(result.output?.text || copy.completed);
-      setPrompt('');
-      await queryClient.invalidateQueries({ queryKey: ['agent', id] });
-      toast.success(copy.runDone);
+      setJobId(result.id);
+      setActiveJob(true);
+      await queryClient.invalidateQueries({ queryKey: ['jobs'] });
     },
     onError: (error: unknown) => toast.error(errorMessage(error, copy.runFailed)),
   });
+
+  const updateMutation = useMutation({
+    mutationFn: (body: Record<string, unknown>) => apiClient.patch(`/agents/${id}`, body),
+    onSuccess: async () => {
+      setEditing(false);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['agent', id] }),
+        queryClient.invalidateQueries({ queryKey: ['agents'] }),
+      ]);
+      toast.success(actions.saved);
+    },
+    onError: (error: unknown) => toast.error(errorMessage(error, actions.saveFailed)),
+  });
+  if (isError) return <ErrorState message={errorMessage(error)} onRetry={() => void refetch()} />;
 
   if (isLoading) {
     return (
@@ -236,9 +330,11 @@ export default function AgentDetailPage() {
               >
                 {agent.status === 'ACTIVE'
                   ? copy.running
-                  : agent.status === 'DRAFT'
-                    ? copy.draft
-                    : copy.archived}
+                  : agent.status === 'PAUSED'
+                    ? actions.paused
+                    : agent.status === 'DRAFT'
+                      ? copy.draft
+                      : copy.archived}
               </span>
             </div>
             <p className="mt-0.5 text-xs font-medium text-muted-foreground">{agent.role}</p>
@@ -246,6 +342,123 @@ export default function AgentDetailPage() {
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={updateMutation.isPending}
+          onClick={() => {
+            setEditName(agent.name);
+            setEditRole(agent.role);
+            setEditPersona(String(agent.systemPrompt?.raw || ''));
+            setEditKnowledge(agent.configuration?.knowledgeBaseId || '');
+            setEditing(true);
+          }}
+        >
+          {actions.edit}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={updateMutation.isPending || activeJob}
+          onClick={() =>
+            updateMutation.mutate({ status: agent.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' })
+          }
+        >
+          {agent.status === 'ACTIVE' ? actions.pause : actions.activate}
+        </Button>
+      </div>
+      {editing && (
+        <form
+          className="surface-card space-y-4 p-5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            updateMutation.mutate({
+              name: editName.trim(),
+              role: editRole.trim(),
+              systemPrompt: { ...agent.systemPrompt, raw: editPersona.trim() },
+              knowledgeBaseId: editKnowledge || null,
+            });
+          }}
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="agent-name">{actions.name}</Label>
+              <Input
+                id="agent-name"
+                required
+                maxLength={100}
+                value={editName}
+                onChange={(event) => setEditName(event.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="agent-role">{actions.role}</Label>
+              <Input
+                id="agent-role"
+                required
+                maxLength={100}
+                value={editRole}
+                onChange={(event) => setEditRole(event.target.value)}
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="agent-persona">{actions.persona}</Label>
+            <Textarea
+              id="agent-persona"
+              maxLength={12000}
+              rows={6}
+              value={editPersona}
+              onChange={(event) => setEditPersona(event.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="agent-knowledge">{knowledgeLabel}</Label>
+            <Select
+              id="agent-knowledge"
+              value={editKnowledge}
+              onChange={(event) => setEditKnowledge(event.target.value)}
+              disabled={knowledge.isLoading || knowledge.isError}
+            >
+              <option value="">{noKnowledge}</option>
+              {knowledge.data?.data.map((base) => (
+                <option key={base.id} value={base.id}>
+                  {base.name}
+                </option>
+              ))}
+              {editKnowledge && !knowledge.data?.data.some((base) => base.id === editKnowledge) && (
+                <option value={editKnowledge}>{editKnowledge}</option>
+              )}
+            </Select>
+            {knowledge.isError && (
+              <Button type="button" variant="ghost" onClick={() => void knowledge.refetch()}>
+                {locale === 'en'
+                  ? 'Retry loading knowledge bases'
+                  : locale === 'zh-TW'
+                    ? '重試載入知識庫'
+                    : '重试加载知识库'}
+              </Button>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={updateMutation.isPending}
+              onClick={() => setEditing(false)}
+            >
+              {actions.cancel}
+            </Button>
+            <Button
+              type="submit"
+              disabled={updateMutation.isPending || !editName.trim() || !editRole.trim()}
+            >
+              {actions.save}
+            </Button>
+          </div>
+        </form>
+      )}
       {/* Main Details Grid */}
       <div className="grid gap-6 md:grid-cols-3">
         {/* Meta Stats Panel */}
@@ -316,7 +529,9 @@ export default function AgentDetailPage() {
             <div className="mt-3 flex justify-end">
               <Button
                 onClick={() => runMutation.mutate()}
-                disabled={runMutation.isPending || !prompt.trim() || agent.status !== 'ACTIVE'}
+                disabled={
+                  runMutation.isPending || activeJob || !prompt.trim() || agent.status !== 'ACTIVE'
+                }
               >
                 {runMutation.isPending
                   ? copy.runningNow
@@ -325,9 +540,16 @@ export default function AgentDetailPage() {
                     : copy.notReady}
               </Button>
             </div>
-            {latestOutput && (
-              <div className="mt-4 rounded-xl border border-border bg-background/70 p-4 text-sm leading-6 whitespace-pre-wrap">
-                {latestOutput}
+            {jobId && (
+              <div className="mt-4">
+                <JobProgress
+                  jobId={jobId}
+                  onSettled={(job) => {
+                    setActiveJob(false);
+                    void queryClient.invalidateQueries({ queryKey: ['agent', id] });
+                    if (job.status === 'SUCCEEDED') toast.success(copy.runDone);
+                  }}
+                />
               </div>
             )}
           </section>
@@ -362,7 +584,7 @@ export default function AgentDetailPage() {
                 {agent.runs.slice(0, 10).map((r) => (
                   <div
                     key={r.id}
-                    className="flex items-center justify-between rounded-xl border border-border/60 bg-card/70 p-4 transition-[border-color,background-color,box-shadow] hover:border-primary/20 hover:bg-card hover:shadow-xs"
+                    className="flex flex-col gap-3 rounded-xl border border-border/60 bg-card/70 p-4 transition-[border-color,background-color,box-shadow] hover:border-primary/20 hover:bg-card hover:shadow-xs"
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/40 bg-muted font-mono text-2xs text-muted-foreground">
@@ -403,6 +625,26 @@ export default function AgentDetailPage() {
                             : copy.running}
                       </span>
                     </div>
+                    {Boolean(r.input?.prompt) && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {actions.historyPrompt}: {String(r.input?.prompt)}
+                      </p>
+                    )}
+                    {r.output?.text && (
+                      <details>
+                        <summary className="cursor-pointer text-xs font-semibold text-primary">
+                          {actions.output}
+                        </summary>
+                        <div className="mt-2">
+                          <ResultText
+                            compact
+                            text={r.output.text}
+                            filename={`worker-${r.id}.txt`}
+                          />
+                          <ResultSources citations={r.output.citations} />
+                        </div>
+                      </details>
+                    )}
                   </div>
                 ))}
               </div>
