@@ -259,7 +259,7 @@ export default function AgentDetailPage() {
               <div>
                 <p className="text-2xs font-semibold text-muted-foreground">{copy.model}</p>
                 <p className="text-xs font-mono font-bold mt-0.5 text-foreground">
-                  {agent.model ?? 'glm-4-flash'}
+                  {agent.model ?? '—'}
                 </p>
               </div>
               <div>

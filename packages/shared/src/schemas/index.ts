@@ -38,7 +38,7 @@ export const createAgentSchema = z.object({
   role: z.string().min(1),
   description: z.string().max(2000).optional(),
   systemPrompt: z.record(z.unknown()),
-  model: z.string().default('glm-4-plus'),
+  model: z.string().trim().min(1).max(100).optional(),
   temperature: z.number().min(0).max(2).default(0.7),
   maxTokens: z.number().int().min(1).max(32000).default(2000),
   memoryMode: z.enum(['short', 'long', 'none']).default('short'),

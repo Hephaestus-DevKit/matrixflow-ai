@@ -78,6 +78,14 @@ describe('Tenant-facing write schemas', () => {
 });
 
 describe('Agent schema', () => {
+  it('uses the configured provider model unless the caller explicitly chooses one', () => {
+    const input = { name: 'Agent', role: 'copywriter', systemPrompt: {} };
+    expect(createAgentSchema.parse(input).model).toBeUndefined();
+    expect(createAgentSchema.parse({ ...input, model: 'deepseek-flash' }).model).toBe(
+      'deepseek-flash',
+    );
+    expect(() => createAgentSchema.parse({ ...input, model: '' })).toThrow();
+  });
   it('validates create agent', () => {
     expect(() =>
       createAgentSchema.parse({

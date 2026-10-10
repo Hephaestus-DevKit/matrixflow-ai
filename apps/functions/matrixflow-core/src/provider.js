@@ -1,4 +1,5 @@
 import { isPrivateNetworkAddress } from './network.js';
+import { createHash } from 'node:crypto';
 
 const MAX_PROMPT_LENGTH = 16_000;
 const DEFAULT_TIMEOUT_MS = 25_000;
@@ -82,6 +83,27 @@ export class ProviderError extends Error {
 }
 
 function providerDefinition(name, env, requested) {
+  if (name === 'deepseek') {
+    const apiKey = envValue(env, 'DEEPSEEK_API_KEY');
+    if (!apiKey) unavailable('deepseek');
+    const effort = envValue(env, 'DEEPSEEK_REASONING_EFFORT') || 'none';
+    if (!['none', 'low', 'high', 'max'].includes(effort))
+      throw new ProviderError('DeepSeek 思考强度配置无效', 500, 'AI_PROVIDER_INVALID');
+    return {
+      name: 'deepseek',
+      protocol: 'anthropic-messages',
+      endpoint: validateProviderEndpoint(
+        anthropicEndpoint(
+          envValue(env, 'DEEPSEEK_BASE_URL') || 'https://api.deepseek.com/anthropic',
+        ),
+        env,
+      ),
+      apiKey,
+      model: envValue(env, 'DEEPSEEK_MODEL') || 'deepseek-flash',
+      version: ANTHROPIC_VERSION,
+      reasoningEffort: effort,
+    };
+  }
   if (name === 'anthropic') {
     const apiKey = envValue(env, 'ANTHROPIC_API_KEY');
     if (!apiKey) unavailable('anthropic');
@@ -158,9 +180,11 @@ function unavailable(provider) {
         ? 'GLM_API_KEY'
         : provider === 'tokenrhythm'
           ? 'TOKENRHYTHM_API_KEY'
-          : 'OPENAI_API_KEY';
+          : provider === 'deepseek'
+            ? 'DEEPSEEK_API_KEY'
+            : 'OPENAI_API_KEY';
   throw new ProviderError(
-    `尚未配置 ${provider === 'anthropic' ? 'Anthropic' : provider === 'glm' ? 'GLM' : provider === 'tokenrhythm' ? 'Token Rhythm' : 'OpenAI 兼容'} AI 服务密钥，请在 Appwrite Function 变量中设置 ${label}`,
+    `尚未配置 ${provider === 'anthropic' ? 'Anthropic' : provider === 'glm' ? 'GLM' : provider === 'deepseek' ? 'DeepSeek' : provider === 'tokenrhythm' ? 'Token Rhythm' : 'OpenAI 兼容'} AI 服务密钥，请在 Appwrite Function 变量中设置 ${label}`,
     503,
     'AI_PROVIDER_UNAVAILABLE',
   );
@@ -179,7 +203,15 @@ function unavailable(provider) {
 export function configuredProvider(env = process.env) {
   const requested = envValue(env, 'MATRIXFLOW_AI_PROVIDER', 'AI_PROVIDER').toLowerCase() || 'auto';
   if (
-    !['auto', 'anthropic', 'openai', 'openai-compatible', 'tokenrhythm', 'glm'].includes(requested)
+    ![
+      'auto',
+      'deepseek',
+      'anthropic',
+      'openai',
+      'openai-compatible',
+      'tokenrhythm',
+      'glm',
+    ].includes(requested)
   ) {
     throw new ProviderError(`不支持的 AI 服务协议：${requested}`, 500, 'AI_PROVIDER_INVALID');
   }
@@ -190,10 +222,19 @@ export function configuredProvider(env = process.env) {
 export function configuredProviders(env = process.env) {
   const requested = envValue(env, 'MATRIXFLOW_AI_PROVIDER', 'AI_PROVIDER').toLowerCase() || 'auto';
   if (
-    !['auto', 'anthropic', 'openai', 'openai-compatible', 'tokenrhythm', 'glm'].includes(requested)
+    ![
+      'auto',
+      'deepseek',
+      'anthropic',
+      'openai',
+      'openai-compatible',
+      'tokenrhythm',
+      'glm',
+    ].includes(requested)
   )
     throw new ProviderError(`不支持的 AI 服务协议：${requested}`, 500, 'AI_PROVIDER_INVALID');
   if (requested === 'anthropic') return [providerDefinition('anthropic', env, requested)];
+  if (requested === 'deepseek') return [providerDefinition('deepseek', env, requested)];
   if (requested === 'glm') return [providerDefinition('glm', env, requested)];
   if (requested === 'openai' || requested === 'openai-compatible' || requested === 'tokenrhythm')
     return [providerDefinition('openai', env, requested)];
@@ -204,11 +245,13 @@ export function configuredProviders(env = process.env) {
   if (envValue(env, 'GLM_API_KEY')) providers.push(providerDefinition('glm', env, requested));
   if (envValue(env, 'ANTHROPIC_API_KEY'))
     providers.push(providerDefinition('anthropic', env, requested));
+  if (envValue(env, 'DEEPSEEK_API_KEY'))
+    providers.push(providerDefinition('deepseek', env, requested));
   if (envValue(env, 'TOKENRHYTHM_API_KEY', 'OPENAI_API_KEY', 'OPENAI_COMPATIBLE_API_KEY'))
     providers.push(providerDefinition('openai', env, requested));
   if (!providers.length)
     throw new ProviderError(
-      '尚未配置 AI 服务密钥，请在 Appwrite Function 变量中设置 ANTHROPIC_API_KEY、OPENAI_API_KEY、OPENAI_COMPATIBLE_API_KEY 或 TOKENRHYTHM_API_KEY',
+      '尚未配置 AI 服务密钥，请在 Appwrite Function 变量中设置 DEEPSEEK_API_KEY、ANTHROPIC_API_KEY、OPENAI_API_KEY、OPENAI_COMPATIBLE_API_KEY 或 TOKENRHYTHM_API_KEY',
       503,
       'AI_PROVIDER_UNAVAILABLE',
     );
@@ -251,7 +294,15 @@ export function estimateCostUsd(providerName, model, usage, env = process.env) {
   if (!Number.isFinite(inputRate) || !Number.isFinite(outputRate)) return 0;
   const inputTokens = safeUsageValue(usage?.inputTokens);
   const outputTokens = safeUsageValue(usage?.outputTokens);
-  return Math.max(0, (inputTokens / 1_000) * inputRate + (outputTokens / 1_000) * outputRate);
+  const cachedTokens = Math.min(inputTokens, safeUsageValue(usage?.cachedInputTokens));
+  const cachedRate = Number(entry.cachedInputPer1k ?? entry.inputPer1k);
+  if (!Number.isFinite(cachedRate)) return 0;
+  return Math.max(
+    0,
+    ((inputTokens - cachedTokens) / 1_000) * inputRate +
+      (cachedTokens / 1_000) * cachedRate +
+      (outputTokens / 1_000) * outputRate,
+  );
 }
 
 function openAiContent(payload) {
@@ -274,14 +325,15 @@ function anthropicContent(payload) {
 }
 
 function responseError(payload, status) {
-  const message = text(payload?.error?.message) || text(payload?.message) || 'AI 服务请求失败';
   if (status === 401 || status === 403)
     return new ProviderError('AI 服务凭证无效或无权访问当前模型', 502, 'AI_PROVIDER_AUTH');
   if (status === 429)
     return new ProviderError('AI 服务已限流，请稍后重试', 429, 'AI_PROVIDER_RATE_LIMITED');
+  if (status === 402)
+    return new ProviderError('AI 服务余额不足，请联系管理员充值', 503, 'AI_PROVIDER_BALANCE');
   if (status >= 400 && status < 500)
     return new ProviderError(
-      `AI 请求参数被服务拒绝：${message.slice(0, 240)}`,
+      'AI 请求参数或模型被服务拒绝，请检查配置',
       502,
       'AI_PROVIDER_BAD_REQUEST',
     );
@@ -290,7 +342,7 @@ function responseError(payload, status) {
 
 function requestFor(
   provider,
-  { systemText, prompt, temperature, maxTokens, topP, model, requestId },
+  { systemText, prompt, temperature, maxTokens, topP, model, requestId, isolationId },
 ) {
   if (provider.protocol === 'anthropic-messages') {
     const headers = {
@@ -308,7 +360,22 @@ function requestFor(
         system: systemText || 'You are a precise business assistant.',
         messages: [{ role: 'user', content: prompt }],
         temperature,
-        ...(topP === undefined ? {} : { top_p: topP }),
+        ...(provider.name === 'deepseek'
+          ? {
+              thinking: { type: provider.reasoningEffort === 'none' ? 'disabled' : 'enabled' },
+              ...(provider.reasoningEffort === 'none'
+                ? {}
+                : { output_config: { effort: provider.reasoningEffort } }),
+              ...(provider.reasoningEffort !== 'none' && topP !== undefined
+                ? { top_p: Math.max(0.95, topP) }
+                : {}),
+            }
+          : topP === undefined
+            ? {}
+            : { top_p: topP }),
+        ...(provider.name === 'deepseek' && isolationId
+          ? { metadata: { user_id: isolationId } }
+          : {}),
       },
     };
   }
@@ -361,10 +428,17 @@ function canFailover(error) {
 
 async function generateWithProvider(
   provider,
-  { systemText, prompt, temperature, maxTokens, topP, model, safeRequestId },
+  { systemText, prompt, temperature, maxTokens, topP, model, safeRequestId, isolationId },
   env,
 ) {
-  const requestedModel = model === undefined ? provider.model : text(model);
+  let requestedModel = model === undefined ? provider.model : text(model);
+  if (
+    provider.name === 'deepseek' &&
+    ['deepseek-v4-flash', 'deepseek-v4-flash-vision-exp', 'deepseek-v4-flash-0731'].includes(
+      requestedModel,
+    )
+  )
+    requestedModel = 'deepseek-flash';
   if (
     !requestedModel ||
     requestedModel.length > 100 ||
@@ -391,6 +465,7 @@ async function generateWithProvider(
     topP,
     model: requestedModel,
     requestId: safeRequestId,
+    isolationId,
   });
   const startedAt = Date.now();
 
@@ -403,6 +478,7 @@ async function generateWithProvider(
         headers: request.headers,
         body: JSON.stringify(request.body),
         signal: controller.signal,
+        redirect: 'error',
       });
       const responseText =
         typeof response.text === 'function'
@@ -414,7 +490,8 @@ async function generateWithProvider(
       try {
         payload = responseText ? JSON.parse(responseText) : {};
       } catch {
-        throw new ProviderError('AI 服务返回了无效响应', 502, 'AI_INVALID_RESPONSE');
+        if (response.ok)
+          throw new ProviderError('AI 服务返回了无效响应', 502, 'AI_INVALID_RESPONSE');
       }
       if (!response.ok) {
         if (retryable(response.status) && attempt < retries) {
@@ -438,6 +515,11 @@ async function generateWithProvider(
               inputTokens: safeUsageValue(payload?.usage?.prompt_tokens),
               outputTokens: safeUsageValue(payload?.usage?.completion_tokens),
             };
+      if (provider.name === 'deepseek') {
+        usage.cachedInputTokens = safeUsageValue(payload?.usage?.cache_read_input_tokens);
+        usage.cacheWriteInputTokens = safeUsageValue(payload?.usage?.cache_creation_input_tokens);
+        usage.inputTokens += usage.cachedInputTokens + usage.cacheWriteInputTokens;
+      }
       return {
         content: content.trim(),
         provider: provider.name,
@@ -448,7 +530,10 @@ async function generateWithProvider(
         stopReason: payload?.stop_reason || payload?.choices?.[0]?.finish_reason || null,
         durationMs: Date.now() - startedAt,
         upstreamRequestId:
-          response.headers?.get?.('x-request-id') || response.headers?.get?.('request-id') || null,
+          response.headers?.get?.('x-request-id') ||
+          response.headers?.get?.('request-id') ||
+          response.headers?.get?.('x-deepseek-request-id') ||
+          null,
         requestId: safeRequestId || null,
       };
     } catch (error) {
@@ -471,7 +556,16 @@ async function generateWithProvider(
 
 /** Generate one text response through a native or OpenAI-compatible protocol. */
 export async function generateText(
-  { system, prompt, temperature = 0.4, maxTokens = DEFAULT_MAX_TOKENS, topP, model, requestId },
+  {
+    system,
+    prompt,
+    temperature = 0.4,
+    maxTokens = DEFAULT_MAX_TOKENS,
+    topP,
+    model,
+    requestId,
+    organizationId,
+  },
   env = process.env,
 ) {
   if (typeof prompt !== 'string' || !prompt.trim())
@@ -489,6 +583,10 @@ export async function generateText(
       ? requestId
       : undefined;
   const providers = configuredProviders(env);
+  const isolationId =
+    typeof organizationId === 'string' && organizationId
+      ? `mf_${createHash('sha256').update(`matrixflow:${organizationId}`).digest('hex')}`
+      : undefined;
   const requested = envValue(env, 'MATRIXFLOW_AI_PROVIDER', 'AI_PROVIDER').toLowerCase() || 'auto';
   const allowFallback =
     providers.length > 1 &&
@@ -506,6 +604,7 @@ export async function generateText(
           topP: safeTopP,
           model,
           safeRequestId,
+          isolationId,
         },
         env,
       );

@@ -84,6 +84,7 @@ AI 能力通过 Appwrite Function 统一接入两种协议：原生 Anthropic Me
 
 推荐在 `matrixflow-core` 函数变量中显式设置 `MATRIXFLOW_AI_PROVIDER`：
 
+- `deepseek`（当前生产选择）：`DEEPSEEK_API_KEY`、`DEEPSEEK_MODEL=deepseek-flash`、`DEEPSEEK_BASE_URL=https://api.deepseek.com/anthropic`。与官方 Harness 一样使用 Messages API；`DEEPSEEK_REASONING_EFFORT=none` 默认关闭思考以降低延迟，`low` / `high` / `max` 可启用思考。
 - `anthropic`：`ANTHROPIC_API_KEY`、`ANTHROPIC_MODEL`、可选 `ANTHROPIC_BASE_URL`。
 - `openai` / `openai-compatible`：`OPENAI_API_KEY`、`OPENAI_MODEL`、可选 `OPENAI_BASE_URL`。
 - `glm`：兼容旧部署的 `GLM_API_KEY`、`GLM_MODEL`、可选 `GLM_ENDPOINT`。

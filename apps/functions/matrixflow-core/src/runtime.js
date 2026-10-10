@@ -538,6 +538,8 @@ export async function recordUsage(services, teamId, generated) {
           upstreamRequestId: generated.upstreamRequestId,
           requestId: generated.requestId,
           costUsd: Number.isFinite(Number(generated?.costUsd)) ? Number(generated.costUsd) : 0,
+          cachedInputTokens: generated.usage?.cachedInputTokens,
+          cacheWriteInputTokens: generated.usage?.cacheWriteInputTokens,
         },
         recordedAt: new Date().toISOString(),
       }),

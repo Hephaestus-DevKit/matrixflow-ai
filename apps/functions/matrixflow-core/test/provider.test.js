@@ -5,6 +5,7 @@ import {
   configuredProviders,
   generateText,
   validateProviderEndpoint,
+  estimateCostUsd,
 } from '../src/provider.js';
 
 test('fails closed when no provider is configured', () => {
@@ -317,4 +318,163 @@ test('bounds system instructions before network access', async () => {
     () => generateText({ system: 'x'.repeat(16_001), prompt: 'hello' }, { GLM_API_KEY: 'test' }),
     (error) => error.code === 'AI_SYSTEM_TOO_LARGE',
   );
+});
+
+test('DeepSeek uses the official Flash Messages endpoint and fails closed without its own key', () => {
+  const provider = configuredProvider({
+    MATRIXFLOW_AI_PROVIDER: 'deepseek',
+    DEEPSEEK_API_KEY: 'test-key',
+    TOKENRHYTHM_BASE_URL: 'https://old.example/v1',
+    OPENAI_API_KEY: 'other-key',
+  });
+  assert.equal(provider.name, 'deepseek');
+  assert.equal(provider.endpoint, 'https://api.deepseek.com/anthropic/v1/messages');
+  assert.equal(provider.model, 'deepseek-flash');
+  assert.equal(provider.reasoningEffort, 'none');
+  assert.throws(
+    () => configuredProvider({ MATRIXFLOW_AI_PROVIDER: 'deepseek', OPENAI_API_KEY: 'other-key' }),
+    (error) => error.code === 'AI_PROVIDER_UNAVAILABLE',
+  );
+  assert.throws(
+    () =>
+      configuredProvider({
+        MATRIXFLOW_AI_PROVIDER: 'deepseek',
+        DEEPSEEK_API_KEY: 'test-key',
+        DEEPSEEK_REASONING_EFFORT: 'invalid',
+      }),
+    (error) => error.code === 'AI_PROVIDER_INVALID',
+  );
+});
+
+test('DeepSeek normalizes versioned endpoints without duplicating the path', () => {
+  for (const base of [
+    'https://api.deepseek.com/anthropic/',
+    'https://api.deepseek.com/anthropic/v1/',
+    'https://api.deepseek.com/anthropic/v1/messages/',
+  ])
+    assert.equal(
+      configuredProvider({
+        MATRIXFLOW_AI_PROVIDER: 'deepseek',
+        DEEPSEEK_API_KEY: 'test-key',
+        DEEPSEEK_BASE_URL: base,
+      }).endpoint,
+      'https://api.deepseek.com/anthropic/v1/messages',
+    );
+});
+
+test('DeepSeek disables thinking by default, isolates tenant caches and counts cached input tokens', async (t) => {
+  const requests = [];
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    requests.push({ url, options, body: JSON.parse(options.body) });
+    return new Response(
+      JSON.stringify({
+        model: 'deepseek-flash',
+        content: [
+          { type: 'thinking', thinking: 'private reasoning' },
+          { type: 'text', text: 'ready' },
+        ],
+        usage: {
+          input_tokens: 11,
+          output_tokens: 3,
+          cache_read_input_tokens: 10,
+          cache_creation_input_tokens: 2,
+        },
+        stop_reason: 'end_turn',
+      }),
+      { headers: { 'x-deepseek-request-id': 'deepseek-request-1' } },
+    );
+  });
+  const env = {
+    MATRIXFLOW_AI_PROVIDER: 'deepseek',
+    DEEPSEEK_API_KEY: 'test-key',
+    MATRIXFLOW_AI_MAX_RETRIES: '0',
+  };
+  let result;
+  for (const organizationId of ['team-1', 'team-1', 'team-2'])
+    result = await generateText(
+      { prompt: 'hello', organizationId, topP: 0.4, model: 'deepseek-v4-flash-0731' },
+      env,
+    );
+  assert.equal(requests[0].url, 'https://api.deepseek.com/anthropic/v1/messages');
+  assert.equal(requests[0].options.redirect, 'error');
+  assert.equal(requests[0].options.headers['x-api-key'], 'test-key');
+  assert.equal(requests[0].body.model, 'deepseek-flash');
+  assert.deepEqual(requests[0].body.thinking, { type: 'disabled' });
+  assert.equal(requests[0].body.top_p, undefined);
+  assert.equal(requests[0].body.output_config, undefined);
+  const ids = requests.map(({ body }) => body.metadata.user_id);
+  assert.match(ids[0], /^mf_[a-f0-9]{64}$/);
+  assert.equal(ids[0], ids[1]);
+  assert.notEqual(ids[0], ids[2]);
+  assert.ok(!JSON.stringify(requests[0].body).includes('team-1'));
+  assert.deepEqual(result.usage, {
+    inputTokens: 23,
+    outputTokens: 3,
+    cachedInputTokens: 10,
+    cacheWriteInputTokens: 2,
+  });
+  assert.equal(result.content, 'ready');
+  assert.equal(result.model, 'deepseek-flash');
+  assert.equal(result.upstreamRequestId, 'deepseek-request-1');
+});
+
+test('DeepSeek thinking modes use output_config effort and the supported top_p bound', async (t) => {
+  let body;
+  t.mock.method(globalThis, 'fetch', async (_url, options) => {
+    body = JSON.parse(options.body);
+    return new Response(JSON.stringify({ content: [{ type: 'text', text: 'ready' }], usage: {} }));
+  });
+  for (const effort of ['low', 'high', 'max']) {
+    await generateText(
+      { prompt: 'hello', topP: 0.4 },
+      {
+        MATRIXFLOW_AI_PROVIDER: 'deepseek',
+        DEEPSEEK_API_KEY: 'test-key',
+        DEEPSEEK_REASONING_EFFORT: effort,
+      },
+    );
+    assert.deepEqual(body.thinking, { type: 'enabled' });
+    assert.deepEqual(body.output_config, { effort });
+    assert.equal(body.top_p, 0.95);
+  }
+});
+
+test('DeepSeek balance and authentication failures are stable and never retried or leaked', async (t) => {
+  let calls = 0;
+  let status = 402;
+  t.mock.method(globalThis, 'fetch', async () => {
+    calls += 1;
+    return new Response('private provider detail', { status });
+  });
+  for (const [code, expected] of [
+    [402, 'AI_PROVIDER_BALANCE'],
+    [401, 'AI_PROVIDER_AUTH'],
+    [400, 'AI_PROVIDER_BAD_REQUEST'],
+  ]) {
+    status = code;
+    await assert.rejects(
+      () =>
+        generateText(
+          { prompt: 'hello' },
+          { MATRIXFLOW_AI_PROVIDER: 'deepseek', DEEPSEEK_API_KEY: 'test-key' },
+        ),
+      (error) => error.code === expected && !error.message.includes('private provider detail'),
+    );
+  }
+  assert.equal(calls, 3);
+});
+
+test('cache cost estimates use the configured cache price without counting cached input twice', () => {
+  const env = {
+    MATRIXFLOW_AI_PRICING_JSON: JSON.stringify({
+      deepseek: { inputPer1k: 0.3, cachedInputPer1k: 0.006, outputPer1k: 1.2 },
+    }),
+  };
+  const cost = estimateCostUsd(
+    'deepseek',
+    'deepseek-flash',
+    { inputTokens: 1000, cachedInputTokens: 500, outputTokens: 100 },
+    env,
+  );
+  assert.ok(Math.abs(cost - 0.273) < 1e-12);
 });
