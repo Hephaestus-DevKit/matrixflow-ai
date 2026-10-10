@@ -1,3 +1,4 @@
+import { parseDocument } from 'htmlparser2';
 import { pathToFileURL } from 'node:url';
 
 const ROUTES = [
@@ -33,12 +34,18 @@ function headerValue(headers, name) {
   return String(entry?.[1] || '');
 }
 
-function pageText(body) {
-  return body
-    .replace(/<(script|style|head)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ');
+export function pageText(body) {
+  const document = parseDocument(body);
+  const parts = [];
+  const pending = [...document.children].reverse();
+  while (pending.length) {
+    const node = pending.pop();
+    if (node.type === 'text') parts.push(node.data);
+    else if (node.children && !['script', 'style', 'head'].includes(node.name))
+      pending.push(...[...node.children].reverse());
+  }
+  // Text extraction only; this value is never rendered as HTML.
+  return parts.join(' ').replace(/\s+/g, ' ');
 }
 
 export function validateProductionPage({ route, status, headers, body, canonicalOrigin }) {

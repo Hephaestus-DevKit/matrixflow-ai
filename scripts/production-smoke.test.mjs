@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateLocalePage, validateProductionPage } from './production-smoke.mjs';
+import { pageText, validateLocalePage, validateProductionPage } from './production-smoke.mjs';
 
 const canonicalOrigin = 'https://matrixflow-ai.vercel.app';
 const route = { path: '/pricing', marker: '从可验证的免费版本开始' };
@@ -85,3 +85,14 @@ test('localized text in hydration scripts cannot disguise a missing page body', 
   });
   assert.ok(failures.some((failure) => failure.includes('content marker')));
 });
+
+for (const markup of [
+  '<script>hidden marker<script>nested</script>',
+  '<!-- hidden marker <!-- nested -->',
+  '<head><title>hidden marker</title></head><style>hidden marker</style>',
+]) {
+  test(`HTML extraction excludes inactive content: ${markup.slice(0, 25)}`, () => {
+    assert.equal(pageText(markup).trim(), '');
+    assert.match(pageText('<main>Visible &amp; confirmed</main>'), /Visible & confirmed/);
+  });
+}

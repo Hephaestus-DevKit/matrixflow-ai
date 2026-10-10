@@ -22,7 +22,7 @@
 
 - 后端检查新增 ESLint 未定义变量检查，并为单项和批量内容异步路由补充回归测试。
 - `pnpm verify`：格式、Schema、三语字典键、类型、lint、单元测试、生产构建与 Function 检查。
-- 单元/脚本测试：共享 12、前端 33、脚本 12、Function 102，共 159 项。
+- 单元/脚本测试：共享 12、前端 33、脚本 15、Function 102，共 162 项。
 - Chromium 浏览器回归：23 项通过。新增登录后的内容语言/目标参数、后台结果恢复、知识关联、工作流保存顺序与输入、团队切换、慢身份读取、网络恢复、手机布局与删除焦点、知识问答引用。
 - 浏览器使用隔离的 Appwrite HTTP 固件；无真实账号、凭据或现有团队内容进入固件。
 - `scripts/product-smoke.mjs`：显式运行的真实云端验收脚本。使用现有 CLI 登录创建临时验证账号/团队，覆盖知识文件索引、带引用的员工运行、问答、德文内容、工作流输入、编辑/暂停/启用。凭据仅存在进程内存，结束清理测试业务资源与账号，保留安全审计。
@@ -44,3 +44,12 @@
 - Vercel 现有项目 `matrixflow-ai` 的生产构建成功；真实生产地址是 `https://matrixflow-ai-sycamore-tree.vercel.app`。原文档和 SEO 元数据误用另一地址，本轮同步纠正。
 - 公开首页已通过本机既有代理取得 HTTP 200 与实际 MatrixFlow 页面。直接连接在当前网络下超时，没有修改系统代理设置。
 - 桌面与手机截图已人工检查；未发现横向溢出、遮挡主要操作或严重无障碍错误。截图使用隔离模拟数据，不代表现有业务内容。
+
+## 发布后的扫描与浏览器验证补充
+
+- GitHub CodeQL 标记了请求指纹的快速哈希与巡检脚本的 HTML 删除正则。本轮改为有团队隔离盐的 PBKDF2（120,000 次）和 HTML DOM 文本提取，补上脚本/样式/注释回归；保持 64 字符的指纹字段和身份/权限隔离。新旧指纹不相同，旧幂等键重试可能返回冲突，不能据此盲目更换键重试未知结果。
+- JavaScript CodeQL 扫描恢复显式语言矩阵/分类，与主分支扫描配置保持可比较；该分支已经没有 Python 源码，不恢复已退役的 Python 服务来制造扫描通过。
+- Appwrite 原本仅允许 localhost 和旧地址。已在同一项目注册精确域名 `matrixflow-ai-sycamore-tree.vercel.app` 与 `matrixflow-ai-web-fawn.vercel.app`，没有使用域名通配符。验证返回 401 且允许对应 Origin 和 Credentials，保留身份验证边界。
+- 干净 Chromium 实际访问生产 `/dashboard/content`，成功转到中文登录页并保留 `next=/dashboard/content`。
+- 六个公开页面和三个语言首页的线上响应、内容、canonical 及安全响应头检查共九项全部通过。
+- 草稿 PR：https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/68 。

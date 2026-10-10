@@ -71,6 +71,18 @@ async function waitJob(job) {
   throw new Error(`Job ${job.type} did not finish within 180 seconds`);
 }
 try {
+  const origin = new URL(
+    process.env.MATRIXFLOW_PUBLIC_URL || 'https://matrixflow-ai-sycamore-tree.vercel.app',
+  ).origin;
+  const cors = await fetch(`${endpoint}/account`, {
+    headers: { Origin: origin, 'X-Appwrite-Project': projectId },
+    signal: AbortSignal.timeout(25000),
+  });
+  assert.equal(cors.status, 401, 'Production origin must reach the authenticated API');
+  assert.equal(cors.headers.get('access-control-allow-origin'), origin);
+  summary.checks.push(
+    'Production browser origin allowed; unauthenticated requests remain protected',
+  );
   cli(
     'users',
     'create',

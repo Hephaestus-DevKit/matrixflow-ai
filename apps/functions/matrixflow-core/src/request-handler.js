@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, pbkdf2Sync, randomUUID } from 'node:crypto';
 import {
   HttpError,
   enforceRequestRateLimit,
@@ -191,27 +191,29 @@ export function createRequestHandler({ handleRoute, readinessSnapshot, dependenc
       );
 
       const fingerprint = idempotencyKey
-        ? createHash('sha256')
-            .update(
-              canonicalJson({
-                method,
-                path,
-                payload,
-                principal:
-                  membership.source === 'api-key'
-                    ? {
-                        source: 'api-key',
-                        id: membership.apiKeyId,
-                        capabilities: [...(membership.capabilities || [])].sort(),
-                      }
-                    : {
-                        source: 'appwrite-session',
-                        id: userId,
-                        roles: [...membership.roles].sort(),
-                      },
-              }),
-            )
-            .digest('hex')
+        ? pbkdf2Sync(
+            canonicalJson({
+              method,
+              path,
+              payload,
+              principal:
+                membership.source === 'api-key'
+                  ? {
+                      source: 'api-key',
+                      id: membership.apiKeyId,
+                      capabilities: [...(membership.capabilities || [])].sort(),
+                    }
+                  : {
+                      source: 'appwrite-session',
+                      id: userId,
+                      roles: [...membership.roles].sort(),
+                    },
+            }),
+            `matrixflow-request-v2:${teamId}`,
+            120_000,
+            32,
+            'sha256',
+          ).toString('hex')
         : null;
       if (idempotencyKey && fingerprint) {
         const claimed = await deps.claimIdempotency(services, teamId, {
