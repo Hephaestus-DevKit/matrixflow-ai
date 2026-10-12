@@ -15,6 +15,9 @@ import { FileText, Loader2, RefreshCw, Trash2, Upload } from 'lucide-react';
 import { useLocale, type Locale } from '@/lib/i18n';
 import { PageHeader } from '@/components/ui/page';
 import { PaginationBar } from '@/components/ui/pagination';
+import { JobProgress } from '@/components/job-progress';
+import { ResultText } from '@/components/ui/result-text';
+import { type BackgroundJob } from '@/lib/jobs';
 
 const DOCUMENT_PAGE_SIZE = 20;
 
@@ -153,6 +156,10 @@ const COPY: Record<
 
 export default function KbDetailPage() {
   const { locale } = useLocale();
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [indexing, setIndexing] = useState(false);
+  const [answerJobId, setAnswerJobId] = useState<string | null>(null);
+  const [answerActive, setAnswerActive] = useState(false);
   const copy = COPY[locale];
   const { id } = useParams();
   const router = useRouter();
@@ -188,14 +195,17 @@ export default function KbDetailPage() {
     fd.append('file', file);
     setUploading(true);
     try {
-      const result = await apiClient.upload<{ status?: string; error?: string }>(
+      const result = await apiClient.upload<BackgroundJob | { status: 'ERROR' }>(
         `/kb/${id}/documents`,
         fd,
       );
       setDocumentOffset(0);
       await queryClient.invalidateQueries({ queryKey: ['kb', id] });
       if (result.status === 'ERROR') toast.error(copy.uploadError);
-      else toast.success(copy.uploadDone);
+      else {
+        setJobId(result.id);
+        setIndexing(true);
+      }
     } catch (error) {
       toast.error(errorMessage(error, copy.uploadFailed));
     } finally {
@@ -205,11 +215,16 @@ export default function KbDetailPage() {
   }
 
   async function ask() {
-    if (!question) return;
+    if (asking || answerActive || !question.trim()) return;
     setAsking(true);
     try {
-      const r = await apiClient.post<RagAnswer>(`/kb/${id}/ask`, { question });
-      setAnswer(r);
+      const r = await apiClient.post<BackgroundJob>(`/kb/${id}/ask`, {
+        question: question.trim(),
+        mode: 'async',
+      });
+      setAnswerJobId(r.id);
+      setAnswerActive(true);
+      setAnswer(null);
     } catch (error) {
       toast.error(errorMessage(error, copy.askFailed));
     } finally {
@@ -219,9 +234,10 @@ export default function KbDetailPage() {
 
   async function retryIndex(documentId: string) {
     try {
-      await apiClient.post('/kb/index', { documentId });
+      const job = await apiClient.post<BackgroundJob>('/kb/index', { documentId, mode: 'async' });
+      setJobId(job.id);
+      setIndexing(true);
       await queryClient.invalidateQueries({ queryKey: ['kb', id] });
-      toast.success(copy.indexed);
     } catch (error) {
       await queryClient.invalidateQueries({ queryKey: ['kb', id] });
       toast.error(errorMessage(error, copy.reindexFailed));
@@ -295,7 +311,7 @@ export default function KbDetailPage() {
           type="file"
           accept=".pdf,.docx,.txt,.md,.csv"
           onChange={upload}
-          disabled={uploading}
+          disabled={uploading || indexing}
           className="sr-only"
         />
       </label>
@@ -335,6 +351,7 @@ export default function KbDetailPage() {
                 <Button
                   variant="ghost"
                   size="icon"
+                  disabled={indexing}
                   aria-label={copy.reindex}
                   onClick={() => void retryIndex(document.id)}
                 >
@@ -375,16 +392,28 @@ export default function KbDetailPage() {
           <Input
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
+            aria-label={copy.rag}
             placeholder={copy.askPlaceholder}
             onKeyDown={(e) => e.key === 'Enter' && ask()}
           />
-          <Button onClick={ask} disabled={asking}>
+          <Button onClick={ask} disabled={asking || answerActive || !question.trim()}>
             {asking ? '…' : copy.ask}
           </Button>
         </div>
+        {answerJobId && (
+          <JobProgress
+            jobId={answerJobId}
+            showResult={false}
+            onSettled={(job) => {
+              setAnswerActive(false);
+              if (job.status === 'SUCCEEDED' && typeof job.result?.answer === 'string')
+                setAnswer(job.result as unknown as RagAnswer);
+            }}
+          />
+        )}
         {answer && (
           <div className="surface-card p-5">
-            <p className="whitespace-pre-wrap text-sm leading-7">{answer.answer}</p>
+            <ResultText text={answer.answer} filename={`knowledge-${id}.txt`} />
             {answer.citations?.length > 0 && (
               <div className="mt-5 border-t border-border pt-4">
                 <p className="text-xs font-bold text-muted-foreground">{copy.references}</p>
@@ -404,6 +433,17 @@ export default function KbDetailPage() {
           </div>
         )}
       </div>
+      {jobId && (
+        <JobProgress
+          jobId={jobId}
+          showResult={false}
+          onSettled={(job) => {
+            setIndexing(false);
+            void queryClient.invalidateQueries({ queryKey: ['kb', id] });
+            if (job.status === 'SUCCEEDED') toast.success(copy.indexed);
+          }}
+        />
+      )}
       <ConfirmDialog
         open={confirmAction !== null}
         title={confirmAction === 'kb' ? copy.deleteKb : copy.deleteDocument}

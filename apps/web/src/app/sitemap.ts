@@ -1,7 +1,8 @@
+import { SITE_ORIGIN } from '@/lib/site';
 import type { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = 'https://matrixflow-ai.vercel.app';
+  const base = SITE_ORIGIN;
   return ['', '/pricing', '/privacy', '/terms'].map((path) => ({
     url: `${base}${path}`,
     lastModified: new Date(),

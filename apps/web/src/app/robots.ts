@@ -1,3 +1,4 @@
+import { SITE_ORIGIN } from '@/lib/site';
 import type { MetadataRoute } from 'next';
 
 export default function robots(): MetadataRoute.Robots {
@@ -9,6 +10,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/dashboard/', '/login', '/register', '/recover', '/invite'],
       },
     ],
-    sitemap: 'https://matrixflow-ai.vercel.app/sitemap.xml',
+    sitemap: `${SITE_ORIGIN}/sitemap.xml`,
   };
 }

@@ -8,7 +8,7 @@
 
 > 当前版本定位：生产可用 Beta。公开体验、Appwrite 租户边界和 AI Provider 适配已可用于真实试用；Stripe 结账、外部连接器、企业 SSO、备份恢复演练和多区域 Worker 仍需按发布清单配置后，才适合承诺企业级 SLA。
 
-发布前请运行 `corepack pnpm verify`、`corepack pnpm readiness:audit:strict`、`corepack pnpm test:e2e` 和 `corepack pnpm smoke:production`。严格就绪检查依赖 Appwrite/Vercel/告警/备份等外部证据；本地未配置这些凭证时失败是预期行为，不应通过关闭检查来绕过。
+发布前请运行 `pnpm verify`、`pnpm readiness:audit:strict`、`pnpm test:e2e` 和 `pnpm smoke:production`。严格就绪检查依赖 Appwrite/Vercel/告警/备份等外部证据；本地未配置这些凭证时失败是预期行为，不应通过关闭检查来绕过。
 
 ## 当前能力
 
@@ -35,7 +35,7 @@
 - 组织可导出脱敏数据，或在精确确认后删除业务数据；安全审计、订阅、发票、交易与计费事件按保留策略留存。
 - AI 用量会按调用、输入/输出 Token、供应商/模型与可选价格表记录；成本缺少价格配置时显示为 0，不会推测或虚构费用。
 
-生产环境：<https://matrixflow-ai.vercel.app>。生产前端部署在 Vercel，数据与 Function 部署在 Appwrite Cloud Singapore；生产 Function 的部署保留策略为 5 天，便于回滚同时避免无界堆积。
+生产环境：<https://matrixflow-ai-sycamore-tree.vercel.app>。生产前端部署在 Vercel，数据与 Function 部署在 Appwrite Cloud Singapore；生产 Function 的部署保留策略为 5 天，便于回滚同时避免无界堆积。
 
 ## 架构
 
@@ -69,12 +69,13 @@ appwrite.config.json                   Appwrite 项目配置入口
 
 ## 本地运行
 
-要求 Node.js 22.14+、pnpm 11。
+要求 Node.js 22.14+、pnpm 11。已安装 pnpm 时可直接运行以下命令，无需 Corepack。
 
 ```bash
-corepack pnpm install --frozen-lockfile
-cp .env.example .env.local
-corepack pnpm dev
+pnpm install --frozen-lockfile
+npm ci --prefix apps/functions/matrixflow-core
+cp .env.example apps/web/.env.local
+pnpm dev
 ```
 
 打开 `http://localhost:3000`。仓库已提供公开的 Appwrite endpoint 与 project ID 默认值；如果复制项目，请在 `.env.local` 中替换。公开页面、登录、注册、恢复密码和工作台均支持简体中文、繁體中文与 English。
@@ -83,6 +84,7 @@ AI 能力通过 Appwrite Function 统一接入两种协议：原生 Anthropic Me
 
 推荐在 `matrixflow-core` 函数变量中显式设置 `MATRIXFLOW_AI_PROVIDER`：
 
+- `deepseek`（当前生产选择）：`DEEPSEEK_API_KEY`、`DEEPSEEK_MODEL=deepseek-flash`、`DEEPSEEK_BASE_URL=https://api.deepseek.com/anthropic`。与官方 Harness 一样使用 Messages API；`DEEPSEEK_REASONING_EFFORT=none` 默认关闭思考以降低延迟，`low` / `high` / `max` 可启用思考。
 - `anthropic`：`ANTHROPIC_API_KEY`、`ANTHROPIC_MODEL`、可选 `ANTHROPIC_BASE_URL`。
 - `openai` / `openai-compatible`：`OPENAI_API_KEY`、`OPENAI_MODEL`、可选 `OPENAI_BASE_URL`。
 - `glm`：兼容旧部署的 `GLM_API_KEY`、`GLM_MODEL`、可选 `GLM_ENDPOINT`。
@@ -106,15 +108,15 @@ X-MatrixFlow-Organization: <team-id>
 ## 质量检查
 
 ```bash
-corepack pnpm verify
-corepack pnpm schema:check
-corepack pnpm readiness:audit
-corepack pnpm function:check
-corepack pnpm function:test
-corepack pnpm test:e2e
-corepack pnpm audit --prod --audit-level=high
+pnpm verify
+pnpm schema:check
+pnpm readiness:audit
+pnpm function:check
+pnpm function:test
+pnpm test:e2e
+pnpm audit --prod --audit-level=high
 npm audit --omit=dev --prefix apps/functions/matrixflow-core
-corepack pnpm smoke:production
+pnpm smoke:production
 ```
 
 生产公开 smoke 会分别携带简体中文、繁體中文与 English 的持久化语言 Cookie，校验服务端首屏的 `<html lang>`、标题和页面主体，避免只在 hydration 后看起来正确。

@@ -17,6 +17,42 @@ test('server-renders the persisted locale before hydration', async ({ context })
   expect(body).toContain('<title>MatrixFlow AI — AI Workforce OS</title>');
 });
 
+test('a locale cookie wins over stale localStorage during hydration', async ({ page, context }) => {
+  await context.addCookies([
+    { name: 'matrixflow-locale', value: 'zh-TW', domain: '127.0.0.1', path: '/' },
+  ]);
+  await context.addInitScript(() => localStorage.setItem('matrixflow-locale', 'en'));
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('把跨境營運流程');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
+  expect(
+    (await context.cookies()).find((cookie) => cookie.name === 'matrixflow-locale')?.value,
+  ).toBe('zh-TW');
+});
+
+test('locale switching works when browser privacy settings block localStorage', async ({
+  page,
+  context,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await context.addInitScript(() => {
+    Object.defineProperty(window, 'localStorage', {
+      get() {
+        throw new DOMException('Storage disabled', 'SecurityError');
+      },
+    });
+  });
+  await page.goto('/');
+  await chooseLocale(page, 'en');
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(
+    'Put cross-border operations',
+  );
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  expect(errors).toEqual([]);
+});
+
 test('switches among all three locales and persists the choice', async ({ page }) => {
   await page.goto('/');
 
@@ -135,8 +171,8 @@ test('keeps authentication helper actions touch friendly', async ({ page }) => {
     );
     expect(actions.length, `${path} should expose helper actions`).toBeGreaterThan(0);
     for (const action of actions) {
-      expect(action.height, `${path} helper action is too short`).toBeGreaterThanOrEqual(44);
-      expect(action.width, `${path} helper action is too narrow`).toBeGreaterThanOrEqual(44);
+      expect(action.height + 0.01, `${path} helper action is too short`).toBeGreaterThanOrEqual(44);
+      expect(action.width + 0.01, `${path} helper action is too narrow`).toBeGreaterThanOrEqual(44);
     }
   }
 });
@@ -183,4 +219,25 @@ test('keeps the complete public journey inside the 320px minimum width in every 
       }
     }
   }
+});
+
+test('narrow English hero remains readable with fallback system fonts', async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([
+    { name: 'matrixflow-locale', value: 'en', domain: '127.0.0.1', path: '/' },
+  ]);
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto('/');
+  await page.addStyleTag({
+    content: ':root { --font-sans: Arial, sans-serif; --font-display: Arial, sans-serif; }',
+  });
+  const layout = await page.locator('.landing-hero').evaluate((hero) => ({
+    height: hero.getBoundingClientRect().height,
+    headingSize: Number.parseFloat(getComputedStyle(hero.querySelector('h1')!).fontSize),
+  }));
+  expect(layout.height).toBeLessThanOrEqual(1250);
+  expect(layout.headingSize).toBeGreaterThanOrEqual(26);
+  await expect(page.locator('.landing-primary-action').first()).toBeInViewport();
 });

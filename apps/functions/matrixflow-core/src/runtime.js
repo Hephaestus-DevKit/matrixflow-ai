@@ -200,7 +200,13 @@ export async function requireTeamMember(services, teamId, userId) {
     throw error;
   }
   const membership = members.memberships[0];
-  if (!membership) throw new HttpError('无权访问该团队空间', 403, 'FORBIDDEN');
+  if (
+    !membership ||
+    membership.confirm !== true ||
+    membership.userId !== userId ||
+    membership.teamId !== teamId
+  )
+    throw new HttpError('无权访问该团队空间', 403, 'FORBIDDEN');
   return { ...membership, roles: membership.roles?.length ? membership.roles : ['member'] };
 }
 
@@ -532,6 +538,8 @@ export async function recordUsage(services, teamId, generated) {
           upstreamRequestId: generated.upstreamRequestId,
           requestId: generated.requestId,
           costUsd: Number.isFinite(Number(generated?.costUsd)) ? Number(generated.costUsd) : 0,
+          cachedInputTokens: generated.usage?.cachedInputTokens,
+          cacheWriteInputTokens: generated.usage?.cacheWriteInputTokens,
         },
         recordedAt: new Date().toISOString(),
       }),

@@ -1,23 +1,11 @@
 'use client';
 
-import { ReactNode, useEffect, useRef } from 'react';
+import { ReactNode, useEffect, useMemo } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState } from 'react';
 import { ThemeProvider } from 'next-themes';
 import { ApiError } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-store';
 import { LocaleProvider, type Locale } from '@/lib/i18n';
-
-function OrganizationCacheBoundary({ queryClient }: { queryClient: QueryClient }) {
-  const organizationId = useAuth((state) => state.organizationId);
-  const previousOrganizationId = useRef(organizationId);
-
-  useEffect(() => {
-    if (previousOrganizationId.current !== organizationId) queryClient.clear();
-    previousOrganizationId.current = organizationId;
-  }, [organizationId, queryClient]);
-  return null;
-}
 
 export function Providers({
   children,
@@ -26,11 +14,14 @@ export function Providers({
   children: ReactNode;
   initialLocale: Locale;
 }) {
-  const [qc] = useState(
+  const organizationId = useAuth((state) => state.organizationId);
+  const userId = useAuth((state) => state.user?.id);
+  const qc = useMemo(
     () =>
       new QueryClient({
         defaultOptions: {
           queries: {
+            meta: { organizationId, userId },
             staleTime: 30_000,
             retry: (failureCount, error) => {
               if (failureCount >= 2) return false;
@@ -43,10 +34,11 @@ export function Providers({
           mutations: { retry: false },
         },
       }),
+    [organizationId, userId],
   );
+  useEffect(() => () => qc.clear(), [qc]);
   return (
     <QueryClientProvider client={qc}>
-      <OrganizationCacheBoundary queryClient={qc} />
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
         <LocaleProvider initialLocale={initialLocale}>{children}</LocaleProvider>
       </ThemeProvider>

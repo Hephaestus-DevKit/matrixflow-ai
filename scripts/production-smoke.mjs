@@ -1,7 +1,8 @@
+import { parseDocument } from 'htmlparser2';
 import { pathToFileURL } from 'node:url';
 
 const ROUTES = [
-  { path: '/', marker: '跨境电商专属 · AI 员工操作系统' },
+  { path: '/', marker: '跨境电商 AI 员工操作系统' },
   { path: '/login', marker: '欢迎回来', canonical: false },
   { path: '/register', marker: '创建你的 AI 团队', canonical: false },
   { path: '/pricing', marker: '从可验证的免费版本开始' },
@@ -12,17 +13,17 @@ const ROUTES = [
 const LOCALE_PROBES = [
   {
     locale: 'zh-CN',
-    marker: '跨境电商专属 · AI 员工操作系统',
+    marker: '跨境电商 AI 员工操作系统',
     title: 'MatrixFlow AI — AI 员工操作系统',
   },
   {
     locale: 'zh-TW',
-    marker: '跨境電商專屬 · AI 員工作業系統',
+    marker: '跨境電商 AI 員工作業系統',
     title: 'MatrixFlow AI — AI 員工作業系統',
   },
   {
     locale: 'en',
-    marker: 'Built for cross-border commerce · AI workforce OS',
+    marker: 'AI workforce for cross-border commerce',
     title: 'MatrixFlow AI — AI Workforce OS',
   },
 ];
@@ -31,6 +32,20 @@ function headerValue(headers, name) {
   if (typeof headers?.get === 'function') return headers.get(name) || '';
   const entry = Object.entries(headers || {}).find(([key]) => key.toLowerCase() === name);
   return String(entry?.[1] || '');
+}
+
+export function pageText(body) {
+  const document = parseDocument(body);
+  const parts = [];
+  const pending = [...document.children].reverse();
+  while (pending.length) {
+    const node = pending.pop();
+    if (node.type === 'text') parts.push(node.data);
+    else if (node.children && !['script', 'style', 'head'].includes(node.name))
+      pending.push(...[...node.children].reverse());
+  }
+  // Text extraction only; this value is never rendered as HTML.
+  return parts.join(' ').replace(/\s+/g, ' ');
 }
 
 export function validateProductionPage({ route, status, headers, body, canonicalOrigin }) {
@@ -46,7 +61,7 @@ export function validateProductionPage({ route, status, headers, body, canonical
     failures.push(`${route.path}: expected an HTML response, received ${contentType || '<empty>'}`);
   if (!body.includes('MatrixFlow'))
     failures.push(`${route.path}: MatrixFlow brand marker is missing`);
-  if (!body.includes(route.marker))
+  if (!pageText(body).includes(route.marker))
     failures.push(`${route.path}: route-specific marker is missing (${route.marker})`);
   if (!/<html\b[^>]*\blang=["']zh-CN["']/i.test(body))
     failures.push(`${route.path}: default document language is not zh-CN`);
@@ -115,7 +130,7 @@ export function validateLocalePage({ locale, marker, title, status, body }) {
   const escapedLocale = locale.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   if (!new RegExp(`<html\\b[^>]*\\blang=["']${escapedLocale}["']`, 'i').test(body))
     failures.push(`locale ${locale}: server-rendered document language is incorrect`);
-  if (!body.includes(marker))
+  if (!pageText(body).includes(marker))
     failures.push(`locale ${locale}: server-rendered localized content marker is missing`);
   if (!body.includes(`<title>${title}</title>`))
     failures.push(`locale ${locale}: server-rendered localized title is missing`);
@@ -123,8 +138,12 @@ export function validateLocalePage({ locale, marker, title, status, body }) {
 }
 
 export async function runProductionSmoke({
-  baseUrl = process.env.MATRIXFLOW_PRODUCTION_URL || 'https://matrixflow-ai.vercel.app',
-  canonicalOrigin = process.env.MATRIXFLOW_CANONICAL_URL || 'https://matrixflow-ai.vercel.app',
+  baseUrl = process.env.MATRIXFLOW_PRODUCTION_URL ||
+    'https://matrixflow-ai-sycamore-tree.vercel.app',
+  canonicalOrigin = process.env.MATRIXFLOW_CANONICAL_URL ||
+    'https://matrixflow-ai-sycamore-tree.vercel.app',
+  fetchPage = fetch,
+  timeoutMs = 15_000,
 } = {}) {
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, '');
   const normalizedCanonicalOrigin = canonicalOrigin.replace(/\/+$/, '');
@@ -133,21 +152,23 @@ export async function runProductionSmoke({
   for (const route of ROUTES) {
     const url = `${normalizedBaseUrl}${route.path}`;
     try {
-      const response = await fetch(url, {
+      const response = await fetchPage(url, {
         headers: { 'user-agent': 'matrixflow-production-smoke/2.0' },
         redirect: 'manual',
+        signal: AbortSignal.timeout(timeoutMs),
       });
       const body = await response.text();
-      failures.push(
-        ...validateProductionPage({
-          route,
-          status: response.status,
-          headers: response.headers,
-          body,
-          canonicalOrigin: normalizedCanonicalOrigin,
-        }),
+      const routeFailures = validateProductionPage({
+        route,
+        status: response.status,
+        headers: response.headers,
+        body,
+        canonicalOrigin: normalizedCanonicalOrigin,
+      });
+      failures.push(...routeFailures);
+      process.stdout.write(
+        `${routeFailures.length ? 'fail' : 'ok'} ${route.path} (${response.status})\n`,
       );
-      process.stdout.write(`ok ${route.path} (${response.status})\n`);
     } catch (error) {
       failures.push(`${route.path}: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -155,22 +176,24 @@ export async function runProductionSmoke({
 
   for (const probe of LOCALE_PROBES) {
     try {
-      const response = await fetch(`${normalizedBaseUrl}/`, {
+      const response = await fetchPage(`${normalizedBaseUrl}/`, {
         headers: {
           'user-agent': 'matrixflow-production-smoke/2.0',
           cookie: `matrixflow-locale=${probe.locale}`,
         },
         redirect: 'manual',
+        signal: AbortSignal.timeout(timeoutMs),
       });
       const body = await response.text();
-      failures.push(
-        ...validateLocalePage({
-          ...probe,
-          status: response.status,
-          body,
-        }),
+      const localeFailures = validateLocalePage({
+        ...probe,
+        status: response.status,
+        body,
+      });
+      failures.push(...localeFailures);
+      process.stdout.write(
+        `${localeFailures.length ? 'fail' : 'ok'} / [${probe.locale}] (${response.status})\n`,
       );
-      process.stdout.write(`ok / [${probe.locale}] (${response.status})\n`);
     } catch (error) {
       failures.push(
         `locale ${probe.locale}: ${error instanceof Error ? error.message : String(error)}`,

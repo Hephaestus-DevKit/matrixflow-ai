@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, pbkdf2Sync, randomUUID } from 'node:crypto';
 import {
   HttpError,
   enforceRequestRateLimit,
@@ -191,7 +191,29 @@ export function createRequestHandler({ handleRoute, readinessSnapshot, dependenc
       );
 
       const fingerprint = idempotencyKey
-        ? createHash('sha256').update(canonicalJson({ method, path, payload })).digest('hex')
+        ? pbkdf2Sync(
+            canonicalJson({
+              method,
+              path,
+              payload,
+              principal:
+                membership.source === 'api-key'
+                  ? {
+                      source: 'api-key',
+                      id: membership.apiKeyId,
+                      capabilities: [...(membership.capabilities || [])].sort(),
+                    }
+                  : {
+                      source: 'appwrite-session',
+                      id: userId,
+                      roles: [...membership.roles].sort(),
+                    },
+            }),
+            `matrixflow-request-v2:${teamId}`,
+            120_000,
+            32,
+            'sha256',
+          ).toString('hex')
         : null;
       if (idempotencyKey && fingerprint) {
         const claimed = await deps.claimIdempotency(services, teamId, {
@@ -229,12 +251,23 @@ export function createRequestHandler({ handleRoute, readinessSnapshot, dependenc
       const response = { data, meta: { requestId, apiVersion: API_VERSION } };
       if (idempotencyKey && fingerprint && idempotencyClaim) {
         try {
+          // API Key plaintext is returned once and must never enter replay storage.
+          const oneTimeSecret = method === 'POST' && path === '/api-keys';
+          const replayResponse = oneTimeSecret
+            ? {
+                error: {
+                  code: 'API_KEY_SECRET_UNAVAILABLE',
+                  message: '密钥已创建，完整密钥无法再次显示；请撤销后重新创建',
+                  requestId,
+                },
+              }
+            : response;
           const stored = await deps.completeIdempotency(
             services,
             teamId,
             idempotencyClaim.id,
-            response,
-            responseStatus,
+            replayResponse,
+            oneTimeSecret ? 409 : responseStatus,
           );
           if (stored) idempotencyClaim.completed = true;
           else idempotencyClaim = undefined;

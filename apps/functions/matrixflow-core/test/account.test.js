@@ -76,3 +76,43 @@ test('organization deletion preserves the active idempotency claim for replay', 
   assert.equal(result.deleted.idempotencyKeys, 1);
   assert.deepEqual(services.deleted, ['idempotency_keys:claim-old']);
 });
+
+test('exports include background job payloads with credentials redacted', async () => {
+  const services = servicesFor({
+    background_jobs: [
+      {
+        $id: 'job-1',
+        organizationId: 'team-1',
+        status: 'SUCCEEDED',
+        payload: JSON.stringify({ apiKey: 'secret', prompt: 'business data' }),
+        result: JSON.stringify({ text: 'generated output' }),
+      },
+    ],
+  });
+  const result = await exportOrganization(services, 'team-1');
+  assert.equal(result.tables.backgroundJobs[0].payload.apiKey, '[REDACTED]');
+  assert.equal(result.tables.backgroundJobs[0].result.text, 'generated output');
+});
+
+test('deletion stops before changing data while background jobs are active', async () => {
+  for (const status of ['QUEUED', 'RETRY_WAIT', 'RUNNING']) {
+    const services = servicesFor({
+      background_jobs: [{ $id: 'job-1', organizationId: 'team-1', status }],
+      agents: [{ $id: 'agent-1', organizationId: 'team-1' }],
+    });
+    await assert.rejects(
+      () => deleteOrganization(services, 'team-1', 'team-1'),
+      (error) => error.code === 'ACTIVE_JOBS_EXIST',
+    );
+    assert.deepEqual(services.deleted, []);
+  }
+});
+
+test('deletion removes completed jobs and their retained business payloads', async () => {
+  const services = servicesFor({
+    background_jobs: [{ $id: 'job-1', organizationId: 'team-1', status: 'SUCCEEDED' }],
+  });
+  const result = await deleteOrganization(services, 'team-1', 'team-1');
+  assert.equal(result.deleted.backgroundJobs, 1);
+  assert.deepEqual(services.deleted, ['background_jobs:job-1']);
+});

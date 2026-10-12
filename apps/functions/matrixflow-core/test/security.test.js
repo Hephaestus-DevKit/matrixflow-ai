@@ -257,6 +257,32 @@ test('unknown teams never expose Appwrite membership details', async () => {
   );
 });
 
+test('membership requires a confirmed invitation for the exact user and team', async () => {
+  const member = { confirm: true, userId: 'user-1', teamId: 'team-1', roles: ['owner'] };
+  for (const change of [
+    { confirm: false },
+    { confirm: undefined },
+    { userId: 'other-user' },
+    { teamId: 'other-team' },
+  ]) {
+    await assert.rejects(
+      () =>
+        requireTeamMember(
+          { teams: { listMemberships: async () => ({ memberships: [{ ...member, ...change }] }) } },
+          'team-1',
+          'user-1',
+        ),
+      (error) => error.status === 403 && error.code === 'FORBIDDEN',
+    );
+  }
+  const result = await requireTeamMember(
+    { teams: { listMemberships: async () => ({ memberships: [member] }) } },
+    'team-1',
+    'user-1',
+  );
+  assert.deepEqual(result.roles, ['owner']);
+});
+
 test('plan limits fail before creating another resource', async () => {
   await assert.rejects(
     () =>

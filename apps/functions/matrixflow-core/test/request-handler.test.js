@@ -142,3 +142,67 @@ test('rejects an explicitly non-JSON request before authentication or routing', 
   assert.equal(calls[0].payload.error.code, 'UNSUPPORTED_MEDIA_TYPE');
   assert.equal(routed, false);
 });
+
+test('idempotent replays are bound to the caller and current permissions', async () => {
+  const fingerprints = [];
+  let roles = ['owner'];
+  const handler = createRequestHandler({
+    readinessSnapshot: () => ({}),
+    handleRoute: async () => ({ created: true }),
+    dependencies: baseDependencies({
+      requireTeamMember: async () => ({ roles }),
+      resolveApiKey: async () => ({
+        source: 'api-key',
+        userId: 'user-1',
+        apiKeyId: 'key-1',
+        capabilities: ['agents.manage'],
+      }),
+      claimIdempotency: async (_services, _teamId, input) => {
+        fingerprints.push(input.fingerprint);
+        return { claim: { id: 'claim-1' } };
+      },
+    }),
+  });
+  for (const headers of [
+    {},
+    { 'x-appwrite-user-id': 'user-2' },
+    { authorization: 'Bearer mf_live_test-key' },
+  ]) {
+    await handler({
+      req: request({}, { ...headers, 'idempotency-key': 'same-key-1234' }),
+      res: responseRecorder().response,
+    });
+  }
+  roles = ['member'];
+  await handler({
+    req: request({}, { 'idempotency-key': 'same-key-1234' }),
+    res: responseRecorder().response,
+  });
+  assert.equal(new Set(fingerprints).size, 4);
+});
+
+test('API key creation returns the secret once but never stores it in an idempotent response', async () => {
+  let stored;
+  const handler = createRequestHandler({
+    readinessSnapshot: () => ({}),
+    handleRoute: async () => ({ key: 'mf_live_plaintext-secret', metadata: { id: 'key-1' } }),
+    dependencies: baseDependencies({
+      claimIdempotency: async () =>
+        stored ? { replay: stored.payload, status: stored.status } : { claim: { id: 'claim-1' } },
+      completeIdempotency: async (_services, _teamId, _claimId, payload, status) => {
+        stored = { payload, status };
+        return true;
+      },
+    }),
+  });
+  const req = { ...request({}, { 'idempotency-key': 'api-key-1234' }), path: '/api-keys' };
+  const first = responseRecorder();
+  await handler({ req, res: first.response });
+  assert.equal(first.calls[0].status, 200);
+  assert.equal(first.calls[0].payload.data.key, 'mf_live_plaintext-secret');
+  assert.ok(!JSON.stringify(stored).includes('mf_live_plaintext-secret'));
+  const retry = responseRecorder();
+  await handler({ req, res: retry.response });
+  assert.equal(retry.calls[0].status, 409);
+  assert.equal(retry.calls[0].payload.error.code, 'API_KEY_SECRET_UNAVAILABLE');
+});

@@ -1,4 +1,4 @@
-import { TABLES, getTeamPlan, recordAudit, requireAdmin, requireCapability } from '../runtime.js';
+import { getTeamPlan, recordAudit, requireAdmin, requireCapability } from '../runtime.js';
 import { deleteOrganization, exportOrganization } from '../account.js';
 import { createApiKey, listApiKeys, revokeApiKey } from '../api-keys.js';
 import { cancelJob, getJob, listJobs } from '../jobs.js';

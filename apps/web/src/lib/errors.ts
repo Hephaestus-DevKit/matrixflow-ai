@@ -20,9 +20,13 @@ const GENERIC_ERROR_COPY: Record<
     tooLarge: string;
     aiUnavailable: string;
     aiUnauthorized: string;
+    aiBalance: string;
     aiInvalid: string;
     quotaExceeded: string;
     planLimit: string;
+    activeJobs: string;
+    secretUnavailable: string;
+    organizationChanged: string;
   }
 > = {
   'zh-CN': {
@@ -42,9 +46,13 @@ const GENERIC_ERROR_COPY: Record<
     tooLarge: '数据量超过当前限制，请缩小范围后重试',
     aiUnavailable: 'AI 服务暂时不可用，请检查协议配置后重试',
     aiUnauthorized: 'AI 服务凭证无效，请联系管理员检查 Appwrite Function 配置',
+    aiBalance: 'AI 服务余额不足，请联系管理员充值',
     aiInvalid: 'AI 请求或模型响应无效，请调整输入后重试',
     quotaExceeded: '本月 AI 额度已用尽，请升级套餐或下月再试',
     planLimit: '已达到当前套餐的资源上限，请升级套餐后继续',
+    activeJobs: '请先取消后台任务并等待执行结束，再删除数据',
+    secretUnavailable: '密钥已创建，无法再次显示完整密钥；请撤销后重新创建',
+    organizationChanged: '团队空间已切换，请重试',
   },
   'zh-TW': {
     operationFailed: '操作失敗，請稍後再試',
@@ -63,9 +71,13 @@ const GENERIC_ERROR_COPY: Record<
     tooLarge: '資料量超過目前限制，請縮小範圍後再試',
     aiUnavailable: 'AI 服務暫時不可用，請檢查協議設定後再試',
     aiUnauthorized: 'AI 服務憑證無效，請聯絡管理員檢查 Appwrite Function 設定',
+    aiBalance: 'AI 服務餘額不足，請聯絡管理員儲值',
     aiInvalid: 'AI 請求或模型回應無效，請調整輸入後再試',
     quotaExceeded: '本月 AI 額度已用盡，請升級方案或下月再試',
     planLimit: '已達到目前方案的資源上限，請升級方案後繼續',
+    activeJobs: '請先取消背景任務並等待執行結束，再刪除資料',
+    secretUnavailable: '密鑰已建立，無法再次顯示完整密鑰；請撤銷後重新建立',
+    organizationChanged: '團隊空間已切換，請重試',
   },
   en: {
     operationFailed: 'Something went wrong. Try again shortly.',
@@ -86,9 +98,14 @@ const GENERIC_ERROR_COPY: Record<
       'The AI service is temporarily unavailable. Check the protocol configuration and try again.',
     aiUnauthorized:
       'The AI credentials are invalid. Ask an administrator to check the Appwrite Function configuration.',
+    aiBalance: 'The AI provider balance is insufficient. Ask an administrator to top it up.',
     aiInvalid: 'The AI request or model response was invalid. Adjust the input and try again.',
     quotaExceeded: 'This month’s AI quota is used up. Upgrade the plan or try again next month.',
     planLimit: 'This plan has reached its resource limit. Upgrade to continue.',
+    activeJobs: 'Cancel background jobs and wait for them to finish before deleting data.',
+    secretUnavailable:
+      'The key was created and cannot be shown again. Revoke it and create a new key.',
+    organizationChanged: 'The team workspace changed. Try again.',
   },
 };
 
@@ -101,6 +118,9 @@ const ERROR_COPY_BY_CODE: Record<string, keyof (typeof GENERIC_ERROR_COPY)['en']
   RESOURCE_NOT_FOUND: 'notFound',
   ROUTE_NOT_FOUND: 'notFound',
   CONFLICT: 'conflict',
+  ACTIVE_JOBS_EXIST: 'activeJobs',
+  API_KEY_SECRET_UNAVAILABLE: 'secretUnavailable',
+  ORGANIZATION_CHANGED: 'organizationChanged',
   IDEMPOTENCY_CONFLICT: 'conflict',
   IDEMPOTENCY_IN_PROGRESS: 'conflict',
   IDEMPOTENCY_REPLAY_UNAVAILABLE: 'conflict',
@@ -116,6 +136,7 @@ const ERROR_COPY_BY_CODE: Record<string, keyof (typeof GENERIC_ERROR_COPY)['en']
   METHOD_NOT_ALLOWED: 'invalidRequest',
   UNSUPPORTED_MEDIA_TYPE: 'invalidRequest',
   INVALID_REQUEST: 'invalidRequest',
+  VALIDATION_ERROR: 'invalidRequest',
   FILE_REQUIRED: 'invalidRequest',
   FILE_TOO_LARGE: 'tooLarge',
   FILE_NOT_FOUND: 'notFound',
@@ -132,6 +153,7 @@ const ERROR_COPY_BY_CODE: Record<string, keyof (typeof GENERIC_ERROR_COPY)['en']
   JOB_WORKER_UNAUTHORIZED: 'forbidden',
   JOB_CONTEXT_INVALID: 'invalidRequest',
   JOB_TYPE_INVALID: 'invalidRequest',
+  JOB_WORKER_TIMEOUT: 'timeout',
   JOB_PAYLOAD_TOO_LARGE: 'tooLarge',
   CONNECTOR_NOT_CONFIGURED: 'preview',
   CONNECTOR_URL_INVALID: 'invalidRequest',
@@ -156,6 +178,7 @@ const ERROR_COPY_BY_CODE: Record<string, keyof (typeof GENERIC_ERROR_COPY)['en']
   AI_NETWORK_ERROR: 'aiUnavailable',
   AI_TIMEOUT: 'aiUnavailable',
   AI_PROVIDER_AUTH: 'aiUnauthorized',
+  AI_PROVIDER_BALANCE: 'aiBalance',
   AI_PROVIDER_BAD_REQUEST: 'aiInvalid',
   AI_PROVIDER_INVALID: 'aiInvalid',
   AI_MODEL_INVALID: 'aiInvalid',
@@ -167,6 +190,7 @@ const ERROR_COPY_BY_CODE: Record<string, keyof (typeof GENERIC_ERROR_COPY)['en']
   AI_SYSTEM_TOO_LARGE: 'tooLarge',
   AI_MONTHLY_QUOTA_EXCEEDED: 'quotaExceeded',
   AI_RATE_LIMITED: 'rateLimited',
+  AI_PROVIDER_RATE_LIMITED: 'rateLimited',
   PLAN_LIMIT_EXCEEDED: 'planLimit',
 };
 

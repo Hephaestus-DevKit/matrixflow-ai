@@ -145,10 +145,17 @@ export async function handleKnowledgeRoute({
 
   if (method === 'POST' && segments.length === 3 && segments[1] && segments[2] === 'ask') {
     requireCapability(membership, 'knowledge.manage');
-    return askKnowledgeBase(services, context, {
-      knowledgeBaseId: segments[1],
-      ...parse(schemas.knowledgeAsk, body),
-    });
+    const input = parse(schemas.knowledgeAsk, body);
+    await getOwned(services, TABLES.knowledgeBases, segments[1], context.teamId);
+    if (input.mode === 'async')
+      return new HttpResult(
+        await enqueueJob(services, context, 'knowledge.ask', {
+          knowledgeBaseId: segments[1],
+          question: input.question,
+        }),
+        202,
+      );
+    return askKnowledgeBase(services, context, { knowledgeBaseId: segments[1], ...input });
   }
 
   if (

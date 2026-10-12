@@ -18,7 +18,7 @@ function apiKeyPepper() {
   const configured = String(process.env.MATRIXFLOW_API_KEY_PEPPER || '').trim();
   if (configured.length >= 32) return configured;
   const production =
-    String(process.env.NODE_ENV || '').toLowerCase() === 'production' ||
+    !['development', 'test'].includes(String(process.env.NODE_ENV || '').toLowerCase()) ||
     String(process.env.MATRIXFLOW_RELEASE || '').toLowerCase() === 'production';
   if (production) throw new HttpError('API Key 安全密钥尚未配置', 503, 'API_KEY_NOT_CONFIGURED');
   return DEVELOPMENT_API_KEY_PEPPER;

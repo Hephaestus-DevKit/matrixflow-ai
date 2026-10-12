@@ -26,7 +26,10 @@ export function ConfirmDialog({
 }) {
   const titleId = useId();
   const descriptionId = useId();
-  const confirmRef = useRef<HTMLButtonElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const busyRef = useRef(busy);
+  busyRef.current = busy;
   const previousFocus = useRef<HTMLElement | null>(null);
   const onCancelRef = useRef(onCancel);
   onCancelRef.current = onCancel;
@@ -37,17 +40,21 @@ export function ConfirmDialog({
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !busy) {
+      if (event.key === 'Escape' && !busyRef.current) {
         event.preventDefault();
         onCancelRef.current();
         return;
       }
       if (event.key !== 'Tab') return;
-      const dialog = confirmRef.current?.closest('[role="alertdialog"]');
+      const dialog = dialogRef.current;
       const focusable = dialog?.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
       );
-      if (!focusable?.length) return;
+      if (!focusable?.length) {
+        event.preventDefault();
+        dialog?.focus();
+        return;
+      }
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (event.shiftKey && document.activeElement === first) {
@@ -59,19 +66,21 @@ export function ConfirmDialog({
       }
     };
     document.addEventListener('keydown', onKeyDown);
-    requestAnimationFrame(() => confirmRef.current?.focus());
+    const frame = requestAnimationFrame(() => cancelRef.current?.focus());
     return () => {
+      cancelAnimationFrame(frame);
       document.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = previousOverflow;
       previousFocus.current?.focus();
     };
-  }, [busy, open]);
+  }, [open]);
 
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <button
         type="button"
+        tabIndex={-1}
         aria-label={cancelLabel}
         className="absolute inset-0 bg-slate-950/[0.65] backdrop-blur-sm"
         onClick={() => {
@@ -79,6 +88,9 @@ export function ConfirmDialog({
         }}
       />
       <div
+        ref={dialogRef}
+        tabIndex={-1}
+        aria-busy={busy}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -93,16 +105,16 @@ export function ConfirmDialog({
         </p>
         {children && <div className="mt-4">{children}</div>}
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
-            {cancelLabel}
-          </Button>
           <Button
-            ref={confirmRef}
+            ref={cancelRef}
             type="button"
-            variant="destructive"
-            onClick={onConfirm}
+            variant="outline"
+            onClick={onCancel}
             disabled={busy}
           >
+            {cancelLabel}
+          </Button>
+          <Button type="button" variant="destructive" onClick={onConfirm} disabled={busy}>
             {busy ? `${confirmLabel}…` : confirmLabel}
           </Button>
         </div>

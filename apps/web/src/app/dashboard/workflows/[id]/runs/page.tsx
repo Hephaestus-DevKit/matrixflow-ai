@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { Workflow } from 'lucide-react';
 import { apiClient, type ListPage } from '@/lib/api-client';
 import type { WorkflowDetail, WorkflowRunSummary } from '@matrixflow/shared';
+import { ResultText } from '@/components/ui/result-text';
 import { useLocale, type Locale } from '@/lib/i18n';
 import { PageHeader } from '@/components/ui/page';
 import { PaginationBar } from '@/components/ui/pagination';
@@ -28,21 +29,39 @@ const COPY: Record<
     title: '运行日志',
     description: '查看每次执行的状态、版本与耗时。',
     empty: '暂无运行记录',
-    status: { SUCCESS: '成功', FAILED: '失败', RUNNING: '运行中', PENDING: '等待中' },
+    status: {
+      SUCCESS: '成功',
+      COMPLETED: '成功',
+      FAILED: '失败',
+      RUNNING: '运行中',
+      PENDING: '等待中',
+    },
   },
   'zh-TW': {
     eyebrow: '執行歷史',
     title: '執行日誌',
     description: '查看每次執行的狀態、版本與耗時。',
     empty: '暫無執行記錄',
-    status: { SUCCESS: '成功', FAILED: '失敗', RUNNING: '執行中', PENDING: '等待中' },
+    status: {
+      SUCCESS: '成功',
+      COMPLETED: '成功',
+      FAILED: '失敗',
+      RUNNING: '執行中',
+      PENDING: '等待中',
+    },
   },
   en: {
     eyebrow: 'Execution history',
     title: 'Run log',
     description: 'Review status, version, and duration for every run.',
     empty: 'No runs yet',
-    status: { SUCCESS: 'Successful', FAILED: 'Failed', RUNNING: 'Running', PENDING: 'Pending' },
+    status: {
+      SUCCESS: 'Successful',
+      COMPLETED: 'Completed',
+      FAILED: 'Failed',
+      RUNNING: 'Running',
+      PENDING: 'Pending',
+    },
   },
 };
 
@@ -59,6 +78,8 @@ export default function WorkflowRunsPage() {
       ),
     enabled: !!id,
     placeholderData: (previous) => previous,
+    refetchInterval: (state) =>
+      state.state.data?.data.some((run) => run.status === 'RUNNING') ? 3_000 : false,
   });
   const { data: wf } = useQuery({
     queryKey: ['wf', id],
@@ -84,7 +105,7 @@ export default function WorkflowRunsPage() {
               <span className="font-mono text-xs text-muted-foreground">{run.id.slice(0, 8)}</span>
               <span
                 className={`status-pill ${
-                  run.status === 'SUCCESS'
+                  ['SUCCESS', 'COMPLETED'].includes(run.status)
                     ? 'bg-success/10 text-success'
                     : run.status === 'FAILED'
                       ? 'bg-destructive/10 text-destructive'
@@ -96,8 +117,25 @@ export default function WorkflowRunsPage() {
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
               v{run.version} · {run.triggerType} · {run.durationMs ? `${run.durationMs}ms` : '—'}
-              {run.error && <span className="ml-2 text-destructive">{run.error}</span>}
             </p>
+            {['SUCCESS', 'COMPLETED'].includes(run.status) && run.output != null && (
+              <details className="mt-3">
+                <summary className="cursor-pointer text-xs font-semibold text-primary">
+                  {locale === 'en' ? 'View output' : locale === 'zh-TW' ? '檢視輸出' : '查看输出'}
+                </summary>
+                <div className="mt-2">
+                  <ResultText
+                    compact
+                    text={
+                      typeof run.output === 'string'
+                        ? run.output
+                        : JSON.stringify(run.output, null, 2)
+                    }
+                    filename={`workflow-${run.id}.txt`}
+                  />
+                </div>
+              </details>
+            )}
           </div>
         ))}
       </div>

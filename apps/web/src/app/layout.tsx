@@ -1,3 +1,4 @@
+import { SITE_ORIGIN } from '@/lib/site';
 import type { Metadata } from 'next';
 import './globals.css';
 import { Providers } from './providers';
@@ -19,7 +20,7 @@ const appwriteOrigin = (() => {
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getServerLocale();
   return {
-    metadataBase: new URL('https://matrixflow-ai.vercel.app'),
+    metadataBase: new URL(SITE_ORIGIN),
     applicationName: 'MatrixFlow AI',
     title: { default: pageTitle(locale, 'root'), template: '%s | MatrixFlow AI' },
     description: pageDescription(locale, 'root'),

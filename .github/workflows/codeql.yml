@@ -17,12 +17,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  analyze:
+  scan:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: github/codeql-action/init@5595ccaf912efad79be6eef63a5619ff05969be3 # v4
         with:
-          languages: javascript-typescript
+          languages: ${{ matrix.language }}
       - uses: github/codeql-action/analyze@5595ccaf912efad79be6eef63a5619ff05969be3 # v4
+        with:
+          category: /language:${{ matrix.language }}
+
+  analyze:
+    name: analyze
+    needs: scan
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+    steps:
+      - name: Require every language scan to pass
+        env:
+          SCAN_RESULT: ${{ needs.scan.result }}
+        run: test "$SCAN_RESULT" = success

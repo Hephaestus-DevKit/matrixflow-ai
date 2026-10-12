@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { dashboardDestination } from '@/lib/navigation';
 import Link from 'next/link';
 import { CheckCircle2, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, Send } from 'lucide-react';
 import { useAuth } from '@/lib/auth-store';
@@ -53,7 +54,7 @@ export default function LoginPage() {
     setError('');
     try {
       await login(email.trim(), password);
-      router.replace('/dashboard');
+      router.replace(dashboardDestination(new URLSearchParams(window.location.search).get('next')));
     } catch (cause) {
       if ((cause as { code?: string })?.code === 'MFA_REQUIRED') {
         setMfaMode('totp');
@@ -82,7 +83,7 @@ export default function LoginPage() {
     setError('');
     try {
       await completeMfa(mfaCode.trim());
-      router.replace('/dashboard');
+      router.replace(dashboardDestination(new URLSearchParams(window.location.search).get('next')));
     } catch (cause) {
       setError(authErrorMessage(cause, t('auth.mfaFailed'), locale));
     }
@@ -108,7 +109,7 @@ export default function LoginPage() {
     setError('');
     try {
       await verifyOtp(userId, otpCode.trim());
-      router.replace('/dashboard');
+      router.replace(dashboardDestination(new URLSearchParams(window.location.search).get('next')));
     } catch (cause) {
       if ((cause as { code?: string })?.code === 'MFA_REQUIRED') {
         setMfaMode('totp');

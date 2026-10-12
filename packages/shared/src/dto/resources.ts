@@ -66,6 +66,8 @@ export interface AgentSkillSummary {
 
 export interface AgentRunSummary {
   id: string;
+  input?: Record<string, unknown>;
+  output?: { text?: string; citations?: RagAnswer['citations'] };
   status: string;
   tokensUsed: number;
   costUsd: number;
@@ -81,9 +83,10 @@ export interface AgentSummary {
   name: string;
   role: string;
   model: string;
-  status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+  status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ARCHIVED';
   createdAt: string;
   systemPrompt: Record<string, unknown>;
+  configuration?: { knowledgeBaseId?: string | null };
   skills: AgentSkillSummary[];
   runs?: AgentRunSummary[];
 }

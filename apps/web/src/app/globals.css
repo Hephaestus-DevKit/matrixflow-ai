@@ -1003,8 +1003,14 @@
   }
 
   .landing-hero h1 {
-    font-size: 2rem;
-    line-height: 1.06;
+    font-size: clamp(1.65rem, 8.75vw, 1.9rem);
+    line-height: 1.08;
+  }
+
+  .landing-hero-description {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.6;
   }
 
   .landing-hero .landing-console-shell {
@@ -1017,6 +1023,15 @@
 
   .landing-hero .landing-console > div:nth-child(2) > div > div {
     padding: 0.7rem;
+  }
+
+  /* Give the three-step preview full text width on the smallest phones. */
+  .landing-hero .landing-console > div:nth-child(2) > div > div > span:first-child {
+    display: none;
+  }
+
+  .landing-hero .landing-console > div:nth-child(2) > div > div:nth-child(2) {
+    margin-left: 1rem;
   }
 
   .landing-trust-row {

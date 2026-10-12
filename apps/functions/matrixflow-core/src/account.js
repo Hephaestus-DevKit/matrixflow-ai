@@ -2,6 +2,7 @@ import { BUCKET_ID, HttpError, TABLES, deleteOwned, listRows } from './runtime.j
 
 const MAX_EXPORT_BYTES = 5 * 1024 * 1024;
 const OWNED_TABLES = [
+  ['backgroundJobs', TABLES.backgroundJobs, 'organizationId'],
   ['agents', TABLES.agents, 'organizationId'],
   ['agentRuns', TABLES.agentRuns, 'organizationId'],
   ['contentProjects', TABLES.contentProjects, 'organizationId'],
@@ -33,8 +34,6 @@ const OWNED_TABLES = [
 ];
 
 const SECRET_KEY = /(key|secret|token|password|authorization|cookie)/i;
-// Security and financial event records follow a separate retention policy;
-// they are not silently destroyed by a personal data deletion request.
 // Security and financial evidence follows the configured retention policy.
 // Keep these rows after business-data deletion for disputes, refunds, tax
 // requests, and incident investigations.
@@ -92,6 +91,9 @@ export async function deleteOrganization(services, teamId, confirmation, options
   if (confirmation !== teamId)
     throw new HttpError('删除确认信息不匹配', 400, 'DELETE_CONFIRMATION_REQUIRED');
   const deleted = {};
+  const jobs = await rowsFor(services, TABLES.backgroundJobs, teamId, 'organizationId');
+  if (jobs.some((job) => !['SUCCEEDED', 'FAILED', 'CANCELED'].includes(job.status)))
+    throw new HttpError('请先取消后台任务并等待执行结束后再删除数据', 409, 'ACTIVE_JOBS_EXIST');
   const documents = await rowsFor(services, TABLES.knowledgeDocuments, teamId, 'organizationId');
   for (const document of documents) {
     await services.storage
