@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: production-smoke
+  group: production-smoke-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -22,7 +22,14 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22.14.0
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+        with:
+          version: 11.9.0
+      - name: Install smoke dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Verify smoke assertions
+        run: node --test scripts/production-smoke.test.mjs
       - name: Check production pages and security headers
         env:
-          MATRIXFLOW_PRODUCTION_URL: https://matrixflow-ai.vercel.app
+          MATRIXFLOW_PRODUCTION_URL: https://matrixflow-ai-sycamore-tree.vercel.app
         run: node scripts/production-smoke.mjs

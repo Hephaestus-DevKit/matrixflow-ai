@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { pageText, validateLocalePage, validateProductionPage } from './production-smoke.mjs';
+import {
+  pageText,
+  runProductionSmoke,
+  validateLocalePage,
+  validateProductionPage,
+} from './production-smoke.mjs';
 
 const canonicalOrigin = 'https://matrixflow-ai.vercel.app';
 const route = { path: '/pricing', marker: '从可验证的免费版本开始' };
@@ -96,3 +101,69 @@ for (const markup of [
     assert.match(pageText('<main>Visible &amp; confirmed</main>'), /Visible & confirmed/);
   });
 }
+
+const productionOrigin = 'https://matrixflow-ai-sycamore-tree.vercel.app';
+const liveRouteMarkers = {
+  '/': '跨境电商 AI 员工操作系统',
+  '/login': '欢迎回来',
+  '/register': '创建你的 AI 团队',
+  '/pricing': '从可验证的免费版本开始',
+  '/privacy': '隐私政策',
+  '/terms': '服务条款',
+};
+const liveLocalePages = {
+  'zh-CN': ['跨境电商 AI 员工操作系统', 'MatrixFlow AI — AI 员工操作系统'],
+  'zh-TW': ['跨境電商 AI 員工作業系統', 'MatrixFlow AI — AI 員工作業系統'],
+  en: ['AI workforce for cross-border commerce', 'MatrixFlow AI — AI Workforce OS'],
+};
+
+function livePageFixture(url, options) {
+  const path = new URL(url).pathname;
+  const locale = options.headers.cookie?.split('=')[1] || 'zh-CN';
+  const [homeMarker, title] = liveLocalePages[locale];
+  const marker = path === '/' ? homeMarker : liveRouteMarkers[path];
+  return new Response(
+    `<html lang="${locale}"><head><title>${title}</title><link rel="canonical" href="${productionOrigin}${path === '/' ? '' : path}" /></head><body>MatrixFlow ${marker}</body></html>`,
+    { status: 200, headers: secureHeaders },
+  );
+}
+
+test('checks all six production routes and three locales with the current home copy', async () => {
+  const requests = [];
+  await runProductionSmoke({
+    baseUrl: productionOrigin,
+    canonicalOrigin: productionOrigin,
+    fetchPage: async (url, options) => {
+      requests.push({ url, locale: options.headers.cookie, redirect: options.redirect });
+      return livePageFixture(url, options);
+    },
+  });
+  assert.equal(requests.length, 9);
+  assert.deepEqual(
+    requests.slice(0, 6).map(({ url }) => new URL(url).pathname),
+    Object.keys(liveRouteMarkers),
+  );
+  assert.deepEqual(
+    requests.slice(6).map(({ locale }) => locale),
+    ['matrixflow-locale=zh-CN', 'matrixflow-locale=zh-TW', 'matrixflow-locale=en'],
+  );
+  assert.ok(requests.every(({ redirect }) => redirect === 'manual'));
+});
+
+test('a 200 response with missing English page content still fails the full smoke', async () => {
+  await assert.rejects(
+    runProductionSmoke({
+      baseUrl: productionOrigin,
+      canonicalOrigin: productionOrigin,
+      fetchPage: async (url, options) => {
+        if (options.headers.cookie === 'matrixflow-locale=en')
+          return new Response(
+            '<html lang="en"><head><title>MatrixFlow AI — AI Workforce OS</title></head><body>MatrixFlow Loading</body></html>',
+            { status: 200, headers: secureHeaders },
+          );
+        return livePageFixture(url, options);
+      },
+    }),
+    /locale en: server-rendered localized content marker is missing/,
+  );
+});
