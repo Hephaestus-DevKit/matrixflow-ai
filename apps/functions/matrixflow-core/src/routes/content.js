@@ -27,6 +27,16 @@ export async function handleContentRoute({
   if (method === 'POST' && segments.length === 2 && segments[1] === 'projects') {
     requireCapability(membership, 'content.manage');
     const input = parse(schemas.contentProject, body);
+    if (input.productData.knowledgeBaseId) {
+      if (typeof input.productData.knowledgeBaseId !== 'string')
+        throw new HttpError('知识库标识无效', 400, 'INVALID_REQUEST');
+      await getOwned(
+        services,
+        TABLES.knowledgeBases,
+        input.productData.knowledgeBaseId,
+        context.teamId,
+      );
+    }
     const reservation = await reservePlanResourceLimit(
       services,
       context.teamId,
