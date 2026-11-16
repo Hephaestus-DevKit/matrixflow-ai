@@ -79,3 +79,38 @@ test('knowledge links can be removed explicitly while invalid IDs fail validatio
     code: 'VALIDATION_ERROR',
   });
 });
+
+test('content generation rejects a foreign linked knowledge base before quota or inference', async () => {
+  const services = {
+    tables: {
+      getRow: async ({ tableId }) =>
+        tableId === 'content_projects'
+          ? {
+              $id: 'project',
+              organizationId: 'team-1',
+              productData: JSON.stringify({ knowledgeBaseId: 'foreign' }),
+            }
+          : { $id: 'foreign', organizationId: 'team-2' },
+    },
+  };
+  await assert.rejects(generateContent(services, context, { projectId: 'project' }), {
+    code: 'FORBIDDEN',
+  });
+});
+test('content generation reports empty linked knowledge before inference', async () => {
+  const services = {
+    tables: {
+      getRow: async ({ tableId }) => ({
+        $id: 'owned',
+        organizationId: 'team-1',
+        ...(tableId === 'content_projects'
+          ? { productData: JSON.stringify({ knowledgeBaseId: 'kb' }) }
+          : {}),
+      }),
+      listRows: async () => ({ rows: [], total: 0 }),
+    },
+  };
+  await assert.rejects(generateContent(services, context, { projectId: 'project' }), {
+    code: 'KNOWLEDGE_BASE_EMPTY',
+  });
+});

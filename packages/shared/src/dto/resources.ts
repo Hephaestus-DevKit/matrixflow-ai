@@ -145,7 +145,11 @@ export interface ContentItemSummary {
   id: string;
   type: string;
   body: { raw?: string; parsed?: unknown };
-  metadata?: { usage?: unknown; cost?: number } | null;
+  metadata?: {
+    usage?: unknown;
+    cost?: number;
+    citations?: { title: string; snippet: string; reference: number }[];
+  } | null;
 }
 
 export interface ContentGenerationView {
