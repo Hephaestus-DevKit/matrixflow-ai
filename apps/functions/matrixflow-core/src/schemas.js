@@ -3,7 +3,7 @@ import { HttpError } from './runtime.js';
 import { BILLING_EVENT_TYPES, SUBSCRIPTION_STATUSES } from './billing.js';
 
 const trimmed = (max) => z.string().trim().min(1).max(max);
-const jsonRecord = z.record(z.unknown());
+const jsonRecord = z.record(z.string(), z.unknown());
 
 export const schemas = {
   agentCreate: z

@@ -37,7 +37,7 @@ export const createAgentSchema = z.object({
   name: nameSchema,
   role: z.string().min(1),
   description: z.string().max(2000).optional(),
-  systemPrompt: z.record(z.unknown()),
+  systemPrompt: z.record(z.string(), z.unknown()),
   model: z.string().trim().min(1).max(100).optional(),
   temperature: z.number().min(0).max(2).default(0.7),
   maxTokens: z.number().int().min(1).max(32000).default(2000),
@@ -47,7 +47,7 @@ export const createAgentSchema = z.object({
 });
 
 export const runAgentSchema = z.object({
-  input: z.record(z.unknown()),
+  input: z.record(z.string(), z.unknown()),
   stream: z.boolean().default(false),
 });
 
@@ -56,7 +56,7 @@ export const productDataSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
   features: z.array(z.string()).default([]),
-  specs: z.record(z.unknown()).default({}),
+  specs: z.record(z.string(), z.unknown()).default({}),
   images: z.array(z.string().url()).default([]),
   price: z.number().nonnegative().optional(),
   currency: z.string().length(3).default('USD'),
@@ -81,7 +81,7 @@ export const createCustomerSchema = z
     stage: z.enum(['lead', 'contacted', 'qualified', 'proposal', 'won', 'lost']).default('lead'),
     source: z.string().trim().max(100).optional(),
     externalId: z.string().trim().max(255).optional(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict()
   .refine((value) => value.name || value.email || value.phone, {
@@ -154,7 +154,7 @@ export const executeWorkflowJobSchema = z.object({ userId: uuidSchema }).strict(
 export const aiPromptRequestSchema = z
   .object({
     promptKey: z.string().trim().min(1).max(100),
-    variables: z.record(z.unknown()),
+    variables: z.record(z.string(), z.unknown()),
     agentId: uuidSchema.optional(),
     responseFormat: z.enum(['text', 'json_object']).optional(),
   })
@@ -208,7 +208,7 @@ export const runWorkflowSchema = z.object({ input: jsonPayloadSchema.optional() 
 export const generateContentSchema = z
   .object({
     type: z.string().regex(/^[a-z_]{1,50}$/),
-    variables: z.record(z.unknown()).optional(),
+    variables: z.record(z.string(), z.unknown()).optional(),
   })
   .strict()
   .superRefine((value, ctx) => {
