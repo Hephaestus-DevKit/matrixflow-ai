@@ -433,7 +433,7 @@ export async function retrieveKnowledgeContext(services, context, body) {
   ]);
   const terms = searchTerms(body.question);
   const documentsById = new Map(documents.map((document) => [document.id, document]));
-  const storedChunks = chunks
+  let storedChunks = chunks
     .filter((chunk) => chunkBelongsToCurrentIndex(chunk, documentsById.get(chunk.documentId)))
     .map((chunk) => ({
       document: documentsById.get(chunk.documentId),
@@ -441,6 +441,33 @@ export async function retrieveKnowledgeContext(services, context, body) {
       start: Number(chunk.charStart || 0),
       chunkId: chunk.id,
     }));
+  // Parent previews shorter than the 2,000-character cap contain the entire
+  // indexed document. Use that canonical text for old overlapping windows,
+  // but never replace long-document chunks with a truncated preview.
+  const completeDocuments = new Map(
+    documents
+      .filter((document) => {
+        const text = String(document.extractedText || '');
+        return (
+          text.length > 0 &&
+          text.length < 2_000 &&
+          storedChunks
+            .filter((chunk) => chunk.document.id === document.id)
+            .every((chunk) => chunk.start + chunk.value.length <= text.length)
+        );
+      })
+      .map((document) => [document.id, String(document.extractedText)]),
+  );
+  storedChunks = storedChunks.map((chunk) =>
+    completeDocuments.has(chunk.document.id)
+      ? {
+          ...chunk,
+          value: completeDocuments.get(chunk.document.id),
+          start: 0,
+          chunkId: `${chunk.document.id}-complete-${chunk.document.indexVersion || 'legacy'}`,
+        }
+      : chunk,
+  );
   const legacyChunks = documents.flatMap((document) => relevantChunks(document, terms));
   const candidates = storedChunks.length ? storedChunks : legacyChunks;
   const ranked = distinctKnowledgeChunks(
