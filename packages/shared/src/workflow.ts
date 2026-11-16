@@ -13,7 +13,7 @@ export const workflowNodeSchema = z
   .object({
     id: z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/),
     type: z.enum(WORKFLOW_NODE_TYPES),
-    config: z.record(z.unknown()).optional(),
+    config: z.record(z.string(), z.unknown()).optional(),
     position: z.object({ x: z.number().finite(), y: z.number().finite() }).strict().optional(),
   })
   .strict();

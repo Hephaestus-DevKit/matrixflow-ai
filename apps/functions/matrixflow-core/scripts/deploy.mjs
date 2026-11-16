@@ -1,5 +1,6 @@
 import { Client, Functions, ID, Runtime } from 'node-appwrite';
 import { InputFile } from 'node-appwrite/file';
+import { listAllFunctionVariables } from './function-variables.mjs';
 
 const endpoint = process.env.MATRIXFLOW_APPWRITE_ENDPOINT || 'https://sgp.cloud.appwrite.io/v1';
 const projectId = process.env.MATRIXFLOW_APPWRITE_PROJECT_ID || '6a43f0af000862e7b0ef';
@@ -44,7 +45,7 @@ try {
   await functions.create(configuration);
 }
 
-const existingVariables = await functions.listVariables({ functionId });
+const existingVariables = await listAllFunctionVariables(functions, functionId);
 const managedVariables = [
   ['MATRIXFLOW_AI_PROVIDER', 'deepseek'],
   ['DEEPSEEK_BASE_URL', 'https://api.deepseek.com/anthropic'],
@@ -74,7 +75,7 @@ const managedVariables = [
 if (deepSeekKey) managedVariables.push(['DEEPSEEK_API_KEY', deepSeekKey, true]);
 
 for (const [variableKey, value, secret = false] of managedVariables) {
-  const existing = existingVariables.variables.find((variable) => variable.key === variableKey);
+  const existing = existingVariables.find((variable) => variable.key === variableKey);
   if (existing) {
     await functions.updateVariable({
       functionId,

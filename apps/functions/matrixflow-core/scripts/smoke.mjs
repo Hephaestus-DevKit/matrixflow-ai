@@ -52,7 +52,7 @@ try {
       method,
       headers: { 'content-type': 'application/json' },
     });
-  const health = await execute('/health');
+  const health = await execute('/health', {}, ExecutionMethod.GET);
   if (health.responseStatusCode !== 200) {
     throw new Error(`Core health check failed with ${health.responseStatusCode}`);
   }
