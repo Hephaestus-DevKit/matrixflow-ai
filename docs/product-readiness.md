@@ -1,6 +1,6 @@
 # 产品成熟度验收清单
 
-MatrixFlow 当前的定位是“生产可用 Beta / 候选版”：核心数据边界、认证、权限、AI 运行时、异步执行和发布质量门禁已经具备。代码层面的成熟能力已落地，但真实 Provider、支付、告警、备份和企业合规仍必须在生产环境配置并留下证据后，才能升级为成熟商业产品。
+MatrixFlow 当前的定位是“生产可用 Beta / 候选版”：核心数据边界、认证、权限、AI 运行时、异步执行和发布质量门禁已经具备。生产环境已验证 DeepSeek Flash 和后端自动部署。支付、告警、备份和企业合规仍需独立配置和验收。
 
 ## 已达到的生产基线
 
@@ -9,7 +9,7 @@ MatrixFlow 当前的定位是“生产可用 Beta / 候选版”：核心数据�
 - 登录、邮箱验证、MFA、恢复代码、会话设备管理和账户恢复。
 - 业务写入幂等、审计、限流、月度额度、资源上限和安全错误映射。
 - Anthropic Messages 与 OpenAI Chat Completions / compatible 协议适配，具备超时、有限重试、响应上限、请求 ID 和用量记录。
-- 自动 Provider 故障转移、端点 HTTPS/私网校验、模型与协议健康状态；未配置时安全失败。
+- Provider 适配支持配置故障转移；当前生产使用单一 DeepSeek Provider。端点有 HTTPS/私网校验，未配置时健康状态明确报错。
 - Agent、DAG 工作流、知识库解析/检索、运行重试、成本遥测和计费权益基础。
 - 长任务可落到 Appwrite 持久化后台任务，支持 202 返回、状态查询、取消、心跳和有界重试。
 - 组织数据导出、显式确认删除、敏感字段脱敏和审计/计费事件保留策略。
@@ -18,7 +18,7 @@ MatrixFlow 当前的定位是“生产可用 Beta / 候选版”：核心数据�
 - 简体中文、繁體中文、English 三语，以及响应式移动端布局。
 - GitHub CI、CodeQL、依赖安全审计、Vercel 生产构建和 Appwrite Schema 即代码。
 - Chromium 浏览器 E2E 自动验证三语切换持久化、英文认证页和 390px 移动端无横向溢出。
-- 生产公开面每小时由 GitHub Actions smoke 监测，首页安全响应头异常会直接告警。
+- 生产公开面由 GitHub Actions 定时 smoke 检查；安全响应头不符会使工作流失败。
 - 简体中文、繁體中文与 English 会从持久化 Cookie 直接服务端渲染；生产 smoke 校验三语首屏语言、标题和主体，不依赖 hydration 后修正。
 - owner/admin 可在管理中心读取不含密钥的发布版本与依赖健康状态；普通成员和 API Key 均由 Function 拒绝。
 - 主分支保护要求当前 CI 与 CodeQL 通过，并启用线性历史和会话解决。
@@ -28,8 +28,8 @@ MatrixFlow 当前的定位是“生产可用 Beta / 候选版”：核心数据�
 
 这些项目不能由代码凭空完成，需要运营方提供真实外部配置：
 
-1. 在 Appwrite Function 中配置至少一个 AI Provider Secret，并建议同时配置 Anthropic 与 OpenAI-compatible 作为故障转移池；生产部署流水线会强制执行一次真实、低 token 的 Agent smoke，未配置或调用失败时发布不通过。
-2. 配置短期 `MATRIXFLOW_DEPLOY_KEY` 或由已授权管理员在 Appwrite Console 发布 Function；发布后验证 active deployment。后端变更流水线在缺少该 Secret 时会显式失败，不会静默跳过。
+1. 在 Appwrite Function 中配置生产 Provider Secret。当前为 DeepSeek Flash；发布流水线要求一次真实、低 token 的 Agent 调用成功。
+2. 自动部署需要项目部署密钥和专用 smoke 账号；各 Secret、轮换和 active deployment 核对步骤见[部署手册](deployment.md)。
 3. 为异步任务配置 32 字符以上的 `MATRIXFLOW_WORKER_SECRET`，并确认 Function 具备 `executions.write` scope；没有该配置时异步入口会安全失败，不会伪装成已排队。
 4. 如果启用付费，配置 Stripe Checkout 与 `/billing/stripe-webhook`（或接入其他供应商适配层），验证 checkout、invoice、payment、refund、chargeback、取消、欠费和恢复事件，并验证重复事件幂等。
 5. 为生产域名配置监控、错误告警、备份保留和恢复演练记录；告警必须进入有人值守渠道。

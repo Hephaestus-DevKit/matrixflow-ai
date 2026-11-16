@@ -32,7 +32,9 @@ HTTP 402 显示余额不足；401/403、400 等返回稳定错误，且不重试
 
 覆盖 DeepSeek 独立凭据、端点规范化、关闭思考、三种思考强度、租户匿名标识、缓存用量、缓存价格、旧模型迁移、余额与鉴权错误、禁止重定向等回归。流式输出、工具循环和多轮 thinking 历史尚未在 MatrixFlow 产品中开放；本次适配不宣称实现这些功能。
 
-## 实际云端发布记录
+## 初次云端发布记录（2026-10-10）
+
+以下为首次迁移的历史证据。当前发布方式见[部署手册](deployment.md)，后续发布见 [Appwrite Actions](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/appwrite.yml)。
 
 2026-10-10 已在既有 MatrixFlow AI 项目启用部署 `6ac9b81f6e08c4d6411c`，运行版本为 `4744e256e925e07ae449ea4aa1cd9d98abe320e2`。未新建 Appwrite 项目，也未写入 GitHub Secrets。
 
@@ -48,5 +50,3 @@ HTTP 402 显示余额不足；401/403、400 等返回稳定错误，且不重试
 - 本地 14 项 Chromium 回归全部通过。
 
 激活前的生产部署为 `6aa4f1dfcd45d526778f`。如需回滚代码，可通过 `appwrite functions update-function-deployment` 切回该 ID；配置回滚需同步恢复当时的 Provider 变量，并重新构建以应用配置。该旧版本的 AI Provider 原本未就绪，回滚不能替代有效供应商密钥配置。
-
-本次核对常见 DeepSeek 钥匙串条目未发现匹配项，最终使用用户提供的凭据，通过不回显的内存输入完成验证和 Secret 配置。密钥没有写入源码、环境文件、部署包或本报告。

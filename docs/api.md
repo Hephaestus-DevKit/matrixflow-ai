@@ -33,7 +33,7 @@ API Key 只允许访问创建时授予的作用域：
 
 ## 长任务
 
-Agent、工作流、批量内容和知识索引支持 `mode: "async"`。服务器返回 HTTP 202 和 `jobId`，任务状态通过以下端点查询：
+Agent、工作流、内容生成、知识库索引和问答支持 `mode: "async"`。服务器返回 HTTP 202，任务 ID 位于响应的 `data.id`。用这个 ID 查询或取消任务：
 
 ```http
 GET /jobs/<job-id>
