@@ -127,3 +127,51 @@ test('overlapping passages with different end facts are both retained', () => {
   ]);
   assert.equal(selected.length, 2);
 });
+
+for (const fullPreview of [true, false]) {
+  test(`historical partial overlap preserves final facts; complete preview=${fullPreview}`, async () => {
+    const text = handbook;
+    const services = {
+      tables: {
+        getRow: async () => ({ $id: 'kb', organizationId: 'team' }),
+        listRows: async ({ tableId }) => ({
+          total: 2,
+          rows:
+            tableId === 'knowledge_documents'
+              ? [
+                  {
+                    $id: 'doc',
+                    title: 'Handbook',
+                    indexVersion: 'old',
+                    extractedText: fullPreview ? text : 'x'.repeat(2000),
+                  },
+                ]
+              : [
+                  {
+                    $id: 'a',
+                    documentId: 'doc',
+                    indexVersion: 'old',
+                    charStart: 0,
+                    content: text.slice(0, 300),
+                  },
+                  {
+                    $id: 'b',
+                    documentId: 'doc',
+                    indexVersion: 'old',
+                    charStart: 140,
+                    content: text.slice(140),
+                  },
+                ],
+        }),
+      },
+    };
+    const result = await retrieveKnowledgeContext(
+      services,
+      { teamId: 'team' },
+      { knowledgeBaseId: 'kb', question: 'confirmed' },
+    );
+    assert.equal(result.citations.length, fullPreview ? 1 : 2);
+    assert.match(result.contextText, /Warranty and discounts/);
+    assert.doesNotMatch(result.contextText, /x{2000}/);
+  });
+}
