@@ -10,10 +10,12 @@ export function ResultText({
   text,
   filename = 'matrixflow-result.txt',
   compact = false,
+  actionsOnly = false,
 }: {
   text: string;
   filename?: string;
   compact?: boolean;
+  actionsOnly?: boolean;
 }) {
   const { locale } = useLocale();
   const [expanded, setExpanded] = useState(false);
@@ -76,7 +78,7 @@ export function ResultText({
           <Download className="h-3.5 w-3.5" aria-hidden="true" />
           {copy.download}
         </Button>
-        {compact && (
+        {compact && !actionsOnly && (
           <Button
             type="button"
             size="sm"
@@ -88,12 +90,14 @@ export function ResultText({
           </Button>
         )}
       </div>
-      <pre
-        tabIndex={0}
-        className={`whitespace-pre-wrap break-words rounded-xl border border-border/50 bg-muted/30 p-4 font-sans text-sm leading-6 ${compact && !expanded ? 'max-h-48 overflow-auto' : 'max-h-[70vh] overflow-auto'}`}
-      >
-        {text}
-      </pre>
+      {!actionsOnly && (
+        <pre
+          tabIndex={0}
+          className={`whitespace-pre-wrap break-words rounded-xl border border-border/50 bg-muted/30 p-4 font-sans text-sm leading-6 ${compact && !expanded ? 'max-h-48 overflow-auto' : 'max-h-[70vh] overflow-auto'}`}
+        >
+          {text}
+        </pre>
+      )}
     </div>
   );
 }

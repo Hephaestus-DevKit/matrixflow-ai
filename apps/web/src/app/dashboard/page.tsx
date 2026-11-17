@@ -119,10 +119,10 @@ export default function DashboardPage() {
         description={t('dashboard.description')}
         actions={
           <Link
-            href="/dashboard/agents/new"
+            href="/dashboard/content"
             className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-primary/15"
           >
-            <Sparkles className="h-3.5 w-3.5" /> {t('dashboard.deployAgent')}
+            <Sparkles className="h-3.5 w-3.5" /> {t('dashboard.quick.content')}
           </Link>
         }
       />
