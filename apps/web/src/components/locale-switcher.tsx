@@ -20,6 +20,8 @@ export function LocaleSwitcher({ compact = false }: { compact?: boolean }) {
   const menuId = useId();
   const current = LOCALE_OPTIONS.find((option) => option.value === locale) ?? LOCALE_OPTIONS[0];
 
+  const languageLabel = `${t('common.language')}: ${current.label}`;
+
   useEffect(() => {
     if (!open) return;
     const closeFromOutside = (event: PointerEvent) => {
@@ -68,7 +70,7 @@ export function LocaleSwitcher({ compact = false }: { compact?: boolean }) {
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={menuId}
-        aria-label={`${t('common.language')}: ${current.label}`}
+        aria-label={compact ? `${LOCALE_CODES[locale]} · ${languageLabel}` : languageLabel}
         data-testid="locale-switcher-trigger"
         data-locale={locale}
         onClick={() => setOpen((value) => !value)}

@@ -11,6 +11,8 @@
 [![Appwrite deploy](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/appwrite.yml/badge.svg?branch=main)](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/appwrite.yml)
 [![Production smoke](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/production-smoke.yml/badge.svg?branch=main)](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/production-smoke.yml)
 
+在线体验由 Vercel 提供前端，Appwrite 处理登录、团队数据和 AI 请求。使用在线工作台生成内容会消耗运营方的 DeepSeek API 配额。自行部署时，请配置自己的 Appwrite 项目和 DeepSeek 密钥，详见[部署手册](docs/deployment.md)。
+
 ## 可以做什么
 
 | 场景     | 当前能力                                                                               |

@@ -19,6 +19,8 @@ Changes shipped to production from `main` since the last version entry. A new ve
 
 ### Deployment and maintenance
 
+- Resolved eight dependency alerts and removed the unused Faker development dependency. [#96](https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/96)
+
 - Switched production to DeepSeek Flash through the Messages API; provider secrets stay in Appwrite.
 - Updated the production domain and smoke assertions, including server-rendered content in three languages.
 - Fixed Appwrite deployment variable pagination and the post-deploy health probe. Automatic deployment and real provider smoke passed on `main` in [PR #82](https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/82).
