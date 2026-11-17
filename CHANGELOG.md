@@ -8,6 +8,10 @@ Changes shipped to production from `main` since the last version entry. A new ve
 
 ### Product
 
+- Content projects can use a team knowledge base. Reviewers can inspect sources, edit drafts and download the reviewed text with citations. [#92](https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/92)
+- Short manuals yield a single source even with older overlapping indexes. Content instructions apply the selected language to headings, missing specifications and source notes. [#93](https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/93) · [#94](https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/94)
+- The home page illustrates a sample product. Desktop review places sources beside the editor, while mobile review stacks the draft, sources and export controls. [#95](https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/95)
+
 - Added AI worker editing, pause/resume, team knowledge links, cited answers, and reusable run history.
 - Moved generation, knowledge indexing and questions, and workflow runs into the task center with progress, cancellation, and result export.
 - Added language, market, and tone controls for content. Workflows now save the visible graph before running and accept JSON input.

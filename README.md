@@ -1,8 +1,10 @@
 # MatrixFlow AI
 
-**面向跨境电商团队的 AI 运营工作台。** 用 AI 员工生成多语言内容、引用团队知识回答问题，并把重复操作编排成可追踪的工作流。
+为跨境电商团队制作可核对来源的多语言商品内容。把商品手册关联到内容项目，生成详情页、FAQ 或广告草稿，逐项核对规格后导出。
 
-[在线体验](https://matrixflow-ai-sycamore-tree.vercel.app) · [文档导航](docs/README.md) · [API](docs/api.md) · [部署手册](docs/deployment.md) · [更新记录](CHANGELOG.md)
+[在线体验](https://matrixflow-ai-sycamore-tree.vercel.app) · [制作第一份商品详情页](docs/content-review-flow.md) · [本地开发](#本地开发) · [完整文档](docs/README.md)
+
+![MatrixFlow AI 首页示例：从 MF92 越野包手册中的容量、重量和材质生成英文详情，再核对护理和保修信息](docs/images/product-home.png)
 
 [![CI](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/codeql.yml)
@@ -20,7 +22,12 @@
 | 任务中心 | 后台执行生成、索引和工作流；查看进度、取消任务、读取或导出结果。                       |
 | 团队协作 | 邮箱登录与验证、可选双重验证、团队角色、用量与审计；支持简体中文、繁體中文和 English。 |
 
-首次试用：注册并验证邮箱 → 创建团队 → 创建 AI 员工或内容项目。要体验带来源的回答，先上传并索引一份非敏感资料，再把知识库关联到员工。
+## 制作第一份商品详情页
+
+1. 注册并验证邮箱。在「内容工厂」点击「填入示例商品」，或填写自己的商品名称和已确认的规格。
+2. 需要引用手册时，在「知识库」上传文档，等状态变为「已就绪」，再在创建内容项目时选择该库。
+3. 选择目标语言和市场，在「商品详情页」点击「生成」。例如手册只确认容量为 23 L、空包重 640 g，审核时就应核对这两项，并将保修条款保留为待确认。
+4. 展开检索来源，对照原文编辑草稿，勾选审核后复制或下载。**编辑稿只在当前页面保留，请在离开前下载。** 下载文件包含审核后的文字及关联的来源摘录。
 
 当前为 **Beta**。核心工作台已上线；模板市场、付费结账和外部消息发送仍是预览或需要额外配置。知识库使用关键词与片段检索，适合中小型资料集。[产品成熟度与边界](docs/product-readiness.md)
 
@@ -59,7 +66,7 @@ pnpm test:e2e
 
 ## 发布与验收
 
-- **前端：** Vercel 从 `main` 发布。随后 [Production smoke](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/production-smoke.yml) 检查六个公开页面、三语首屏与安全响应头。
+- **前端：** Vercel 从 `main` 发布。定时或手动运行的 [Production smoke](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/production-smoke.yml) 检查六个公开页面、三语首屏与安全响应头。
 - **后端：** `main` 的函数或 Appwrite 配置变更触发 [Appwrite deploy](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/appwrite.yml)。工作流同步资源、激活函数，并用专用账号验证登录、团队权限及真实模型调用。
 - **运维：** 发布账号、Secrets、回滚及模型配置见[部署手册](docs/deployment.md)；监控与恢复目标见[生产运行基线](docs/operations.md)。
 

@@ -1,0 +1,24 @@
+name: 问题反馈
+description: 报告页面、生成、引用或导出问题
+body:
+  - type: markdown
+    attributes:
+      value: '请使用虚构商品描述问题。请勿粘贴密钥、账户密码或客户资料。安全漏洞请通过[私密渠道](https://github.com/Hephaestus-DevKit/matrixflow-ai/security/advisories/new)报告。'
+  - type: textarea
+    id: steps
+    attributes:
+      label: 操作步骤
+      description: 写明使用的页面，以及从哪一步开始出现问题。
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: 预期结果和实际结果
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 使用环境
+      placeholder: 例如 iPhone Safari、简体中文界面、英文商品详情页
