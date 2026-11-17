@@ -1,11 +1,8 @@
 # 部署手册
 
-## 目标拓扑
+[文档导航](README.md) · [生产站点](https://matrixflow-ai-sycamore-tree.vercel.app) · [运行与恢复基线](operations.md)
 
-- Web：Vercel（或任何支持 Next.js 15 的 Node.js 平台）。
-- Backend：Appwrite Cloud Singapore 项目。
-- Function：Appwrite Node.js 22 Runtime `matrixflow-core`。
-- AI：Anthropic Messages 或 OpenAI Chat Completions，由函数变量提供密钥。
+前端由 Vercel 从 `main` 部署。后端是 Appwrite Cloud Singapore 的 Node.js 22 函数 `matrixflow-core`，生产 AI 使用 DeepSeek Flash。独立部署时，请为开发、验收和生产使用不同的 Appwrite 项目。
 
 ## 发布前
 
@@ -13,148 +10,76 @@
 pnpm install --frozen-lockfile
 npm ci --prefix apps/functions/matrixflow-core
 pnpm verify
-pnpm function:check
-pnpm function:test
-pnpm audit --prod --audit-level=high
-npm audit --omit=dev --prefix apps/functions/matrixflow-core
+pnpm exec playwright install chromium
+pnpm test:e2e
 ```
 
-确认 `appwrite.config.json` 与 `infra/appwrite` 的变更经过审查，且仓库、日志和构建产物中没有真实密钥。
+生产依赖审计由 [MatrixFlow CI](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/ci.yml) 执行。涉及数据表时，审查 `appwrite.config.json` 与 `infra/appwrite/`，确认部署、旧客户端和回滚版本对结构变更兼容。
 
-## Appwrite 资源
+`pnpm readiness:audit` 检查配置形状；`pnpm readiness:audit:strict` 还要求支付、告警及近期备份与恢复演练等运营证据。严格审核与线上 smoke 是不同的检查，后者通过不代表商业发布条件已全部就绪。
 
-创建短期 API key，通过环境变量注入，不写入 `.env`：
+## Appwrite 自动部署
 
-```bash
-MATRIXFLOW_DEPLOY_KEY=... pnpm appwrite:provision
+[Appwrite deploy](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/appwrite.yml) 在 `main` 的函数或基础设施变更后触发，也可在 Actions 中对 `main` 手动运行。它依次检查凭据、跑后端测试、同步 Schema 和存储桶、发布并激活函数，然后执行真实后端 smoke。
+
+在 [GitHub Actions repository secrets](https://github.com/Hephaestus-DevKit/matrixflow-ai/settings/secrets/actions) 配置：
+
+| Secret                     | 用途                                          |
+| -------------------------- | --------------------------------------------- |
+| `MATRIXFLOW_DEPLOY_KEY`    | Appwrite 项目部署密钥，用于同步资源和发布函数 |
+| `MATRIXFLOW_TEST_EMAIL`    | 已验证邮箱的专用测试账号                      |
+| `MATRIXFLOW_TEST_PASSWORD` | 专用账号密码                                  |
+
+测试账号应只加入隔离的测试团队，脚本会使用该账号列表中的第一个团队。任何一项缺失都会在改动 Appwrite 前使工作流失败。
+
+部署密钥只需要下列资源的 `.read` 和 `.write` 权限：`databases`、`tables`、`columns`、`indexes`、`buckets`、`functions`。函数变量与代码部署使用 Functions 权限。给密钥设置有效期；轮换时先验证替换的 Secret，再撤销旧密钥。手动发布使用的临时密钥应在结束后撤销。不要将密钥写进终端历史、环境样例、源码或运行日志。
+
+### Function 变量
+
+当前生产配置在 Appwrite Console 的 `matrixflow-core` 中维护：
+
+```text
+MATRIXFLOW_AI_PROVIDER=deepseek
+DEEPSEEK_MODEL=deepseek-flash
+DEEPSEEK_BASE_URL=https://api.deepseek.com/anthropic
+DEEPSEEK_REASONING_EFFORT=none
 ```
 
-也可以使用不读取本地变量的显式部署命令，避免把 Console 中的 Secret 误覆盖：
+- `DEEPSEEK_API_KEY`、`MATRIXFLOW_WORKER_SECRET` 与 `MATRIXFLOW_API_KEY_PEPPER` 存为 **Function Secret**。Worker Secret 和 pepper 使用至少 32 个字符的独立随机值。pepper 更换会影响已有 MatrixFlow API Key，需协调轮换。
+- 自动部署分页读取现有变量并保留 Secret 标记。部署脚本维护生产 Provider、限额和版本等非敏感变量；变更它们时一并检查 [deploy.mjs](../apps/functions/matrixflow-core/scripts/deploy.mjs)，避免下一次 CI 覆盖控制台手改值。
+- 手动上传函数时不要用 `--with-variables`，避免用本地声明替换控制台中的 Secret。变更函数变量后，需要新部署使配置生效。
+- 其他模型、计费和就绪配置见[配置样例](../.env.example)、[模型适配](deepseek-adapter.md)和[计费说明](billing.md)。部署密钥和测试账号不属于 Web 构建变量。
+
+### 手动发布
+
+只有在需要单独发布或诊断时，使用已授权的 Appwrite CLI 会话。先核对项目，再将 `src/`、`package.json` 和 `package-lock.json` 放入干净的临时目录，不包含本地依赖、凭据或测试数据。以下示例假设 `FUNCTION_STAGE_DIR` 已指向该目录：
 
 ```bash
 appwrite functions create-deployment \
   --function-id matrixflow-core \
-  --code apps/functions/matrixflow-core \
-  --activate \
+  --code "${FUNCTION_STAGE_DIR:?set the staged function directory}" \
+  --activate=false \
   --entrypoint src/main.js \
   --commands "npm ci --omit=dev"
 ```
 
-日常发布不要加 `--with-variables`：该 CLI 选项会用本地清单替换函数变量，可能清掉 Console 中的 Secret。生产流水线使用幂等部署脚本，只更新受管的非敏感变量并保留模型密钥。当前线上还需要保留 `MATRIXFLOW_AGENT_LIMIT`、`MATRIXFLOW_CONTENT_PROJECT_LIMIT`、`MATRIXFLOW_KNOWLEDGE_BASE_LIMIT`、`MATRIXFLOW_WORKFLOW_LIMIT` 四个资源额度变量。
-
-初始化脚本是幂等的，会创建或更新数据库、表权限、列、索引和文件桶。函数发布后，在 Appwrite Console 的 `matrixflow-core` 变量中设置协议与密钥，再部署一个新版本使变量生效：
-
-```text
-MATRIXFLOW_AI_PROVIDER=anthropic      # anthropic | openai | openai-compatible | tokenrhythm | glm | auto
-ANTHROPIC_API_KEY=                   # 仅选择 anthropic 时需要
-ANTHROPIC_MODEL=claude-3-5-haiku-latest
-ANTHROPIC_BASE_URL=https://api.anthropic.com
-
-# 或者：
-MATRIXFLOW_AI_PROVIDER=openai-compatible
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_MAX_TOKENS_FIELD=max_completion_tokens
-
-# Token Rhythm（OpenAI-compatible，推荐生产配置）：
-MATRIXFLOW_AI_PROVIDER=tokenrhythm
-TOKENRHYTHM_API_KEY=<Appwrite Function secret>
-TOKENRHYTHM_MODEL=deepseek-v4-flash-0731  # or qwen3.8-max
-TOKENRHYTHM_BASE_URL=https://tokenrhythm.studio/v1
-# If you prefer generic names, use OPENAI_COMPATIBLE_API_KEY,
-# OPENAI_MODEL, OPENAI_BASE_URL and OPENAI_MAX_TOKENS_FIELD=max_tokens.
-```
-
-可选的运营变量：
-
-```text
-# 仅用于内部用量统计，不会把价格展示为供应商承诺
-MATRIXFLOW_AI_PRICING_JSON={"openai:gpt-4o-mini":{"inputPer1k":0.00015,"outputPer1k":0.0006}}
-
-# 计费适配器的 HMAC secret；支付供应商事件先由你的适配层规范化为
-# MatrixFlow billing webhook schema，再请求 /billing/webhook。
-MATRIXFLOW_BILLING_WEBHOOK_SECRET=<secret>
-MATRIXFLOW_BILLING_PROVIDER=stripe
-MATRIXFLOW_PUBLIC_URL=https://matrixflow-ai.vercel.app
-STRIPE_SECRET_KEY=<Appwrite Function secret>
-STRIPE_PRICE_PRO=price_...
-STRIPE_PRICE_TEAM=price_...
-STRIPE_WEBHOOK_SECRET=<Stripe webhook signing secret>
-MATRIXFLOW_ALLOW_TEST_BILLING=false
-
-# 异步任务与连接器（均为 Function Secret/运营配置）
-MATRIXFLOW_API_KEY_PEPPER=<random-32-plus-character-secret>
-MATRIXFLOW_WORKER_SECRET=<random-32-plus-character-secret>
-MATRIXFLOW_CONNECTOR_ALLOWLIST=api.example.com,*.trusted.example
-MATRIXFLOW_REQUIRE_ASYNC=true
-MATRIXFLOW_REQUIRE_BILLING=true
-
-# Strict release evidence (CI/operations only; never expose in the browser):
-MATRIXFLOW_ALERT_WEBHOOK_URL=https://alerts.example.com/matrixflow
-MATRIXFLOW_BACKUP_EVIDENCE_URL=https://ops.example.com/backups/latest
-MATRIXFLOW_BACKUP_LAST_SUCCESS_AT=2026-08-16T00:00:00.000Z
-MATRIXFLOW_RESTORE_EVIDENCE_URL=https://ops.example.com/restores/latest
-MATRIXFLOW_RESTORE_LAST_SUCCESS_AT=2026-08-01T00:00:00.000Z
-```
-
-计费事件必须使用原始请求体计算 `HMAC-SHA256`，通过
-`X-MatrixFlow-Billing-Signature: sha256=<hex>` 发送；事件 ID 在
-`billing_events` 中唯一去重。订阅权益只由 Function 根据 `subscriptions` 表判定，浏览器不能传入或覆盖套餐。
-
-`OPENAI_BASE_URL` 支持任意遵循 Chat Completions 请求/响应结构的网关；官方 OpenAI 新模型默认使用 `max_completion_tokens`，旧版兼容网关（包括 Token Rhythm）应使用 `max_tokens`。GLM 保留独立变量以兼容既有环境。`ANTHROPIC_API_KEY`、`OPENAI_API_KEY`、`OPENAI_COMPATIBLE_API_KEY`、`TOKENRHYTHM_API_KEY` 和 `GLM_API_KEY` 必须标记为 Secret，其他模型、端点和限流变量可以是普通变量。密钥永远不要放到 Web 环境变量或仓库。
-
-自动部署由 `.github/workflows/appwrite.yml` 提供。主分支的后端或基础设施变更会依次执行测试、Schema 更新、Function 部署和可选 smoke test；如果仓库 Secret `MATRIXFLOW_DEPLOY_KEY` 缺失，任务会明确失败，不会把未发布的后端代码标记为成功。
-
-如果 Secret 缺失，工作流会在运行摘要和警告中明确标记“未修改 Appwrite”，不能把绿色的跳过任务当作后端已发布。配置短期最小权限 key 后，应重新运行工作流，并在 Appwrite Console 核对 active deployment ID。
-
-发布前可以先运行配置审计：
-
-```bash
-pnpm readiness:audit
-pnpm readiness:audit:strict
-```
-
-普通审计允许 Free 预览环境缺少外部凭据并显示 WARN；严格审计要求真实 Provider、异步执行器、支付签名、连接器白名单、HTTPS 告警地址、近 26 小时备份、近 92 天恢复演练和短期部署 key 全部存在。严格审计通过只是配置门槛，仍需真实 smoke 和人工验收。
+构建就绪后，在 Appwrite Console 激活对应部署。若同时修改 Schema，应先审查差异，再通过自动工作流或使用安全注入的临时 `MATRIXFLOW_DEPLOY_KEY` 运行 `pnpm appwrite:provision`。
 
 ## Web 发布
 
-设置公开变量：
+在 Vercel 配置以下变量。换用其他 Appwrite 项目或公开域名时，使用目标环境对应的值：
 
 ```text
 NEXT_PUBLIC_APPWRITE_ENDPOINT=https://sgp.cloud.appwrite.io/v1
 NEXT_PUBLIC_APPWRITE_PROJECT_ID=<project-id>
+MATRIXFLOW_PUBLIC_URL=https://matrixflow-ai-sycamore-tree.vercel.app
 ```
 
-如果使用自建或其他地域的 Appwrite，必须在构建时提供 endpoint；Next.js 会同步更新 CSP 与头像白名单。修改 Vercel 环境变量后需要重新部署，旧部署不会自动读取新端点。
+在 Appwrite Web Platforms 登记生产域名和需要访问该项目的本地域名。更改 Web 构建变量后重新部署；现有构建不会自动读取新值。独立站点执行公开 smoke 时，应同时设置 `MATRIXFLOW_PRODUCTION_URL` 和 `MATRIXFLOW_CANONICAL_URL`。
 
-Appwrite Web Platform 同时登记生产域名和 `localhost`。向 `main` 推送后由 Vercel 自动发布；发布状态成功后再切换流量。
+## 发布验收与回滚
 
-## 验证
-
-使用专用测试账号或一次性凭据运行 `scripts/smoke.mjs`，覆盖：
-
-1. 登录和邮箱验证状态；
-2. Appwrite Team 成员关系；
-3. 客户端业务表创建被拒绝，Function 写入可被本团队读取；
-4. `matrixflow-core` 的 `/health`；
-5. Provider 已配置时执行一次真实、低 token 的 Agent 调用，并校验 Provider、协议、模型与非空输出；
-6. 无论验证成功或失败都清理测试 Agent 和当前会话。
-
-CI 中的生产部署 smoke 会设置 `MATRIXFLOW_REQUIRE_AI_SMOKE=true`：如果 Provider 未配置或真实调用失败，发布任务必须失败。手动诊断未配置 Provider 的环境时可以不设置该变量，此时脚本仍验证认证、租户边界和 Function，并明确报告 AI smoke 被跳过。
-
-随后人工验证注册、登录、组织切换、知识库上传和工作流 true/false 分支。未配置 AI key 时应收到明确的 503 配置错误；这属于预期失败关闭。
-
-## 收尾
-
-- 撤销部署 API key，删除本地临时 key 文件。
-- 删除 smoke test 数据和不需要的会话。
-- 检查 GitHub CI、CodeQL、Vercel 和 Appwrite Function deployment 均为成功。
-- 记录 deployment ID、Git commit 和回滚点。
-
-## 回滚
-
-- Web：在 Vercel 将上一个成功 deployment 设为生产。
-- Function：在 Appwrite Deployments 中激活上一个成功 deployment。
-- Schema：只做向后兼容扩展；删除列或表需先停止旧代码写入、备份数据并单独审批。
-- 凭据泄露：先撤销/轮换，再调查日志，不能仅重新部署。
+1. 核对 `main` 提交、CI、Vercel 发布状态与 Appwrite **active deployment ID**。
+2. 查看 Appwrite 工作流的 Smoke test：验证登录、邮箱、团队权限、浏览器禁写、函数写入及一次真实模型调用。CI 固定要求 AI smoke；脚本结束时会尝试清理测试 Agent 和会话，部署失败时也应核对清理结果。
+3. Vercel 发布成功后，在 `main` 手动运行 [Production smoke](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/production-smoke.yml)，或运行 `pnpm smoke:production`，验证六个公开页面、三语服务端首屏、canonical 与安全响应头。
+4. 记录发布证据、上一个可用版本及必要的配置差异。回滚前端时恢复上一可用的 Vercel 生产部署；回滚后端时激活上一可用的 Appwrite 部署，再跑 smoke。数据表变更不会随函数回滚自动撤销，优先保持向后兼容。

@@ -1,15 +1,11 @@
-## Summary
+## 改动
 
-Describe the user-visible and architectural impact.
+描述原来的问题、修改后的行为，以及受影响的页面、接口或文档。
 
-## Verification
+## 验证
 
-- [ ] `pnpm format:check`
-- [ ] `pnpm typecheck`
-- [ ] `pnpm lint`
-- [ ] `pnpm test`
-- [ ] Migration and security implications reviewed
+列出已运行的检查及结果。仅文档改动请注明格式、链接和事实核对；行为变更请注明新增或更新的回归覆盖。
 
-## Deployment
+## 发布与回滚
 
-List required environment, migration, rollout, and rollback steps. Write “none” when not applicable.
+说明是否涉及 Appwrite 资源、环境变量、权限、迁移或外部副作用。如涉及，补充发布后验收与回滚步骤；不涉及可填「无」。

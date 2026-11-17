@@ -2,6 +2,28 @@
 
 All notable MatrixFlow AI changes are documented here. Versions follow semantic versioning for the product shell; the Appwrite Function keeps its own compatible runtime version.
 
+## Unreleased
+
+Changes shipped to production from `main` since the last version entry. A new version tag has not been assigned.
+
+### Product
+
+- Content projects can use a team knowledge base. Reviewers can inspect sources, edit drafts and download the reviewed text with citations. [#92](https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/92)
+- Short manuals yield a single source even with older overlapping indexes. Content instructions apply the selected language to headings, missing specifications and source notes. [#93](https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/93) · [#94](https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/94)
+- The home page illustrates a sample product. Desktop review places sources beside the editor, while mobile review stacks the draft, sources and export controls. [#95](https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/95)
+
+- Added AI worker editing, pause/resume, team knowledge links, cited answers, and reusable run history.
+- Moved generation, knowledge indexing and questions, and workflow runs into the task center with progress, cancellation, and result export.
+- Added language, market, and tone controls for content. Workflows now save the visible graph before running and accept JSON input.
+- Improved sign-in recovery, team switching, and small-screen layouts across the three supported languages.
+
+### Deployment and maintenance
+
+- Switched production to DeepSeek Flash through the Messages API; provider secrets stay in Appwrite.
+- Updated the production domain and smoke assertions, including server-rendered content in three languages.
+- Fixed Appwrite deployment variable pagination and the post-deploy health probe. Automatic deployment and real provider smoke passed on `main` in [PR #82](https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/82).
+- Upgraded Next.js to 15.5.29 and Zod to 4.6.7, and updated the backend's undici lock to 6.29.1. Both production dependency audits passed for that release.
+
 ## [0.5.0] - 2026-08-29
 
 ### Structured visual motion
