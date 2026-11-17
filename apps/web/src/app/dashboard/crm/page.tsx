@@ -228,8 +228,11 @@ export default function CrmPage() {
       {!isLoading && !isError && (
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Customers */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
+          <section className="space-y-3" aria-labelledby="crm-customers-heading">
+            <h2
+              id="crm-customers-heading"
+              className="text-sm font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider"
+            >
               <Users className="h-4 w-4 text-primary" /> {copy.buyerDb}
             </h2>
             {(!customers || customers.length === 0) && (
@@ -258,34 +261,6 @@ export default function CrmPage() {
                 </Link>
               ))}
             </div>
-            {leadPage && leadPage.total > leadPage.limit && (
-              <div className="flex items-center justify-between gap-2 pt-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={leadOffset === 0 || leadsQuery.isFetching}
-                  onClick={() => setLeadOffset((offset) => Math.max(0, offset - leadPage.limit))}
-                >
-                  {copy.previous}
-                </Button>
-                <span className="text-2xs text-muted-foreground">
-                  {leadOffset + 1}–{Math.min(leadOffset + leads.length, leadPage.total)} /{' '}
-                  {leadPage.total}
-                </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={leadPage.nextOffset === null || leadsQuery.isFetching}
-                  onClick={() => {
-                    if (leadPage.nextOffset !== null) setLeadOffset(leadPage.nextOffset);
-                  }}
-                >
-                  {copy.next}
-                </Button>
-              </div>
-            )}
             {customerPage && customerPage.total > customerPage.limit && (
               <div className="flex items-center justify-between gap-2 pt-2">
                 <Button
@@ -318,11 +293,14 @@ export default function CrmPage() {
                 </Button>
               </div>
             )}
-          </div>
+          </section>
 
           {/* Sales Leads */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
+          <section className="space-y-3" aria-labelledby="crm-leads-heading">
+            <h2
+              id="crm-leads-heading"
+              className="text-sm font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider"
+            >
               <TrendingUp className="h-4 w-4 text-success" /> {copy.leads}
             </h2>
             {(!leads || leads.length === 0) && (
@@ -343,7 +321,35 @@ export default function CrmPage() {
                 </div>
               ))}
             </div>
-          </div>
+            {leadPage && leadPage.total > leadPage.limit && (
+              <div className="flex items-center justify-between gap-2 pt-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={leadOffset === 0 || leadsQuery.isFetching}
+                  onClick={() => setLeadOffset((offset) => Math.max(0, offset - leadPage.limit))}
+                >
+                  {copy.previous}
+                </Button>
+                <span className="text-2xs text-muted-foreground">
+                  {leadOffset + 1}–{Math.min(leadOffset + leads.length, leadPage.total)} /{' '}
+                  {leadPage.total}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={leadPage.nextOffset === null || leadsQuery.isFetching}
+                  onClick={() => {
+                    if (leadPage.nextOffset !== null) setLeadOffset(leadPage.nextOffset);
+                  }}
+                >
+                  {copy.next}
+                </Button>
+              </div>
+            )}
+          </section>
         </div>
       )}
     </div>

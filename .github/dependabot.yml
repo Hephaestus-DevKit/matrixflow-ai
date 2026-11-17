@@ -11,6 +11,12 @@ updates:
         dependency-type: production
       node-development:
         dependency-type: development
+  - package-ecosystem: npm
+    directory: /apps/functions/matrixflow-core
+    schedule: { interval: weekly }
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
