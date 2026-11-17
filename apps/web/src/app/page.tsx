@@ -167,15 +167,6 @@ export default function LandingPage() {
                               <LocalizedText id={item.description} />
                             </p>
                           </div>
-                          <span className="hidden rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-2xs font-semibold text-slate-500 sm:block">
-                            <LocalizedText
-                              id={
-                                index === 2
-                                  ? 'public.preview.reviewable'
-                                  : 'public.preview.arranged'
-                              }
-                            />
-                          </span>
                         </div>
                         {index < OPERATING_FLOW.length - 1 && (
                           <div className="ml-9 h-2.5 w-px bg-gradient-to-b from-primary/[0.45] to-slate-200" />

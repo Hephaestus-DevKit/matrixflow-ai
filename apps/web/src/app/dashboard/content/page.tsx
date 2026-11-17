@@ -478,6 +478,7 @@ export default function ContentFactoryPage() {
         <p className="text-sm text-muted-foreground">{flow.review}</p>
         <Button
           variant="outline"
+          disabled={Boolean(projectName.trim() || productDesc.trim())}
           onClick={() => {
             setIsCreating(true);
             setProjectName('Travel bag');
@@ -704,13 +705,25 @@ export default function ContentFactoryPage() {
             </Button>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {CONTENT_TYPES.map((ct) => (
-              <div key={ct.key} className="surface-card flex flex-col justify-between p-5">
+              <div
+                key={ct.key}
+                className={
+                  results[ct.key]
+                    ? 'surface-card col-span-full min-w-0 border-primary/25 p-4 sm:p-6'
+                    : 'surface-card min-w-0 p-4 sm:p-5'
+                }
+              >
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">{ct.icon}</span>
+                      <span
+                        aria-hidden="true"
+                        className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-muted text-lg"
+                      >
+                        {ct.icon}
+                      </span>
                       <span className="text-sm font-bold text-foreground">{ct.labels[locale]}</span>
                     </div>
                     <Button
@@ -718,7 +731,7 @@ export default function ContentFactoryPage() {
                       variant="outline"
                       onClick={() => generate(ct.key)}
                       disabled={!!generating || batchActive}
-                      className="h-8 border-border/60 px-2.5 text-2xs hover:bg-muted"
+                      className="min-h-11 border-border/60 px-2.5 text-2xs hover:bg-muted"
                     >
                       {generating === ct.key ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
