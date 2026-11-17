@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient, type ListPage } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,7 @@ import { EmptyState, ErrorState, LoadingCards } from '@/components/ui/states';
 import { PaginationBar } from '@/components/ui/pagination';
 import { Select } from '@/components/ui/select';
 import { JobProgress } from '@/components/job-progress';
-import { ResultText } from '@/components/ui/result-text';
+import { ContentReview } from '@/components/content-review';
 import { type BackgroundJob } from '@/lib/jobs';
 
 const PROJECT_PAGE_SIZE = 12;
@@ -299,6 +300,38 @@ export default function ContentFactoryPage() {
   }, []);
   const [projectName, setProjectName] = useState('');
   const [productDesc, setProductDesc] = useState('');
+  const [knowledgeBaseId, setKnowledgeBaseId] = useState('');
+  const knowledge = useQuery({
+    queryKey: ['content-knowledge-options'],
+    queryFn: () => apiClient.get<ListPage<{ id: string; name: string }>>('/kb?limit=100'),
+  });
+  const flow =
+    locale === 'en'
+      ? {
+          title: 'Product → sources → draft → review → export',
+          kb: 'Knowledge base (optional)',
+          none: 'Use product facts only',
+          add: 'Manage source documents',
+          sample: 'Try sample product',
+          review: 'Review facts and edit before export. Edits stay in this page until downloaded.',
+        }
+      : locale === 'zh-TW'
+        ? {
+            title: '商品資料 → 知識來源 → 草稿 → 審核 → 匯出',
+            kb: '關聯知識庫（選填）',
+            none: '僅使用商品資料',
+            add: '管理來源文件',
+            sample: '填入示例商品',
+            review: '匯出前請核對事實並編輯。修改僅保留在目前頁面，請下載保存。',
+          }
+        : {
+            title: '商品资料 → 知识来源 → 草稿 → 审核 → 导出',
+            kb: '关联知识库（选填）',
+            none: '仅使用商品资料',
+            add: '管理来源文档',
+            sample: '填入示例商品',
+            review: '导出前请核对事实并编辑。修改仅保留在当前页面，请下载保存。',
+          };
 
   const {
     data: projectPage,
@@ -388,7 +421,11 @@ export default function ContentFactoryPage() {
     try {
       const res = await apiClient.post<ContentProjectSummary>('/content/projects', {
         name: projectName,
-        productData: { title: projectName, description: productDesc },
+        productData: {
+          title: projectName,
+          description: productDesc,
+          ...(knowledgeBaseId ? { knowledgeBaseId } : {}),
+        },
       });
       setProjectOffset(0);
       await queryClient.invalidateQueries({ queryKey: ['content-projects'] });
@@ -436,12 +473,53 @@ export default function ContentFactoryPage() {
         }
       />
 
+      <div className="surface-card p-4 space-y-2">
+        <p className="font-semibold">{flow.title}</p>
+        <p className="text-sm text-muted-foreground">{flow.review}</p>
+        <Button
+          variant="outline"
+          disabled={Boolean(projectName.trim() || productDesc.trim())}
+          onClick={() => {
+            setIsCreating(true);
+            setProjectName('Travel bag');
+            setProductDesc(
+              'Capacity: 20 liters. Material: recycled polyester. Weight: 600 g. Warranty and waterproof rating: not provided.',
+            );
+          }}
+        >
+          {flow.sample}
+        </Button>
+      </div>
       {/* Create project inline-form */}
       {isCreating && (
         <form
           onSubmit={handleCreateProject}
           className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-4 max-w-xl animate-slide-up"
         >
+          <div className="space-y-2">
+            <Label htmlFor="project-knowledge">{flow.kb}</Label>
+            <Select
+              id="project-knowledge"
+              value={knowledgeBaseId}
+              onChange={(e) => setKnowledgeBaseId(e.target.value)}
+            >
+              <option value="">{flow.none}</option>
+              {knowledge.data?.data.map((kb) => (
+                <option key={kb.id} value={kb.id}>
+                  {kb.name}
+                </option>
+              ))}
+            </Select>
+            {knowledge.isError && <ErrorState onRetry={() => void knowledge.refetch()} />}
+            <Link
+              className="text-sm underline"
+              href="/dashboard/knowledge"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {flow.add}
+            </Link>
+          </div>
           <h3 className="text-sm font-bold flex items-center gap-1.5 text-primary">
             <Sparkles className="h-4 w-4" /> {copy.quick}
           </h3>
@@ -627,13 +705,25 @@ export default function ContentFactoryPage() {
             </Button>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {CONTENT_TYPES.map((ct) => (
-              <div key={ct.key} className="surface-card flex flex-col justify-between p-5">
+              <div
+                key={ct.key}
+                className={
+                  results[ct.key]
+                    ? 'surface-card col-span-full min-w-0 border-primary/25 p-4 sm:p-6'
+                    : 'surface-card min-w-0 p-4 sm:p-5'
+                }
+              >
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">{ct.icon}</span>
+                      <span
+                        aria-hidden="true"
+                        className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-muted text-lg"
+                      >
+                        {ct.icon}
+                      </span>
                       <span className="text-sm font-bold text-foreground">{ct.labels[locale]}</span>
                     </div>
                     <Button
@@ -641,7 +731,7 @@ export default function ContentFactoryPage() {
                       variant="outline"
                       onClick={() => generate(ct.key)}
                       disabled={!!generating || batchActive}
-                      className="h-8 border-border/60 px-2.5 text-2xs hover:bg-muted"
+                      className="min-h-11 border-border/60 px-2.5 text-2xs hover:bg-muted"
                     >
                       {generating === ct.key ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
@@ -662,8 +752,12 @@ export default function ContentFactoryPage() {
                     <span className="text-2xs font-semibold uppercase text-muted-foreground">
                       {copy.output}
                     </span>
-                    <ResultText
-                      compact
+                    <ContentReview
+                      key={results[ct.key].itemId}
+                      citations={
+                        items?.find((item) => item.id === results[ct.key].itemId)?.metadata
+                          ?.citations || []
+                      }
                       text={formatContent(results[ct.key].content)}
                       filename={`${ct.key}-${results[ct.key].itemId}.txt`}
                     />
