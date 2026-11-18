@@ -13,7 +13,7 @@
     "dev": "pnpm --filter @matrixflow/shared build && pnpm --filter @matrixflow/web dev",
     "lint": "pnpm --filter @matrixflow/shared lint && pnpm --filter @matrixflow/web lint",
     "typecheck": "pnpm --filter @matrixflow/shared typecheck && pnpm --filter @matrixflow/shared build && pnpm --filter @matrixflow/web typecheck",
-    "test": "pnpm --filter @matrixflow/shared test && pnpm --filter @matrixflow/web test && node --test scripts/production-smoke.test.mjs scripts/production-config-audit.test.mjs scripts/appwrite-schema-check.test.mjs scripts/i18n-key-audit.test.mjs",
+    "test": "pnpm --filter @matrixflow/shared test && pnpm --filter @matrixflow/web test && node --test scripts/glob-security.test.mjs scripts/production-smoke.test.mjs scripts/production-config-audit.test.mjs scripts/appwrite-schema-check.test.mjs scripts/i18n-key-audit.test.mjs",
     "test:e2e": "playwright test",
     "test:coverage": "pnpm --filter @matrixflow/shared test:coverage",
     "schema:check": "node scripts/appwrite-schema-check.mjs",

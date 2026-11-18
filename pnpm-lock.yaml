@@ -22,6 +22,10 @@ overrides:
   nanoid@<3.3.18: 3.3.18
   source-map-js@<1.2.2: 1.2.2
 
+patchedDependencies:
+  picomatch@2.3.2: d74e621992baf7c0dabcb8da389b5423965b5315af1466df2a459ea45983324f
+  picomatch@4.0.4: 0a117a7ead506e1b6e4c7f900140123413e1e9c530f583b0e6613a11583e4ae8
+
 importers:
 
   .:
@@ -4767,7 +4771,7 @@ snapshots:
   anymatch@3.1.3:
     dependencies:
       normalize-path: 3.0.0
-      picomatch: 2.3.2
+      picomatch: 2.3.2(patch_hash=d74e621992baf7c0dabcb8da389b5423965b5315af1466df2a459ea45983324f)
 
   appwrite@26.2.0:
     dependencies:
@@ -5660,9 +5664,9 @@ snapshots:
     dependencies:
       bser: 2.1.1
 
-  fdir@6.5.0(picomatch@4.0.4):
+  fdir@6.5.0(picomatch@4.0.4(patch_hash=0a117a7ead506e1b6e4c7f900140123413e1e9c530f583b0e6613a11583e4ae8)):
     optionalDependencies:
-      picomatch: 4.0.4
+      picomatch: 4.0.4(patch_hash=0a117a7ead506e1b6e4c7f900140123413e1e9c530f583b0e6613a11583e4ae8)
 
   file-entry-cache@8.0.0:
     dependencies:
@@ -6308,7 +6312,7 @@ snapshots:
       chalk: 4.1.2
       ci-info: 3.9.0
       graceful-fs: 4.2.11
-      picomatch: 2.3.2
+      picomatch: 2.3.2(patch_hash=d74e621992baf7c0dabcb8da389b5423965b5315af1466df2a459ea45983324f)
 
   jest-validate@29.7.0:
     dependencies:
@@ -6460,7 +6464,7 @@ snapshots:
   micromatch@4.0.8:
     dependencies:
       braces: 3.0.3
-      picomatch: 2.3.2
+      picomatch: 2.3.2(patch_hash=d74e621992baf7c0dabcb8da389b5423965b5315af1466df2a459ea45983324f)
 
   mimic-fn@2.1.0: {}
 
@@ -6659,9 +6663,9 @@ snapshots:
 
   picocolors@1.1.1: {}
 
-  picomatch@2.3.2: {}
+  picomatch@2.3.2(patch_hash=d74e621992baf7c0dabcb8da389b5423965b5315af1466df2a459ea45983324f): {}
 
-  picomatch@4.0.4: {}
+  picomatch@4.0.4(patch_hash=0a117a7ead506e1b6e4c7f900140123413e1e9c530f583b0e6613a11583e4ae8): {}
 
   pify@2.3.0: {}
 
@@ -6778,7 +6782,7 @@ snapshots:
 
   readdirp@3.6.0:
     dependencies:
-      picomatch: 2.3.2
+      picomatch: 2.3.2(patch_hash=d74e621992baf7c0dabcb8da389b5423965b5315af1466df2a459ea45983324f)
 
   reflect.getprototypeof@1.0.10:
     dependencies:
@@ -7142,8 +7146,8 @@ snapshots:
 
   tinyglobby@0.2.17:
     dependencies:
-      fdir: 6.5.0(picomatch@4.0.4)
-      picomatch: 4.0.4
+      fdir: 6.5.0(picomatch@4.0.4(patch_hash=0a117a7ead506e1b6e4c7f900140123413e1e9c530f583b0e6613a11583e4ae8))
+      picomatch: 4.0.4(patch_hash=0a117a7ead506e1b6e4c7f900140123413e1e9c530f583b0e6613a11583e4ae8)
 
   tmpl@1.0.5: {}
 
