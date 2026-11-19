@@ -1,5 +1,4 @@
-import { readFile } from 'node:fs/promises';
-import { expect, test } from '@playwright/test';
+import { expect, test, watchDownload } from './safari';
 import { mockWorkspace } from './fixtures/workspace';
 
 for (const width of [1360, 390]) {
@@ -11,20 +10,20 @@ for (const width of [1360, 390]) {
     const confirmation = page.getByLabel('I checked product facts, claims and sources').first();
     const download = page.getByRole('button', { name: 'Download', exact: true });
     await editor.fill(' ');
-    await expect(confirmation).toBeDisabled();
+    await expect.poll(() => confirmation.enabled()).toBe(false);
     await editor.fill('Reviewed product facts');
     await confirmation.check();
     await editor.fill('Final reviewed product facts');
-    await expect(download).toHaveCount(0);
+    await expect.poll(() => download.count()).toBe(0);
     await confirmation.check();
     await download.scrollIntoViewIfNeeded();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       width,
     );
-    const event = page.waitForEvent('download');
+    const event = await watchDownload(page, '.txt');
     await download.click();
-    const file = await event;
-    expect(await readFile((await file.path())!, 'utf8')).toBe('Final reviewed product facts');
+    const file = await event();
+    expect((await file.read()).toString('utf8')).toBe('Final reviewed product facts');
     await page.screenshot({ path: info.outputPath('review.png') });
   });
 }

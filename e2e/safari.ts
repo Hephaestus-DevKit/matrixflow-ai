@@ -1,6 +1,6 @@
 import { test as runner, expect } from '@playwright/test';
-import { launchSafari, watchDownload } from '../e2e/native/session.mjs';
-import { serveFixture } from '../e2e/native/fixture-server.mjs';
+import { launchSafari, watchDownload } from './native/session.mjs';
+import { serveFixture } from './native/fixture-server.mjs';
 export { expect, watchDownload };
 export const test = runner.extend({
   page: async ({}, use) => {

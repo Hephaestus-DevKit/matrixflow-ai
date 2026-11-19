@@ -39,7 +39,7 @@ export async function mockWorkspace(
   await page
     .context()
     .addCookies([{ name: 'matrixflow-locale', value: 'en', domain: '127.0.0.1', path: '/' }]);
-  await page.route('https://sgp.cloud.appwrite.io/v1/**', async (route) => {
+  await page.route('http://127.0.0.1:3102/v1/**', async (route) => {
     const req = route.request();
     const url = new URL(req.url());
     const path = url.pathname.replace('/v1', '');

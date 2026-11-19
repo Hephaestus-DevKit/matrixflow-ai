@@ -9,7 +9,7 @@
 
 ```bash
 pnpm verify
-pnpm exec playwright install webkit
+/usr/bin/safaridriver --enable  # macOS, one-time setup
 pnpm test:e2e
 pnpm audit --prod --audit-level=high
 npm audit --omit=dev --audit-level=high --prefix apps/functions/matrixflow-core

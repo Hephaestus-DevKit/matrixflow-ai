@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import type { Page, Route } from '@playwright/test';
+import { expect, test, watchDownload } from './safari';
 
 async function chooseLocale(page: Page, locale: 'zh-CN' | 'zh-TW' | 'en') {
   await page.getByTestId('locale-switcher-trigger').click();
@@ -23,8 +24,10 @@ test('a locale cookie wins over stale localStorage during hydration', async ({ p
   ]);
   await context.addInitScript(() => localStorage.setItem('matrixflow-locale', 'en'));
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('把跨境營運流程');
-  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
+  await expect
+    .poll(() => page.getByRole('heading', { level: 1 }).innerText())
+    .toContain('把跨境營運流程');
+  await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('zh-TW');
   expect(
     (await context.cookies()).find((cookie) => cookie.name === 'matrixflow-locale')?.value,
   ).toBe('zh-TW');
@@ -35,7 +38,6 @@ test('locale switching works when browser privacy settings block localStorage', 
   context,
 }) => {
   const errors: string[] = [];
-  page.on('pageerror', (error) => errors.push(error.message));
   await context.addInitScript(() => {
     Object.defineProperty(window, 'localStorage', {
       get() {
@@ -46,38 +48,46 @@ test('locale switching works when browser privacy settings block localStorage', 
   await page.goto('/');
   await chooseLocale(page, 'en');
   await page.reload();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText(
-    'Put cross-border operations',
-  );
-  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  expect(errors).toEqual([]);
+  await expect
+    .poll(() => page.getByRole('heading', { level: 1 }).innerText())
+    .toContain('Put cross-border operations');
+  await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('en');
+  expect(await page.errors()).toEqual([]);
 });
 
 test('switches among all three locales and persists the choice', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
-  await expect(page).toHaveTitle(/MatrixFlow AI/);
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('把跨境运营流程');
+  await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('zh-CN');
+  await expect.poll(() => page.title()).toMatch(/MatrixFlow AI/);
+  await expect
+    .poll(() => page.getByRole('heading', { level: 1 }).innerText())
+    .toContain('把跨境运营流程');
 
   await chooseLocale(page, 'zh-TW');
-  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('把跨境營運流程');
+  await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('zh-TW');
+  await expect
+    .poll(() => page.getByRole('heading', { level: 1 }).innerText())
+    .toContain('把跨境營運流程');
 
   await chooseLocale(page, 'en');
-  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  await expect(page).toHaveTitle('MatrixFlow AI — AI Workforce OS');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText(
-    'Put cross-border operations',
-  );
-  await expect(page.getByRole('heading', { level: 1 })).not.toContainText('operationsin');
+  await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('en');
+  await expect.poll(() => page.title()).toBe('MatrixFlow AI — AI Workforce OS');
+  await expect
+    .poll(() => page.getByRole('heading', { level: 1 }).innerText())
+    .toContain('Put cross-border operations');
+  await expect
+    .poll(() => page.getByRole('heading', { level: 1 }).innerText())
+    .not.toContain('operationsin');
 
   await page.reload();
-  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  await expect(page.getByTestId('locale-switcher-trigger')).toHaveAttribute('data-locale', 'en');
+  await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('en');
+  await expect
+    .poll(() => page.getByTestId('locale-switcher-trigger').getAttribute('data-locale'))
+    .toBe('en');
 
   await page.goto('/pricing');
-  await expect(page).toHaveTitle('Pricing | MatrixFlow AI');
+  await expect.poll(() => page.title()).toBe('Pricing | MatrixFlow AI');
 });
 
 test('keeps authentication screens in the selected language', async ({ page }) => {
@@ -85,22 +95,26 @@ test('keeps authentication screens in the selected language', async ({ page }) =
   await chooseLocale(page, 'en');
   await page.goto('/login');
 
-  await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
-  await expect(page.getByLabel('Email')).toBeVisible();
-  await expect(page.getByLabel('Password', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Email code' })).toBeVisible();
+  await expect.poll(() => page.url()).toMatch(/\/login$/);
+  await expect
+    .poll(() => page.getByRole('heading', { name: 'Welcome back' }).isVisible())
+    .toBe(true);
+  await expect.poll(() => page.getByLabel('Email').isVisible()).toBe(true);
+  await expect.poll(() => page.getByLabel('Password', { exact: true }).isVisible()).toBe(true);
+  await expect.poll(() => page.getByRole('button', { name: 'Email code' }).isVisible()).toBe(true);
 
   await page.goto('/register');
-  await expect(page).toHaveURL(/\/register$/);
-  await expect(page.getByRole('heading', { name: 'Create your AI team' })).toBeVisible();
-  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect.poll(() => page.url()).toMatch(/\/register$/);
+  await expect
+    .poll(() => page.getByRole('heading', { name: 'Create your AI team' }).isVisible())
+    .toBe(true);
+  await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('en');
 });
 
 test('does not overflow a narrow mobile viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect.poll(() => page.getByRole('heading', { level: 1 }).isVisible()).toBe(true);
 
   const dimensions = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -122,8 +136,10 @@ test('does not overflow a narrow mobile viewport', async ({ page }) => {
     .first()
     .evaluate((section) => Math.round(section.getBoundingClientRect().height));
   expect(heroHeight).toBeLessThanOrEqual(1150);
-  await expect(page.getByTestId('locale-switcher-trigger')).toBeVisible();
-  await expect(page.getByRole('link', { name: '免费开始', exact: true })).toBeVisible();
+  await expect.poll(() => page.getByTestId('locale-switcher-trigger').isVisible()).toBe(true);
+  await expect
+    .poll(() => page.getByRole('link', { name: '免费开始', exact: true }).isVisible())
+    .toBe(true);
 });
 
 test('keeps structured motion expressive on desktop and quiet on mobile', async ({ page }) => {
@@ -134,6 +150,9 @@ test('keeps structured motion expressive on desktop and quiet on mobile', async 
     const grid = document.querySelector<HTMLElement>('.landing-grid');
     const sweep = document.querySelector<HTMLElement>('.landing-sweep');
     return {
+      width: innerWidth,
+      reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+      highContrast: matchMedia('(prefers-contrast: more)').matches,
       gridOpacity: Number.parseFloat(getComputedStyle(grid!).opacity),
       gridAnimation: getComputedStyle(grid!).animationName,
       sweepDisplay: getComputedStyle(sweep!).display,
@@ -142,7 +161,7 @@ test('keeps structured motion expressive on desktop and quiet on mobile', async 
   });
   expect(desktop.gridOpacity).toBeGreaterThan(0);
   expect(desktop.gridAnimation).toContain('landing-grid-drift');
-  expect(desktop.sweepDisplay).not.toBe('none');
+  expect(desktop.sweepDisplay, JSON.stringify(desktop)).not.toBe('none');
   expect(desktop.sweepAnimation).toContain('landing-sweep-drift');
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -189,7 +208,7 @@ test('keeps the complete public journey inside the 320px minimum width in every 
       .context()
       .addCookies([{ name: 'matrixflow-locale', value: locale, domain: '127.0.0.1', path: '/' }]);
     await page.goto('/');
-    await expect(page.locator('html')).toHaveAttribute('lang', locale);
+    await expect.poll(() => page.locator('html').getAttribute('lang')).toBe(locale);
 
     for (const path of ['/', '/pricing', '/login', '/register']) {
       await page.goto(path);
@@ -239,5 +258,5 @@ test('narrow English hero remains readable with fallback system fonts', async ({
   }));
   expect(layout.height).toBeLessThanOrEqual(1250);
   expect(layout.headingSize).toBeGreaterThanOrEqual(26);
-  await expect(page.locator('.landing-primary-action').first()).toBeInViewport();
+  await expect.poll(() => page.locator('.landing-primary-action').first().inViewport()).toBe(true);
 });
