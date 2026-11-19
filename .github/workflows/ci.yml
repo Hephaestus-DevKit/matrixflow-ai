@@ -40,8 +40,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build
-      - name: Install Chromium for UI regression tests
-        run: pnpm exec playwright install --with-deps chromium
+      - name: Install browsers for UI regression tests
+        run: pnpm exec playwright install --with-deps chromium webkit
       - name: Run browser E2E
         run: pnpm test:e2e
       - run: pnpm function:check
