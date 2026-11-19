@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import type { Page, Route } from '@playwright/test';
+import { expect, test, watchDownload } from './safari';
 
 async function chooseLocale(page: Page, locale: 'zh-CN' | 'zh-TW' | 'en') {
   await page.getByTestId('locale-switcher-trigger').click();
@@ -6,7 +7,9 @@ async function chooseLocale(page: Page, locale: 'zh-CN' | 'zh-TW' | 'en') {
 }
 
 test('protected dashboard routes fail closed to the localized login screen', async ({ page }) => {
-  await page.route('https://sgp.cloud.appwrite.io/v1/**', async (route) => {
+  // Each route may require a cold Next.js compile on the macOS runner.
+  test.setTimeout(120_000);
+  await page.route('http://127.0.0.1:3102/v1/**', async (route) => {
     await route.fulfill({
       status: 401,
       contentType: 'application/json',
@@ -22,9 +25,11 @@ test('protected dashboard routes fail closed to the localized login screen', asy
     '/dashboard/jobs',
   ]) {
     await page.goto(path);
-    await expect(page).toHaveURL(/\/login(?:\?next=.+)?$/);
-    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
-    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect.poll(() => page.url()).toMatch(/\/login(?:\?next=.+)?$/);
+    await expect
+      .poll(() => page.getByRole('heading', { name: 'Welcome back' }).isVisible())
+      .toBe(true);
+    await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('en');
   }
 });
 
@@ -32,8 +37,10 @@ test('unknown routes render the localized not-found experience', async ({ page }
   await page.goto('/');
   await chooseLocale(page, 'zh-TW');
   await page.goto('/does-not-exist');
-  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('這個頁面不存在');
+  await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('zh-TW');
+  await expect
+    .poll(() => page.getByRole('heading', { level: 1 }).innerText())
+    .toContain('這個頁面不存在');
 });
 
 test('password recovery removes reset credentials from the address bar', async ({
@@ -44,6 +51,6 @@ test('password recovery removes reset credentials from the address bar', async (
     { name: 'matrixflow-locale', value: 'en', domain: '127.0.0.1', path: '/' },
   ]);
   await page.goto('/recover?userId=user-1&secret=one-time-secret');
-  await expect(page).toHaveURL(/\/recover$/);
-  await expect(page.getByLabel('New password', { exact: true })).toBeVisible();
+  await expect.poll(() => page.url()).toMatch(/\/recover$/);
+  await expect.poll(() => page.getByLabel('New password', { exact: true }).isVisible()).toBe(true);
 });

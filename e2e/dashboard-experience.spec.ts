@@ -1,6 +1,7 @@
-import { expect, test, type Page, type Route } from '@playwright/test';
+import type { Page, Route } from '@playwright/test';
+import { expect, test, watchDownload } from './safari';
 
-const APPWRITE_ORIGIN = 'https://sgp.cloud.appwrite.io';
+const APPWRITE_ORIGIN = 'http://127.0.0.1:3102';
 const TEAM_ID = 'team-e2e';
 const USER_ID = 'user-e2e';
 
@@ -255,7 +256,6 @@ test('every primary dashboard surface renders with an authenticated Appwrite ses
   ]);
   const unexpected: string[] = [];
   const pageErrors: string[] = [];
-  page.on('pageerror', (error) => pageErrors.push(error.message));
   await mockAuthenticatedAppwrite(page, unexpected);
   await page.setViewportSize({ width: 390, height: 844 });
 
@@ -282,13 +282,15 @@ test('every primary dashboard surface renders with an authenticated Appwrite ses
   for (const path of routes) {
     await page.goto(path);
     if (path === '/dashboard/content/new') {
-      await expect(page).toHaveURL('/dashboard/content?create=1');
+      await expect.poll(() => page.url()).toMatch('/dashboard/content?create=1');
     } else {
-      await expect(page).toHaveURL(new RegExp(`${path.replaceAll('/', '\\/')}(?:\\?.*)?$`));
+      await expect
+        .poll(() => page.url())
+        .toMatch(new RegExp(`${path.replaceAll('/', '\\/')}(?:\\?.*)?$`));
     }
-    await expect(page.locator('main')).toBeVisible();
-    await expect(page.locator('main h1')).toBeVisible();
-    await expect(page.getByText('Loading workspace')).toHaveCount(0);
+    await expect.poll(() => page.locator('main').isVisible()).toBe(true);
+    await expect.poll(() => page.locator('main h1').isVisible()).toBe(true);
+    await expect.poll(() => page.getByText('Loading workspace').count()).toBe(0);
     const dimensions = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,
@@ -299,7 +301,7 @@ test('every primary dashboard surface renders with an authenticated Appwrite ses
   }
 
   expect(unexpected).toEqual([]);
-  expect(pageErrors).toEqual([]);
+  expect(await page.errors()).toEqual([]);
 });
 
 test('primary creation forms validate and submit the intended tenant-scoped payloads', async ({
@@ -319,32 +321,32 @@ test('primary creation forms validate and submit the intended tenant-scoped payl
   await page.getByLabel('Role name').fill('E2E Copy Lead');
   await page.getByLabel('Role identifier').fill('copy_lead');
   await page.getByRole('button', { name: 'Create custom AI worker' }).click();
-  await expect(page).toHaveURL(/\/dashboard\/agents$/);
+  await expect.poll(() => page.url()).toMatch(/\/dashboard\/agents$/);
 
   await page.goto('/dashboard/content');
   await page.getByRole('button', { name: 'New content project' }).click();
   await page.getByLabel('Project name').fill('E2E Launch');
   await page.getByLabel('Product benefits / description').fill('Fast, light, and durable.');
   await page.getByRole('button', { name: 'Create now' }).click();
-  await expect(page.getByLabel('Project name')).toHaveCount(0);
+  await expect.poll(() => page.getByLabel('Project name').count()).toBe(0);
 
   await page.goto('/dashboard/knowledge/new');
   await page.getByLabel('Name').fill('E2E Knowledge');
   await page.getByLabel('Description').fill('Verified product facts.');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page).toHaveURL(/\/dashboard\/knowledge$/);
+  await expect.poll(() => page.url()).toMatch(/\/dashboard\/knowledge$/);
 
   await page.goto('/dashboard/workflows/new');
   await page.getByLabel('Name').fill('E2E Workflow');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page).toHaveURL(/\/dashboard\/workflows$/);
+  await expect.poll(() => page.url()).toMatch(/\/dashboard\/workflows$/);
 
   await page.goto('/dashboard/crm');
   await page.getByRole('button', { name: 'New customer' }).first().click();
   await page.getByLabel('Customer name').fill('E2E Buyer');
   await page.getByLabel('Customer email').fill('buyer@example.test');
   await page.locator('form').getByRole('button', { name: 'New customer', exact: true }).click();
-  await expect(page.getByLabel('Customer name')).toHaveCount(0);
+  await expect.poll(() => page.getByLabel('Customer name').count()).toBe(0);
 
   expect(
     functionCalls
@@ -403,8 +405,8 @@ test('CRM keeps customer and lead pagination inside their respective regions', a
 
   const customers = page.getByRole('region', { name: 'Buyer customer base' });
   const leads = page.getByRole('region', { name: 'Intent leads' });
-  await expect(customers.getByRole('button', { name: 'Next' })).toBeVisible();
-  await expect(leads.getByRole('button', { name: 'Next' })).toBeVisible();
+  await expect.poll(() => customers.getByRole('button', { name: 'Next' }).isVisible()).toBe(true);
+  await expect.poll(() => leads.getByRole('button', { name: 'Next' }).isVisible()).toBe(true);
   expect(unexpected).toEqual([]);
 });
 
@@ -425,8 +427,10 @@ test('password, email-code, registration, and recovery journeys reach their succ
   await page.getByLabel('Email').fill('owner@example.test');
   await page.getByLabel('Password', { exact: true }).fill('local-test-password');
   await page.getByRole('button', { name: 'Enter workspace' }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('E2E Owner');
+  await expect.poll(() => page.url()).toMatch(/\/dashboard$/);
+  await expect
+    .poll(() => page.getByRole('heading', { level: 1 }).innerText())
+    .toContain('E2E Owner');
 
   await page.goto('/login');
   await page.getByRole('button', { name: 'Email code' }).click();
@@ -434,7 +438,7 @@ test('password, email-code, registration, and recovery journeys reach their succ
   await page.getByRole('button', { name: 'Send email code' }).click();
   await page.getByLabel('6-digit code').fill('123456');
   await page.getByRole('button', { name: 'Verify and enter' }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect.poll(() => page.url()).toMatch(/\/dashboard$/);
 
   await page.goto('/register');
   await page.getByLabel('Name').fill('E2E Owner');
@@ -444,12 +448,14 @@ test('password, email-code, registration, and recovery journeys reach their succ
   await page.getByRole('button', { name: 'Send email code' }).click();
   await page.getByLabel('6-digit code').fill('654321');
   await page.getByRole('button', { name: 'Verify and enter' }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect.poll(() => page.url()).toMatch(/\/dashboard$/);
 
   await page.goto('/recover');
   await page.getByLabel('Email').fill('owner@example.test');
   await page.getByRole('button', { name: 'Send reset link' }).click();
-  await expect(page.getByText('Check your inbox for the password reset link.')).toBeVisible();
+  await expect
+    .poll(() => page.getByText('Check your inbox for the password reset link.').isVisible())
+    .toBe(true);
 
   expect(authRequests).toEqual(
     expect.arrayContaining([

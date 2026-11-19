@@ -1,5 +1,4 @@
-import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test, watchDownload } from './safari';
 
 const publicPaths = ['/', '/pricing', '/login', '/register'];
 
@@ -11,10 +10,8 @@ test('public product journey has no serious WCAG violations', async ({ page, con
 
   for (const path of publicPaths) {
     await page.goto(path);
-    await expect(page.locator('main')).toBeVisible();
-    const results = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-      .analyze();
+    await expect.poll(() => page.locator('main').isVisible()).toBe(true);
+    const results = await page.audit(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']);
     const blocking = results.violations.filter(
       (violation) => violation.impact === 'critical' || violation.impact === 'serious',
     );
@@ -33,11 +30,8 @@ test('landing page remains accessible in all supported locales', async ({ page, 
       { name: 'matrixflow-locale', value: locale, domain: '127.0.0.1', path: '/' },
     ]);
     await page.goto('/');
-    await expect(page.locator('html')).toHaveAttribute('lang', locale);
-    const results = await new AxeBuilder({ page })
-      .include('main')
-      .withTags(['wcag2a', 'wcag2aa'])
-      .analyze();
+    await expect.poll(() => page.locator('html').getAttribute('lang')).toBe(locale);
+    const results = await page.audit(['wcag2a', 'wcag2aa'], 'main');
     expect(
       results.violations.filter(
         (violation) => violation.impact === 'critical' || violation.impact === 'serious',
