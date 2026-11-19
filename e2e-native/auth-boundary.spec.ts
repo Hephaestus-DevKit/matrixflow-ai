@@ -7,6 +7,8 @@ async function chooseLocale(page: Page, locale: 'zh-CN' | 'zh-TW' | 'en') {
 }
 
 test('protected dashboard routes fail closed to the localized login screen', async ({ page }) => {
+  // Each route may require a cold Next.js compile on the macOS runner.
+  test.setTimeout(120_000);
   await page.route('http://127.0.0.1:3102/v1/**', async (route) => {
     await route.fulfill({
       status: 401,

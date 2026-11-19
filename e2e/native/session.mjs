@@ -112,10 +112,24 @@ export async function launchSafari(fixture) {
             .perform(),
         innerText: async () => (await first()).getProperty('innerText'),
         async selectOption(value) {
-          await driver.executeScript(
-            "arguments[0].value=arguments[1]; arguments[0].dispatchEvent(new Event('change',{bubbles:true}))",
-            await first(),
-            value,
+          await driver.wait(
+            async () =>
+              driver.executeScript(
+                (select, requestedValue) => {
+                  const option = Array.from(select.options).find(
+                    (item) => item.value === requestedValue,
+                  );
+                  if (select.disabled || !option || option.matches(':disabled')) return false;
+                  select.value = requestedValue;
+                  select.dispatchEvent(new Event('input', { bubbles: true }));
+                  select.dispatchEvent(new Event('change', { bubbles: true }));
+                  return true;
+                },
+                await first(),
+                value,
+              ),
+            15000,
+            'Select option never became available: ' + value,
           );
         },
         first: () => selector([...steps, { type: 'first' }]),
