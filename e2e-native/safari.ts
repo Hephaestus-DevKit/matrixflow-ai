@@ -13,7 +13,7 @@ export const test = runner.extend({
       try {
         await browser?.close();
       } finally {
-        fixture.close();
+        await fixture.close();
       }
     }
   },

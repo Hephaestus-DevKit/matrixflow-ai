@@ -96,7 +96,10 @@ export async function serveFixture() {
     });
     req.pipe(upstream);
   });
+  const upgraded = new Set();
   server.on('upgrade', (req, socket, head) => {
+    upgraded.add(socket);
+    socket.once('close', () => upgraded.delete(socket));
     const conn = http.request({
       hostname: '127.0.0.1',
       port: 3101,
@@ -131,11 +134,16 @@ export async function serveFixture() {
       setRoute: (fn) => {
         route = fn;
       },
-      close() {
-        server.closeAllConnections();
-        api.closeAllConnections();
-        server.close();
-        api.close();
+      async close() {
+        for (const socket of upgraded) socket.destroy();
+        await Promise.all(
+          [server, api].map((listener) => {
+            const closed = once(listener, 'close');
+            listener.close();
+            listener.closeAllConnections();
+            return closed;
+          }),
+        );
       },
     };
   } catch (err) {
