@@ -11,7 +11,9 @@ function json(route: Route, value: unknown, status = 200) {
     headers: {
       'access-control-allow-origin': 'http://127.0.0.1:3100',
       'access-control-allow-credentials': 'true',
-      'access-control-allow-headers': '*',
+      'access-control-allow-headers':
+        route.request().headers()['access-control-request-headers'] ?? 'content-type',
+      'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     },
     body: JSON.stringify(value),
   });
