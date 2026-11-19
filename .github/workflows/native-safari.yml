@@ -22,10 +22,7 @@ jobs:
         run: |
           defaults write com.apple.universalaccess reduceMotion -bool false
           defaults write com.apple.universalaccess increaseContrast -bool false
-      - name: Build the web app against the isolated test API
-        run: pnpm build
-        env:
-          NEXT_PUBLIC_APPWRITE_ENDPOINT: http://127.0.0.1:3102/v1
+      - run: pnpm --filter @matrixflow/shared build
       - run: pnpm exec playwright test -c native.config.ts
       - name: Upload Safari failure context
         if: failure()

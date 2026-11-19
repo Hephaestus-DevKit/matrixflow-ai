@@ -14,7 +14,7 @@ export default defineConfig({
   },
   projects: [{ name: 'safari' }],
   webServer: {
-    command: 'pnpm --filter @matrixflow/web exec next start -H 127.0.0.1 -p 3101',
+    command: 'pnpm --filter @matrixflow/web exec next dev --turbopack -H 127.0.0.1 -p 3101',
     url: 'http://127.0.0.1:3101',
     env: { NEXT_PUBLIC_APPWRITE_ENDPOINT: 'http://127.0.0.1:3102/v1' },
     reuseExistingServer: false,
