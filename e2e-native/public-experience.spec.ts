@@ -150,6 +150,9 @@ test('keeps structured motion expressive on desktop and quiet on mobile', async 
     const grid = document.querySelector<HTMLElement>('.landing-grid');
     const sweep = document.querySelector<HTMLElement>('.landing-sweep');
     return {
+      width: innerWidth,
+      reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+      highContrast: matchMedia('(prefers-contrast: more)').matches,
       gridOpacity: Number.parseFloat(getComputedStyle(grid!).opacity),
       gridAnimation: getComputedStyle(grid!).animationName,
       sweepDisplay: getComputedStyle(sweep!).display,
@@ -158,7 +161,7 @@ test('keeps structured motion expressive on desktop and quiet on mobile', async 
   });
   expect(desktop.gridOpacity).toBeGreaterThan(0);
   expect(desktop.gridAnimation).toContain('landing-grid-drift');
-  expect(desktop.sweepDisplay).not.toBe('none');
+  expect(desktop.sweepDisplay, JSON.stringify(desktop)).not.toBe('none');
   expect(desktop.sweepAnimation).toContain('landing-sweep-drift');
 
   await page.setViewportSize({ width: 390, height: 844 });

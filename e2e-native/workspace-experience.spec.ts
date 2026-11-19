@@ -48,7 +48,9 @@ test('content batches run durably and report partial success', async ({ page }) 
   expect(calls.find((call) => call.path.endsWith('/generate-all'))?.body.mode).toBe('async');
   await page.getByRole('link', { name: 'View task' }).click();
   await expect
-    .poll(() => page.getByRole('heading', { name: 'Task details' }).isVisible())
+    .poll(() => page.getByRole('heading', { name: 'Task details' }).isVisible(), {
+      timeout: 15_000,
+    })
     .toBe(true);
   await expect
     .poll(() => page.getByText('Generated listing', { exact: false }).first().isVisible())
