@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -23,6 +23,8 @@ interface AuthShellProps {
 
 export function AuthShell({ title, description, children, footer, step }: AuthShellProps) {
   const { t } = useLocale();
+  const [interactive, setInteractive] = useState(false);
+  useEffect(() => setInteractive(true), []);
 
   return (
     <main
@@ -101,7 +103,10 @@ export function AuthShell({ title, description, children, footer, step }: AuthSh
                 {step}
               </p>
             )}
-            <h1 className="font-display text-[1.75rem] font-semibold tracking-[-0.04em] text-slate-950 sm:text-[2rem]">
+            <h1
+              id="auth-title"
+              className="font-display text-[1.75rem] font-semibold tracking-[-0.04em] text-slate-950 sm:text-[2rem]"
+            >
               {title}
             </h1>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-600 lg:mx-0">
@@ -109,7 +114,13 @@ export function AuthShell({ title, description, children, footer, step }: AuthSh
             </p>
           </div>
 
-          <div className="auth-card rounded-[1.75rem] p-5 sm:p-7">{children}</div>
+          <fieldset
+            disabled={!interactive}
+            aria-labelledby="auth-title"
+            className="auth-card min-w-0 rounded-[1.75rem] p-5 sm:p-7"
+          >
+            {children}
+          </fieldset>
           <div className="mt-5 flex min-h-8 items-center justify-center text-center text-xs text-slate-500 sm:mt-6">
             {footer}
           </div>
