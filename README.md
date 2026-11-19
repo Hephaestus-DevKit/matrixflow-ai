@@ -60,7 +60,8 @@ pnpm dev
 
 ```bash
 pnpm verify
-pnpm exec playwright install chromium
+# 本地默认使用 WebKit，CI 同时验证 WebKit 和 Chromium。
+pnpm exec playwright install webkit
 pnpm test:e2e
 ```
 

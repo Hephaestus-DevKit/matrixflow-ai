@@ -13,11 +13,14 @@ export default defineConfig({
     trace: 'on-first-retry',
     video: 'retain-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    ...(process.env.CI ? [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }] : []),
+  ],
   webServer: {
-    command: 'pnpm --filter @matrixflow/web exec next dev -p 3100',
+    command: 'pnpm --filter @matrixflow/web exec next dev --turbopack -p 3100',
     url: 'http://127.0.0.1:3100',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

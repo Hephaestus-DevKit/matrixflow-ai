@@ -11,7 +11,9 @@ function json(route: Route, value: unknown, status = 200) {
     headers: {
       'access-control-allow-origin': 'http://127.0.0.1:3100',
       'access-control-allow-credentials': 'true',
-      'access-control-allow-headers': '*',
+      'access-control-allow-headers':
+        route.request().headers()['access-control-request-headers'] ?? 'content-type',
+      'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     },
     body: JSON.stringify(value),
   });
@@ -279,7 +281,11 @@ test('every primary dashboard surface renders with an authenticated Appwrite ses
 
   for (const path of routes) {
     await page.goto(path);
-    await expect(page).toHaveURL(new RegExp(`${path.replaceAll('/', '\\/')}(?:\\?.*)?$`));
+    if (path === '/dashboard/content/new') {
+      await expect(page).toHaveURL('/dashboard/content?create=1');
+    } else {
+      await expect(page).toHaveURL(new RegExp(`${path.replaceAll('/', '\\/')}(?:\\?.*)?$`));
+    }
     await expect(page.locator('main')).toBeVisible();
     await expect(page.locator('main h1')).toBeVisible();
     await expect(page.getByText('Loading workspace')).toHaveCount(0);

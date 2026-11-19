@@ -10,7 +10,7 @@
 pnpm install --frozen-lockfile
 npm ci --prefix apps/functions/matrixflow-core
 pnpm verify
-pnpm exec playwright install chromium
+pnpm exec playwright install webkit
 pnpm test:e2e
 ```
 
