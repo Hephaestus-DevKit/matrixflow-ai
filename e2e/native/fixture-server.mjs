@@ -47,8 +47,12 @@ export async function serveFixture() {
         },
       });
     } catch (error) {
-      if (!res.headersSent) res.writeHead(500, headers);
-      res.end(String(error));
+      if (res.headersSent) {
+        res.destroy(error);
+        return;
+      }
+      res.writeHead(500, headers);
+      res.end('Safari test fixture request failed');
     }
   });
   const server = http.createServer((req, res) => {
@@ -90,9 +94,13 @@ export async function serveFixture() {
         res.end(html);
       },
     );
-    upstream.on('error', (e) => {
+    upstream.on('error', (error) => {
+      if (res.headersSent) {
+        res.destroy(error);
+        return;
+      }
       res.writeHead(502);
-      res.end(String(e));
+      res.end('Safari test app is unavailable');
     });
     req.pipe(upstream);
   });
