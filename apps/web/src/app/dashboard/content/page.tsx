@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient, type ListPage } from '@/lib/api-client';
@@ -10,11 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Factory, Sparkles, Plus, Loader2, AlertCircle, Trash2 } from 'lucide-react';
-import type {
-  ContentGenerationView,
-  ContentItemSummary,
-  ContentProjectSummary,
-} from '@matrixflow/shared';
+import type { ContentItemSummary, ContentProjectSummary } from '@matrixflow/shared';
 import { errorMessage } from '@/lib/errors';
 import { toast } from 'sonner';
 import { useLocale } from '@/lib/i18n';
@@ -253,10 +249,12 @@ export default function ContentFactoryPage() {
   const [generating, setGenerating] = useState<string | null>(null);
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
-  const [results, setResults] = useState<Record<string, ContentGenerationView>>({});
   const [isCreating, setIsCreating] = useState(false);
-  const [batchActive, setBatchActive] = useState(false);
-  const [jobId, setJobId] = useState<string | null>(null);
+  const [projectJobs, setProjectJobs] = useState<Record<string, { id: string; active: boolean }>>(
+    {},
+  );
+  const projectJob =
+    projectId && Object.hasOwn(projectJobs, projectId) ? projectJobs[projectId] : undefined;
   const [language, setLanguage] = useState('en');
   const [market, setMarket] = useState('');
   const [tone, setTone] = useState('');
@@ -356,57 +354,33 @@ export default function ContentFactoryPage() {
     refetch: refetchItems,
   } = useQuery({
     queryKey: ['content-items', projectId],
-    queryFn: () => apiClient.get<ContentItemSummary[]>(`/content/projects/${projectId}/items`),
+    queryFn: ({ signal }) =>
+      apiClient.get<ContentItemSummary[]>(`/content/projects/${projectId}/items`, { signal }),
     enabled: !!projectId,
   });
 
-  useEffect(() => {
-    if (Array.isArray(items)) {
-      const mappedResults: Record<string, ContentGenerationView> = {};
-      items.forEach((item) => {
-        if (mappedResults[item.type]) return;
-        mappedResults[item.type] = {
-          itemId: item.id,
-          content: item.body?.parsed ?? item.body?.raw ?? '',
-          usage: item.metadata?.usage,
-          cost: item.metadata?.cost,
-        };
-      });
-      setResults(mappedResults);
-    } else {
-      setResults({});
+  const results = useMemo(() => {
+    const latestByType = new Map<string, ContentItemSummary>();
+    for (const item of items ?? []) {
+      if (!latestByType.has(item.type)) latestByType.set(item.type, item);
     }
+    return latestByType;
   }, [items]);
 
-  async function generate(type: string) {
+  async function generate(type?: string) {
     if (!projectId) return;
-    setGenerating(type);
+    setGenerating(type ?? 'all');
     try {
-      const job = await apiClient.post<BackgroundJob>(`/content/projects/${projectId}/generate`, {
-        mode: 'async',
-        type,
-        language,
-        variables: { targetMarket: market.trim(), tone: tone.trim() },
-      });
-      setJobId(job.id);
-      setBatchActive(true);
-    } catch (error: unknown) {
-      toast.error(errorMessage(error));
-    } finally {
-      setGenerating(null);
-    }
-  }
-
-  async function generateAll() {
-    if (!projectId) return;
-    setGenerating('all');
-    try {
-      const result = await apiClient.post<BackgroundJob>(
-        `/content/projects/${projectId}/generate-all`,
-        { language, variables: { targetMarket: market.trim(), tone: tone.trim() }, mode: 'async' },
+      const job = await apiClient.post<BackgroundJob>(
+        `/content/projects/${projectId}/${type ? 'generate' : 'generate-all'}`,
+        {
+          mode: 'async',
+          type,
+          language,
+          variables: { targetMarket: market.trim(), tone: tone.trim() },
+        },
       );
-      setJobId(result.id);
-      setBatchActive(true);
+      setProjectJobs((jobs) => ({ ...jobs, [projectId]: { id: job.id, active: true } }));
     } catch (error: unknown) {
       toast.error(errorMessage(error));
     } finally {
@@ -444,7 +418,11 @@ export default function ContentFactoryPage() {
     setDeletingProjectId(id);
     try {
       await apiClient.del(`/content/projects/${id}`);
-      if (projectId === id) setProjectId(null);
+      setProjectId((selected) => (selected === id ? null : selected));
+      setProjectJobs((jobs) =>
+        Object.fromEntries(Object.entries(jobs).filter(([key]) => key !== id)),
+      );
+      queryClient.removeQueries({ queryKey: ['content-items', id] });
       if ((projects?.length ?? 0) === 1 && projectOffset > 0)
         setProjectOffset(Math.max(0, projectOffset - PROJECT_PAGE_SIZE));
       await queryClient.invalidateQueries({ queryKey: ['content-projects'] });
@@ -580,13 +558,10 @@ export default function ContentFactoryPage() {
                 }`}
               >
                 <button
+                  type="button"
+                  aria-pressed={projectId === project.id}
                   disabled={!!generating}
-                  onClick={() => {
-                    setProjectId(project.id);
-                    setResults({});
-                    setJobId(null);
-                    setBatchActive(false);
-                  }}
+                  onClick={() => setProjectId(project.id)}
                   className="min-h-9 px-3.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted/80 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                 >
                   {project.name}
@@ -669,13 +644,18 @@ export default function ContentFactoryPage() {
               />
             </div>
           </div>
-          {jobId && (
+          {projectJob && (
             <JobProgress
-              jobId={jobId}
+              key={projectJob.id}
+              jobId={projectJob.id}
               showResult={false}
-              onSettled={() => {
-                setBatchActive(false);
-                void refetchItems();
+              onSettled={(job) => {
+                setProjectJobs((jobs) =>
+                  jobs[projectId]?.id === job.id
+                    ? { ...jobs, [projectId]: { id: job.id, active: false } }
+                    : jobs,
+                );
+                void queryClient.invalidateQueries({ queryKey: ['content-items', projectId] });
               }}
             />
           )}
@@ -687,8 +667,8 @@ export default function ContentFactoryPage() {
           {itemsError && <ErrorState onRetry={() => void refetchItems()} />}
           <div className="flex items-center gap-3">
             <Button
-              onClick={generateAll}
-              disabled={!!generating || batchActive}
+              onClick={() => generate()}
+              disabled={!!generating || projectJob?.active}
               className="gap-2 text-xs"
             >
               {generating === 'all' ? (
@@ -706,65 +686,67 @@ export default function ContentFactoryPage() {
           </div>
 
           <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {CONTENT_TYPES.map((ct) => (
-              <div
-                key={ct.key}
-                className={
-                  results[ct.key]
-                    ? 'surface-card col-span-full min-w-0 border-primary/25 p-4 sm:p-6'
-                    : 'surface-card min-w-0 p-4 sm:p-5'
-                }
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span
-                        aria-hidden="true"
-                        className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-muted text-lg"
+            {CONTENT_TYPES.map((ct) => {
+              const result = results.get(ct.key);
+              return (
+                <div
+                  key={ct.key}
+                  className={
+                    result
+                      ? 'surface-card col-span-full min-w-0 border-primary/25 p-4 sm:p-6'
+                      : 'surface-card min-w-0 p-4 sm:p-5'
+                  }
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          aria-hidden="true"
+                          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-muted text-lg"
+                        >
+                          {ct.icon}
+                        </span>
+                        <span className="text-sm font-bold text-foreground">
+                          {ct.labels[locale]}
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => generate(ct.key)}
+                        disabled={!!generating || projectJob?.active}
+                        className="min-h-11 border-border/60 px-2.5 text-2xs hover:bg-muted"
                       >
-                        {ct.icon}
-                      </span>
-                      <span className="text-sm font-bold text-foreground">{ct.labels[locale]}</span>
+                        {generating === ct.key ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : result ? (
+                          copy.regenerate
+                        ) : (
+                          controls.generate
+                        )}
+                      </Button>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => generate(ct.key)}
-                      disabled={!!generating || batchActive}
-                      className="min-h-11 border-border/60 px-2.5 text-2xs hover:bg-muted"
-                    >
-                      {generating === ct.key ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : results[ct.key] ? (
-                        copy.regenerate
-                      ) : (
-                        controls.generate
-                      )}
-                    </Button>
+                    <p className="text-2xs text-muted-foreground leading-relaxed mb-4">
+                      {ct.descriptions[locale]}
+                    </p>
                   </div>
-                  <p className="text-2xs text-muted-foreground leading-relaxed mb-4">
-                    {ct.descriptions[locale]}
-                  </p>
-                </div>
 
-                {results[ct.key] && (
-                  <div className="mt-2 space-y-1">
-                    <span className="text-2xs font-semibold uppercase text-muted-foreground">
-                      {copy.output}
-                    </span>
-                    <ContentReview
-                      key={results[ct.key].itemId}
-                      citations={
-                        items?.find((item) => item.id === results[ct.key].itemId)?.metadata
-                          ?.citations || []
-                      }
-                      text={formatContent(results[ct.key].content)}
-                      filename={`${ct.key}-${results[ct.key].itemId}.txt`}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
+                  {result && (
+                    <div className="mt-2 space-y-1">
+                      <span className="text-2xs font-semibold uppercase text-muted-foreground">
+                        {copy.output}
+                      </span>
+                      <ContentReview
+                        key={result.id}
+                        citations={result.metadata?.citations || []}
+                        text={formatContent(result.body?.parsed ?? result.body?.raw ?? '')}
+                        filename={`${ct.key}-${result.id}.txt`}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

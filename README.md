@@ -60,7 +60,7 @@ pnpm dev
 
 ```bash
 pnpm verify
-# 本地默认使用 WebKit，CI 同时验证 WebKit 和 Chromium。
+# 浏览器回归通过 safaridriver 在本地和 macOS CI 中运行原生 Safari。
 /usr/bin/safaridriver --enable  # macOS, one-time setup
 pnpm test:e2e
 ```

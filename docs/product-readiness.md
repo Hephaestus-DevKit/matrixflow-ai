@@ -17,7 +17,7 @@ MatrixFlow 当前的定位是“生产可用 Beta / 候选版”：核心数据�
 - 发票、支付、退款和拒付事件的规范化存储模型；供应商回调使用 HMAC 与事件幂等。
 - 简体中文、繁體中文、English 三语，以及响应式移动端布局。
 - GitHub CI、CodeQL、依赖安全审计、Vercel 生产构建和 Appwrite Schema 即代码。
-- Chromium 浏览器 E2E 自动验证三语切换持久化、英文认证页和 390px 移动端无横向溢出。
+- 原生 Safari 浏览器 E2E 自动验证三语切换持久化、英文认证页和 390px 移动端无横向溢出。
 - 生产公开面由 GitHub Actions 定时 smoke 检查；安全响应头不符会使工作流失败。
 - 简体中文、繁體中文与 English 会从持久化 Cookie 直接服务端渲染；生产 smoke 校验三语首屏语言、标题和主体，不依赖 hydration 后修正。
 - owner/admin 可在管理中心读取不含密钥的发布版本与依赖健康状态；普通成员和 API Key 均由 Function 拒绝。

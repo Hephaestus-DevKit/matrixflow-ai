@@ -24,7 +24,7 @@ export async function launchSafari(fixture) {
       .forBrowser('safari')
       .build();
   } catch (err) {
-    await service.kill();
+    await Promise.allSettled([service.kill(), rm(scratch, { recursive: true, force: true })]);
     throw err;
   }
 
@@ -319,8 +319,11 @@ export async function launchSafari(fixture) {
       try {
         await driver.quit();
       } finally {
-        await service.kill();
-        await rm(scratch, { recursive: true, force: true });
+        try {
+          await service.kill();
+        } finally {
+          await rm(scratch, { recursive: true, force: true });
+        }
       }
     },
   };

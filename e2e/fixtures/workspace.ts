@@ -6,6 +6,7 @@ export async function mockWorkspace(
     slowIdentity?: boolean;
     identityUnavailable?: boolean;
     keepJobsRunning?: boolean;
+    extraContentProject?: boolean;
   } = {},
 ) {
   const calls: Array<{ path: string; method: string; body: Record<string, unknown> }> = [];
@@ -118,8 +119,11 @@ export async function mockWorkspace(
               name: 'Travel bag',
               productData: JSON.stringify({ title: 'Travel bag', description: '20 L capacity' }),
             },
+            ...(options.extraContentProject
+              ? [{ $id: 'project-2', name: 'Laptop sleeve', productData: '{}' }]
+              : []),
           ];
-        if (table === 'content_items') rows = items;
+        if (table === 'content_items' && !url.search.includes('project-2')) rows = items;
         if (table === 'agents') rows = [agent];
         if (table === 'knowledge_bases') rows = [{ $id: 'kb-1', name: 'Product handbook' }];
         if (table === 'knowledge_documents')

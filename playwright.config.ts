@@ -9,13 +9,15 @@ export default defineConfig({
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: 'http://127.0.0.1:3100',
-    trace: 'on-first-retry',
   },
   projects: [{ name: 'safari' }],
   webServer: {
     command: 'pnpm --filter @matrixflow/web exec next dev --turbopack -H 127.0.0.1 -p 3101',
     url: 'http://127.0.0.1:3101',
-    env: { NEXT_PUBLIC_APPWRITE_ENDPOINT: 'http://127.0.0.1:3102/v1' },
+    env: {
+      NEXT_PUBLIC_APPWRITE_ENDPOINT: 'http://127.0.0.1:3102/v1',
+      NEXT_PUBLIC_APPWRITE_PROJECT_ID: 'matrixflow-safari-fixture',
+    },
     reuseExistingServer: false,
     timeout: 120_000,
   },

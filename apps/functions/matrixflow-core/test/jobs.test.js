@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { claimJob, enqueueJob, listJobs, verifyWorkerRequest } from '../src/jobs.js';
+import {
+  cancelJob,
+  claimJob,
+  enqueueJob,
+  executeJob,
+  listJobs,
+  recoverStaleJob,
+  verifyWorkerRequest,
+} from '../src/jobs.js';
 
 function withWorkerSecret(value) {
   const previous = process.env.MATRIXFLOW_WORKER_SECRET;
@@ -8,6 +16,68 @@ function withWorkerSecret(value) {
   return () => {
     if (previous === undefined) delete process.env.MATRIXFLOW_WORKER_SECRET;
     else process.env.MATRIXFLOW_WORKER_SECRET = previous;
+  };
+}
+
+function jobStore(initial, { beforeCommit, beforeUpdate, getResource, onList } = {}) {
+  let row = {
+    $id: 'job-1',
+    organizationId: 'team-1',
+    status: 'QUEUED',
+    type: 'agent.run',
+    attempts: 0,
+    maxAttempts: 3,
+    cancelRequested: false,
+    runAfter: new Date(0).toISOString(),
+    payload: JSON.stringify({ agentId: 'agent-1' }),
+    ...initial,
+  };
+  const transactions = new Map();
+  let nextTransaction = 0;
+  let revision = 0;
+  return {
+    getRow: async ({ tableId }) => {
+      if (tableId !== 'background_jobs') return getResource?.();
+      return { ...row };
+    },
+    createTransaction: async () => ({ $id: String(++nextTransaction) }),
+    updateRow: async ({ rowId, data, transactionId }) => {
+      assert.equal(rowId, row.$id);
+      const concurrentChange = beforeUpdate?.(data);
+      if (concurrentChange) {
+        row = { ...row, ...concurrentChange };
+        revision++;
+      }
+      transactions.set(transactionId, { data, revision });
+      return { ...row, ...data };
+    },
+    listRows: async ({ queries }) => {
+      onList?.(queries);
+      const matches = queries.every((raw) => {
+        const { method, attribute, values } = JSON.parse(raw);
+        if (method === 'equal') return values.includes(row[attribute]);
+        if (method === 'lessThanEqual') return row[attribute] <= values[0];
+        if (method === 'isNull') return row[attribute] == null;
+        if (method === 'limit') return true;
+        assert.fail(`Unhandled query method: ${method}`);
+      });
+      return { rows: matches ? [{ ...row }] : [] };
+    },
+    updateTransaction: async ({ transactionId, commit }) => {
+      const staged = transactions.get(transactionId);
+      transactions.delete(transactionId);
+      if (!commit) return;
+      const concurrentChange = beforeCommit?.(staged.data);
+      if (concurrentChange) {
+        row = { ...row, ...concurrentChange };
+        revision++;
+      }
+      if (staged.revision !== revision) {
+        throw Object.assign(new Error('Transaction conflict'), { code: 409 });
+      }
+      row = { ...row, ...staged.data };
+      revision++;
+    },
   };
 }
 
@@ -59,26 +129,9 @@ test('worker invocations fail closed on missing or incorrect credentials', () =>
   }
 });
 
-test('job claims use an atomic status predicate and issue a bounded lease token', async () => {
+test('job claims check the status before committing a bounded lease token', async () => {
   const calls = [];
-  const services = {
-    tables: {
-      updateRows: async (input) => {
-        calls.push(input);
-        return {
-          rows: [
-            {
-              $id: 'job-1',
-              organizationId: 'team-1',
-              status: 'RUNNING',
-              attempts: 1,
-              leaseToken: input.data.leaseToken,
-            },
-          ],
-        };
-      },
-    },
-  };
+  const services = { tables: jobStore({}, { onList: (queries) => calls.push(queries) }) };
   const claimed = await claimJob(
     services,
     {
@@ -94,13 +147,13 @@ test('job claims use an atomic status predicate and issue a bounded lease token'
   assert.equal(claimed.status, 'RUNNING');
   assert.match(claimed.leaseToken, /^request-1-/);
   assert.equal(calls.length, 1);
-  assert.ok(calls[0].queries.some((query) => query.includes('status')));
-  assert.equal(calls[0].data.status, 'RUNNING');
-  assert.equal(calls[0].data.attempts, 1);
+  assert.ok(calls[0].some((query) => query.includes('status')));
+  assert.equal(claimed.status, 'RUNNING');
+  assert.equal(claimed.attempts, 1);
 });
 
 test('a duplicate delivery that loses the atomic claim does not receive a lease', async () => {
-  const services = { tables: { updateRows: async () => ({ rows: [] }) } };
+  const services = { tables: jobStore({ $id: 'job-2', status: 'RUNNING' }) };
   const claimed = await claimJob(
     services,
     {
@@ -114,6 +167,18 @@ test('a duplicate delivery that loses the atomic claim does not receive a lease'
     'request-2',
   );
   assert.equal(claimed, null);
+});
+
+test('simultaneous deliveries can commit only one lease', async () => {
+  const tables = jobStore({});
+  const row = await tables.getRow({ tableId: 'background_jobs' });
+  const job = { id: row.$id, ...row };
+  const claims = await Promise.all([
+    claimJob({ tables }, job, Date.now(), 'worker-a'),
+    claimJob({ tables }, job, Date.now(), 'worker-b'),
+  ]);
+  assert.equal(claims.filter(Boolean).length, 1);
+  assert.equal((await tables.getRow({ tableId: 'background_jobs' })).attempts, 1);
 });
 
 test('job lists are tenant-scoped, paginated, and exclude worker internals', async () => {
@@ -133,6 +198,7 @@ test('job lists are tenant-scoped, paginated, and exclude worker internals', asy
               attempts: 1,
               maxAttempts: 3,
               runAfter: '2026-08-25T00:00:00.000Z',
+              leaseExpiresAt: new Date(Date.now() + 60_000).toISOString(),
               payload: JSON.stringify({ prompt: 'private' }),
               result: JSON.stringify({ content: 'private' }),
               error: 'private error',
@@ -191,31 +257,17 @@ test('job lists preserve the legacy array response without pagination options', 
 });
 
 test('a retryable worker failure persists a retry and dispatches it instead of crashing', async () => {
-  const { executeJob } = await import('../src/jobs.js');
   const restore = withWorkerSecret('z'.repeat(40));
   const executions = [];
-  let job = {
-    $id: 'retry-job',
-    organizationId: 'team-1',
-    type: 'agent.run',
-    status: 'QUEUED',
-    attempts: 0,
-    maxAttempts: 3,
-    runAfter: new Date(0).toISOString(),
-    payload: JSON.stringify({ agentId: 'agent-1' }),
-  };
   const services = {
-    tables: {
-      getRow: async ({ tableId }) => {
-        if (tableId === 'agents')
+    tables: jobStore(
+      {},
+      {
+        getResource() {
           throw Object.assign(new Error('upstream private details'), { code: 'AI_NETWORK_ERROR' });
-        return job;
+        },
       },
-      updateRows: async ({ data }) => {
-        job = { ...job, ...data };
-        return { rows: [job] };
-      },
-    },
+    ),
     functions: {
       createExecution: async (input) => {
         executions.push(input);
@@ -224,7 +276,7 @@ test('a retryable worker failure persists a retry and dispatches it instead of c
     },
   };
   try {
-    const result = await executeJob(services, { jobId: 'retry-job', organizationId: 'team-1' });
+    const result = await executeJob(services, { jobId: 'job-1', organizationId: 'team-1' });
     assert.equal(result.status, 'RETRY_WAIT');
     assert.equal(result.attempts, 1);
     assert.deepEqual(result.error, { code: 'AI_NETWORK_ERROR' });
@@ -237,50 +289,36 @@ test('a retryable worker failure persists a retry and dispatches it instead of c
 });
 
 test('a failure after cancellation becomes canceled and never dispatches another attempt', async () => {
-  const { executeJob } = await import('../src/jobs.js');
-  let job = {
-    $id: 'cancel-job',
-    organizationId: 'team-1',
-    type: 'agent.run',
-    status: 'QUEUED',
-    attempts: 0,
-    maxAttempts: 3,
-    runAfter: new Date(0).toISOString(),
-    payload: JSON.stringify({ agentId: 'agent-1' }),
-  };
   let dispatches = 0;
   const services = {
-    tables: {
-      getRow: async ({ tableId }) => {
-        if (tableId === 'agents') {
-          job.cancelRequested = true;
+    tables: jobStore(
+      {},
+      {
+        getResource() {
           throw Object.assign(new Error('temporary failure'), { code: 'AI_NETWORK_ERROR' });
-        }
-        return job;
+        },
+        beforeUpdate(data) {
+          if (data.status === 'RETRY_WAIT') return { cancelRequested: true };
+        },
       },
-      updateRows: async ({ data }) => {
-        job = { ...job, ...data };
-        return { rows: [job] };
-      },
-    },
+    ),
     functions: {
       createExecution: async () => {
         dispatches++;
       },
     },
   };
-  const result = await executeJob(services, { jobId: 'cancel-job', organizationId: 'team-1' });
+  const result = await executeJob(services, { jobId: 'job-1', organizationId: 'team-1' });
   assert.equal(result.status, 'CANCELED');
   assert.equal(dispatches, 0);
 });
 
 test('task reads atomically recover an expired worker lease and bound recovery attempts', async () => {
-  const { recoverStaleJob } = await import('../src/jobs.js');
   const restore = withWorkerSecret('r'.repeat(40));
   let dispatches = 0;
   const updates = [];
   const expired = {
-    id: 'expired',
+    id: 'job-1',
     organizationId: 'team-1',
     type: 'agent.run',
     status: 'RUNNING',
@@ -289,33 +327,107 @@ test('task reads atomically recover an expired worker lease and bound recovery a
     attempts: 1,
     maxAttempts: 3,
   };
-  const services = {
-    tables: {
-      updateRows: async (input) => {
-        updates.push(input);
-        return { rows: [{ $id: expired.id, ...expired, ...input.data }] };
-      },
-    },
+  const services = (job) => ({
+    tables: jobStore(job, { onList: (queries) => updates.push(queries) }),
     functions: {
       createExecution: async () => {
         dispatches++;
       },
     },
-  };
+  });
   try {
-    const recovered = await recoverStaleJob(services, expired);
+    const recovered = await recoverStaleJob(services(expired), expired);
     assert.equal(recovered.status, 'RETRY_WAIT');
     assert.equal(dispatches, 1);
-    assert.ok(updates[0].queries.some((query) => query.includes('leaseToken')));
-    const terminal = await recoverStaleJob(services, { ...expired, attempts: 3 });
+    assert.ok(updates[0].some((query) => query.includes('leaseToken')));
+    const exhausted = { ...expired, attempts: 3 };
+    const terminal = await recoverStaleJob(services(exhausted), exhausted);
     assert.equal(terminal.status, 'FAILED');
     assert.equal(dispatches, 1);
-    const live = await recoverStaleJob(services, {
+    const live = await recoverStaleJob(services(expired), {
       ...expired,
       leaseExpiresAt: new Date(Date.now() + 60_000).toISOString(),
     });
     assert.equal(live.status, 'RUNNING');
     assert.equal(updates.length, 2);
+  } finally {
+    restore();
+  }
+});
+
+test('cancelling a running job preserves a completion written at the same time', async () => {
+  const tables = jobStore(
+    { status: 'RUNNING' },
+    {
+      beforeCommit(data) {
+        if (data.cancelRequested) {
+          return { status: 'SUCCEEDED', result: JSON.stringify({ content: 'Saved result' }) };
+        }
+      },
+    },
+  );
+  const result = await cancelJob({ tables }, { teamId: 'team-1' }, 'job-1');
+  assert.equal(result.status, 'SUCCEEDED');
+  assert.equal(result.cancelRequested, false);
+  assert.deepEqual(result.result, { content: 'Saved result' });
+});
+
+test('a duplicate delivery leaves an active cancellation with its worker', async () => {
+  const tables = jobStore({
+    status: 'RUNNING',
+    attempts: 1,
+    cancelRequested: true,
+    leaseExpiresAt: new Date(Date.now() + 60_000).toISOString(),
+  });
+  const result = await executeJob({ tables }, { jobId: 'job-1', organizationId: 'team-1' });
+  assert.equal(result.status, 'RUNNING');
+  assert.equal(result.cancelRequested, true);
+});
+
+test('an expired worker on the final attempt fails without invoking the job again', async () => {
+  const tables = jobStore(
+    {
+      status: 'RUNNING',
+      attempts: 3,
+      leaseToken: 'expired-lease',
+      leaseExpiresAt: new Date(0).toISOString(),
+    },
+    {
+      getResource: () => assert.fail('An exhausted job must not invoke the worker again'),
+    },
+  );
+  const result = await executeJob({ tables }, { jobId: 'job-1', organizationId: 'team-1' });
+  assert.equal(result.status, 'FAILED');
+  assert.equal(result.attempts, 3);
+  assert.deepEqual(result.error, { code: 'JOB_WORKER_TIMEOUT' });
+});
+
+test('an ambiguous retry dispatch error preserves a worker that already claimed the task', async () => {
+  const restore = withWorkerSecret('s'.repeat(40));
+  try {
+    const tables = jobStore({
+      status: 'RUNNING',
+      attempts: 1,
+      leaseToken: 'expired-lease',
+      leaseExpiresAt: new Date(0).toISOString(),
+    });
+    const result = await recoverStaleJob(
+      {
+        tables,
+        functions: {
+          async createExecution() {
+            const row = await tables.getRow({ tableId: 'background_jobs' });
+            const claimed = await claimJob({ tables }, { id: row.$id, ...row });
+            assert.equal(claimed.status, 'RUNNING');
+            assert.equal(claimed.attempts, 2);
+            throw new Error('Dispatch response lost');
+          },
+        },
+      },
+      { id: 'job-1', ...(await tables.getRow({ tableId: 'background_jobs' })) },
+    );
+    assert.equal(result.status, 'RUNNING');
+    assert.equal(result.attempts, 2);
   } finally {
     restore();
   }

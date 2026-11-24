@@ -57,6 +57,32 @@ test('content batches run durably and report partial success', async ({ page }) 
     .toBe(true);
 });
 
+test('switching content projects keeps the running task attached to its project', async ({
+  page,
+}) => {
+  await mockWorkspace(page, { keepJobsRunning: true, extraContentProject: true });
+  await page.goto('/dashboard/content?project=project-1');
+  const generateAll = page.getByRole('button', { name: /Generate all/ });
+  const viewTask = page.getByRole('link', { name: 'View task' });
+  await generateAll.click();
+  await expect.poll(() => viewTask.isVisible()).toBe(true);
+
+  const travelBag = page.getByRole('button', { name: 'Travel bag', exact: true });
+  await travelBag.click();
+  await expect.poll(() => viewTask.isVisible()).toBe(true);
+  await expect.poll(() => generateAll.enabled()).toBe(false);
+
+  await page.getByRole('button', { name: 'Laptop sleeve', exact: true }).click();
+  await expect.poll(() => viewTask.count()).toBe(0);
+  await expect.poll(() => generateAll.enabled()).toBe(true);
+  await expect.poll(() => page.getByLabel('Edit draft').count()).toBe(0);
+
+  await travelBag.click();
+  await expect.poll(() => viewTask.isVisible()).toBe(true);
+  await expect.poll(() => generateAll.enabled()).toBe(false);
+  await expect.poll(() => page.getByLabel('Edit draft').first().value()).toBe('Newest saved title');
+});
+
 test('worker configuration links a knowledge base and async results survive navigation', async ({
   page,
 }) => {
