@@ -1,8 +1,8 @@
 import { Builder, By, Key } from 'selenium-webdriver';
 import safari from 'selenium-webdriver/safari.js';
-import { readFile, writeFile, readdir, stat, unlink, mkdtemp, rm } from 'node:fs/promises';
+import { readFile, writeFile, readdir, stat, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { homedir, tmpdir } from 'node:os';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -15,7 +15,6 @@ const library = await readFile(
 
 export async function launchSafari(fixture) {
   const service = new safari.ServiceBuilder('/usr/bin/safaridriver').build();
-  const scratch = await mkdtemp(join(tmpdir(), 'matrixflow-safari-'));
   const sessionDeadline = new AbortController();
   let driver;
   try {
@@ -31,7 +30,7 @@ export async function launchSafari(fixture) {
       }),
     ]);
   } catch (err) {
-    await Promise.allSettled([service.kill(), rm(scratch, { recursive: true, force: true })]);
+    await service.kill().catch(() => {});
     throw err;
   } finally {
     sessionDeadline.abort();
@@ -173,10 +172,22 @@ export async function launchSafari(fixture) {
             value,
           );
         },
-        async setInputFiles({ name, buffer }) {
-          const file = join(scratch, name);
-          await writeFile(file, buffer);
-          await (await first()).sendKeys(file);
+        async setInputFiles({ name, mimeType, buffer }) {
+          // Set the file at the DOM boundary without driving the macOS file chooser.
+          await driver.executeScript(
+            (input, filename, type, encoded) => {
+              const bytes = Uint8Array.from(atob(encoded), (char) => char.charCodeAt(0));
+              const transfer = new DataTransfer();
+              transfer.items.add(new File([bytes], filename, { type }));
+              input.files = transfer.files;
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+              input.dispatchEvent(new Event('change', { bubbles: true }));
+            },
+            await first(),
+            name,
+            mimeType,
+            buffer.toString('base64'),
+          );
         },
         count: async () => (await matches()).length,
         textContent: async () => (await first()).getProperty('textContent'),
@@ -328,11 +339,7 @@ export async function launchSafari(fixture) {
       try {
         await driver.quit();
       } finally {
-        try {
-          await service.kill();
-        } finally {
-          await rm(scratch, { recursive: true, force: true });
-        }
+        await service.kill();
       }
     },
   };

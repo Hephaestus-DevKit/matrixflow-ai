@@ -350,8 +350,11 @@ export function ShopifyTranslations({
                 disabled={busy}
                 className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
                 onChange={(event) => {
-                  void preview(event.target.files?.[0]);
-                  event.target.value = '';
+                  const input = event.currentTarget;
+                  const file = input.files?.[0];
+                  void preview(file).finally(() => {
+                    if (input.files?.[0] === file) input.value = '';
+                  });
                 }}
               />
             </label>

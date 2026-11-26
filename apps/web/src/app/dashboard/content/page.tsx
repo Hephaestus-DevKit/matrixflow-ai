@@ -1330,7 +1330,9 @@ export default function ContentFactoryPage() {
                                 aria-hidden="true"
                               />
                             </summary>
-                            {more.map(formatButton)}
+                            <div className="hidden group-open/formats:block">
+                              {more.map(formatButton)}
+                            </div>
                           </details>
                         )}
                       </div>

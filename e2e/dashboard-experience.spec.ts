@@ -324,7 +324,7 @@ test('primary creation forms validate and submit the intended tenant-scoped payl
   await expect.poll(() => page.url()).toMatch(/\/dashboard\/agents$/);
 
   await page.goto('/dashboard/content');
-  await page.getByRole('button', { name: 'New content project' }).click();
+  await page.getByRole('button', { name: 'New project', exact: true }).click();
   await page.getByLabel('Project name').fill('E2E Launch');
   await page.getByLabel('Product benefits / description').fill('Fast, light, and durable.');
   await page.getByRole('button', { name: 'Create now' }).click();

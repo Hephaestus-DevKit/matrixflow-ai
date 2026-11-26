@@ -34,9 +34,12 @@ for (const width of [1360, 390, 320]) {
     await expect.poll(() => download.count()).toBe(0);
     await confirmation.click();
     await download.scrollIntoViewIfNeeded();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
-      width,
-    );
+    const dimensions = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    // macOS Safari may clamp the window to its minimum width.
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
     const event = await watchDownload(page, '.txt');
     await download.click();
     const file = await event();
