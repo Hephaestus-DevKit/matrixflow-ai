@@ -70,7 +70,7 @@ jobs:
       - run: pnpm test:e2e
       - name: Upload Safari failure context
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: safari-failure-context
           path: test-results/
