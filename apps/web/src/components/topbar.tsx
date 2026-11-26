@@ -5,31 +5,31 @@ import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { LogOut, Menu, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/lib/auth-store';
-import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { navigationItemForPath } from '@/components/dashboard-navigation';
 import { useLocale } from '@/lib/i18n';
 import { LocaleSwitcher } from '@/components/locale-switcher';
+import { TeamSwitcher } from '@/components/team-switcher';
 
 export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
   const pathname = usePathname();
-  const { logout, user, organizationId, setOrg } = useAuth();
+  const { logout } = useAuth();
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const current = navigationItemForPath(pathname);
   const CurrentIcon = current.icon;
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
 
   useEffect(() => setMounted(true), []);
 
   return (
-    <header className="dashboard-topbar sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border/[0.55] px-4 sm:px-6 lg:px-8">
-      <div className="flex min-w-0 items-center gap-3">
+    <header className="dashboard-topbar sticky top-0 z-30 flex h-16 items-center justify-between gap-2 border-b border-border/[0.55] px-3 sm:px-6 lg:px-8">
+      <div className="flex min-w-0 items-center gap-1.5 sm:gap-3">
         <Button
           variant="ghost"
           size="icon"
           onClick={onOpenNavigation}
-          className="h-10 w-10 lg:hidden"
+          className="h-10 w-10 shrink-0 lg:hidden"
           aria-label={t('dashboard.openNavigation')}
         >
           <Menu className="h-5 w-5" />
@@ -44,23 +44,8 @@ export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-1.5">
-        {!!user && user.memberships.length > 1 && (
-          <Select
-            aria-label={
-              locale === 'en' ? 'Team workspace' : locale === 'zh-TW' ? '團隊空間' : '团队空间'
-            }
-            className="max-w-28 sm:max-w-48 text-xs"
-            value={organizationId || ''}
-            onChange={(event) => setOrg(event.target.value)}
-          >
-            {user.memberships.map((membership) => (
-              <option key={membership.organizationId} value={membership.organizationId}>
-                {membership.organizationName}
-              </option>
-            ))}
-          </Select>
-        )}
+      <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5">
+        <TeamSwitcher />
         <LocaleSwitcher compact />
         {mounted && (
           <Button
@@ -73,7 +58,7 @@ export function Topbar({ onOpenNavigation }: { onOpenNavigation: () => void }) {
             {resolvedTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
         )}
-        <span className="mx-1 h-5 w-px bg-border" aria-hidden="true" />
+        <span className="mx-1 hidden h-5 w-px bg-border sm:block" aria-hidden="true" />
         <Button
           variant="ghost"
           size="sm"

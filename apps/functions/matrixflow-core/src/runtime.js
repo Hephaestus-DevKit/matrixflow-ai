@@ -243,7 +243,14 @@ export async function getOwned(services, tableId, rowId, teamId, field = 'organi
   return row;
 }
 
-export async function createRow(services, tableId, teamId, data, field = 'organizationId') {
+export async function createRow(
+  services,
+  tableId,
+  teamId,
+  data,
+  field = 'organizationId',
+  transactionId,
+) {
   return decodeRow(
     await services.tables.createRow({
       databaseId: DATABASE_ID,
@@ -251,6 +258,7 @@ export async function createRow(services, tableId, teamId, data, field = 'organi
       rowId: ID.unique(),
       data: encodeData({ ...data, [field]: teamId }),
       permissions: rowPermissions(teamId, tableId),
+      ...(transactionId ? { transactionId } : {}),
     }),
   );
 }
@@ -480,10 +488,18 @@ export async function reservePlanResourceLimit(
   return { resource, bucket, limit, used: current + 1 };
 }
 
-export async function releasePlanResourceLimit(services, teamId, reservation) {
+export async function releasePlanResourceLimit(services, teamId, reservation, transactionId) {
   if (!reservation?.bucket) return false;
   const rowId = usageCounterId(teamId, reservation.bucket);
   try {
+    if (transactionId) {
+      const current = await services.tables.getRow({
+        databaseId: DATABASE_ID,
+        tableId: TABLES.usageCounters,
+        rowId,
+      });
+      if (Number(current.used) <= 0) return false;
+    }
     await services.tables.decrementRowColumn({
       databaseId: DATABASE_ID,
       tableId: TABLES.usageCounters,
@@ -491,6 +507,7 @@ export async function releasePlanResourceLimit(services, teamId, reservation) {
       column: 'used',
       value: 1,
       min: 0,
+      ...(transactionId ? { transactionId } : {}),
     });
     return true;
   } catch (error) {
@@ -499,14 +516,29 @@ export async function releasePlanResourceLimit(services, teamId, reservation) {
   }
 }
 
-export async function recordAudit(services, context, action, resource, resourceId, metadata = {}) {
-  return createRow(services, TABLES.auditLogs, context.teamId, {
-    userId: context.userId,
-    action,
-    resource,
-    resourceId,
-    metadata,
-  });
+export async function recordAudit(
+  services,
+  context,
+  action,
+  resource,
+  resourceId,
+  metadata = {},
+  transactionId,
+) {
+  return createRow(
+    services,
+    TABLES.auditLogs,
+    context.teamId,
+    {
+      userId: context.userId,
+      action,
+      resource,
+      resourceId,
+      metadata,
+    },
+    'organizationId',
+    transactionId,
+  );
 }
 
 export async function recordUsage(services, teamId, generated) {

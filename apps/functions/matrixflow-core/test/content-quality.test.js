@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   splitTextIntoChunks,
   distinctKnowledgeChunks,
+  commerceEvidence,
   retrieveKnowledgeContext,
 } from '../src/features.js';
 import { buildContentPrompt } from '../src/content-prompts.js';
@@ -37,6 +38,17 @@ test('long multiline sources advance with bounded overlap and retain all text', 
       assert.ok(chunk.charStart <= chunks[i - 1].charEnd);
     }
   });
+});
+
+test('multiline index chunks stay near their byte budget without splitting Unicode characters', () => {
+  const multiline = 'row\n'.repeat(25_000);
+  assert.equal(splitTextIntoChunks(multiline).length, 5);
+  const text = `${'a'.repeat(23_997)}🙂${'㐀'.repeat(20_000)}`;
+  for (const { content } of splitTextIntoChunks(text)) {
+    assert.ok(content.isWellFormed());
+    assert.ok(Buffer.byteLength(content) <= 24_000);
+  }
+  assert.ok(splitTextIntoChunks(text).some(({ content }) => content.includes('🙂')));
 });
 test('legacy shifted citations collapse while separate passages and documents survive', () => {
   const chunk = (start, value, id = 'doc') => ({ start, value, document: { id } });
@@ -175,3 +187,146 @@ for (const fullPreview of [true, false]) {
     assert.doesNotMatch(result.contextText, /x{2000}/);
   });
 }
+
+function knowledgeServices(documents, chunks) {
+  return {
+    tables: {
+      getRow: async () => ({ $id: 'kb', organizationId: 'team' }),
+      listRows: async ({ tableId }) => {
+        const rows = tableId === 'knowledge_documents' ? documents : chunks;
+        return { total: rows.length, rows };
+      },
+    },
+  };
+}
+
+test('retrieval searches the tail of long stored chunks and cites only passages in the prompt', async () => {
+  const documents = Array.from({ length: 8 }, (_, index) => ({
+    $id: `document-${index}`,
+    title: `Handbook ${index}`,
+    indexVersion: 'current',
+  }));
+  const chunks = documents.map((document, index) => ({
+    $id: `chunk-${index}`,
+    documentId: document.$id,
+    indexVersion: 'current',
+    content: `${'General product information. '.repeat(730)}\nSpecial warranty: ${index + 12} years.`,
+  }));
+  const result = await retrieveKnowledgeContext(
+    knowledgeServices(documents, chunks),
+    { teamId: 'team' },
+    { knowledgeBaseId: 'kb', question: 'Special warranty' },
+  );
+  assert.match(result.contextText, /Special warranty: 12 years\./);
+  assert.ok(result.contextText.length <= 12_000);
+  const suppliedSources = result.contextText.split(/\n\n(?=\[Source )/);
+  assert.equal(result.retrieval.selected, suppliedSources.length);
+  assert.equal(result.citations.length, suppliedSources.length);
+  assert.ok(result.citations.length > 1);
+  for (const { reference, title, snippet } of result.citations) {
+    const source = suppliedSources[reference - 1];
+    assert.ok(source.startsWith(`[Source ${reference}: ${title}]\n`));
+    assert.ok(source.includes(snippet));
+    assert.match(snippet, /Special warranty/);
+    assert.match(source, /Special warranty/);
+  }
+});
+
+test('a knowledge base can retrieve legacy documents alongside versioned documents', async () => {
+  const documents = [
+    { $id: 'current-doc', title: 'Current handbook', indexVersion: 'current' },
+    { $id: 'legacy-doc', title: 'Earlier policy', extractedText: 'Warranty lasts two years.' },
+  ];
+  const chunks = [
+    { $id: 'old', documentId: 'current-doc', indexVersion: 'old', content: 'Warranty: stale.' },
+    {
+      $id: 'active',
+      documentId: 'current-doc',
+      indexVersion: 'current',
+      content: 'Warranty is transferable.',
+    },
+  ];
+  const result = await retrieveKnowledgeContext(
+    knowledgeServices(documents, chunks),
+    { teamId: 'team' },
+    { knowledgeBaseId: 'kb', question: 'Warranty' },
+  );
+  assert.match(result.contextText, /Warranty lasts two years/);
+  assert.match(result.contextText, /Warranty is transferable/);
+  assert.doesNotMatch(result.contextText, /stale/);
+  assert.deepEqual(
+    new Set(result.citations.map(({ docId }) => docId)),
+    new Set(['current-doc', 'legacy-doc']),
+  );
+});
+
+test('retrieval rereads when an index is published and retired between its row reads', async () => {
+  let version = 'old';
+  let documentReads = 0;
+  const services = {
+    tables: {
+      getRow: async () => ({ $id: 'kb', organizationId: 'team' }),
+      listRows: async ({ tableId }) => {
+        if (tableId === 'knowledge_documents') {
+          documentReads++;
+          return {
+            total: 1,
+            rows: [{ $id: 'doc', title: 'Policy', indexVersion: version, chunkCount: 1 }],
+          };
+        }
+        version = 'current';
+        return {
+          total: 1,
+          rows: [
+            {
+              $id: 'updated',
+              documentId: 'doc',
+              indexVersion: version,
+              content: 'Returns are accepted for 30 days.',
+            },
+          ],
+        };
+      },
+    },
+  };
+  const result = await retrieveKnowledgeContext(
+    services,
+    { teamId: 'team' },
+    {
+      knowledgeBaseId: 'kb',
+      question: 'Returns',
+    },
+  );
+  assert.equal(documentReads, 2);
+  assert.equal(result.citations[0].chunkId, 'updated');
+  assert.match(result.contextText, /30 days/);
+});
+
+test('a handbook with no relevant passage or a different explicit model cannot supply evidence', async () => {
+  const services = knowledgeServices(
+    [{ $id: 'bag', title: 'A17 旅行包', extractedText: 'A17 旅行包容量为 23 升，保修一年。' }],
+    [],
+  );
+  for (const question of ['电热水壶功率', 'K88 电热水壶保修期限', 'A170 旅行包容量']) {
+    await assert.rejects(
+      retrieveKnowledgeContext(services, { teamId: 'team' }, { knowledgeBaseId: 'kb', question }),
+      { code: 'KNOWLEDGE_NO_MATCH' },
+    );
+  }
+  const match = await retrieveKnowledgeContext(
+    services,
+    { teamId: 'team' },
+    { knowledgeBaseId: 'kb', question: 'A17 旅行包容量' },
+  );
+  assert.equal(match.citations[0].docId, 'bag');
+});
+
+test('commerce drafts reject conflicting labelled specs and accept equivalent metric values', async () => {
+  const services = knowledgeServices(
+    [{ $id: 'doc', title: 'A17', extractedText: 'Capacity: 23 liters. Empty weight: 640 grams.' }],
+    [],
+  );
+  const get = (question) => commerceEvidence(services, { teamId: 'team' }, 'kb', question);
+  await assert.rejects(get('A17 容量: 22 升'), { code: 'CONTENT_SPEC_CONFLICT' });
+  assert.ok((await get('A17 容量: 23000 毫升，空包重: 0.64 公斤')).citations.length);
+});

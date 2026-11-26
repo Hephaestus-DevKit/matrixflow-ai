@@ -75,3 +75,41 @@ test('an oversized successful response retains a completion marker and cannot re
   assert.equal(retry.replay.error.code, 'IDEMPOTENCY_REPLAY_UNAVAILABLE');
   assert.equal(retry.replay.error.requestId, 'request-1');
 });
+
+test('an expired fingerprint no longer owns its key even if another request removes it first', async () => {
+  for (const concurrentlyDeleted of [false, true]) {
+    let row = {
+      $id: 'expired-claim',
+      organizationId: 'team-1',
+      fingerprint: 'old-fingerprint',
+      expiresAt: new Date(0).toISOString(),
+    };
+    const services = {
+      tables: {
+        listRows: async () => ({ total: 1, rows: [row] }),
+        getRow: async () => {
+          if (concurrentlyDeleted) {
+            row = undefined;
+            throw { code: 404 };
+          }
+          return row;
+        },
+        deleteRow: async () => {
+          row = undefined;
+        },
+        createRow: async ({ rowId, data }) => {
+          assert.equal(row, undefined);
+          return { $id: rowId, ...data };
+        },
+      },
+    };
+    const result = await claimIdempotency(services, 'team-1', {
+      key: 'request-1234',
+      fingerprint: 'new-fingerprint',
+      method: 'POST',
+      path: '/agents',
+    });
+    assert.equal(result.replay, null);
+    assert.equal(result.claim.fingerprint, 'new-fingerprint');
+  }
+});

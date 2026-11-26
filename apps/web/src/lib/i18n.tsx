@@ -77,9 +77,9 @@ const messages = {
     'public.preview.boundaries': '权限边界',
     'public.preview.runs': '运行记录',
     'public.preview.stepLabel': '步骤',
-    'public.features.title': '一个系统，即是一整支 AI 运营团队',
+    'public.features.title': '跨境电商工作台',
     'public.features.description':
-      '覆盖从素材策划、内容产出、多语言客服到自动化流转的完整跨境出海链路',
+      '用商品资料生成多语言内容，核对来源后导出，也可配置 AI 员工和工作流。',
     'public.feature.agents.title': 'AI 员工系统',
     'public.feature.agents.description':
       '配置文案、客服等专属角色，并通过受控运行入口查看每次调用结果与消耗。',
@@ -95,7 +95,7 @@ const messages = {
     'public.feature.crm.title': '智能客服 & CRM',
     'public.feature.crm.description':
       '集中维护客户和内部对话，生成客服回复建议；外部渠道连接仍处于产品路线图。',
-    'public.feature.marketplace.title': '模板生态市场',
+    'public.feature.marketplace.title': '模板市场（预览）',
     'public.feature.marketplace.description':
       '官方模板正在受控预览，正式发布、授权与交易能力开放前不会产生扣款。',
     'public.cta.title': '开启智能化出海新纪元',
@@ -308,9 +308,9 @@ const messages = {
     'public.preview.boundaries': '權限邊界',
     'public.preview.runs': '執行記錄',
     'public.preview.stepLabel': '步驟',
-    'public.features.title': '一個系統，就是一整支 AI 營運團隊',
+    'public.features.title': '跨境電商工作台',
     'public.features.description':
-      '涵蓋從素材企劃、內容產出、多語客服到自動化流轉的完整跨境出海鏈路',
+      '用商品資料生成多語內容，核對來源後匯出，也可設定 AI 員工和工作流。',
     'public.feature.agents.title': 'AI 員工系統',
     'public.feature.agents.description':
       '設定文案、客服等專屬角色，並透過受控執行入口查看每次呼叫結果與用量。',
@@ -326,7 +326,7 @@ const messages = {
     'public.feature.crm.title': '智慧客服 & CRM',
     'public.feature.crm.description':
       '集中維護客戶和內部對話，生成客服回覆建議；外部渠道連接仍在產品路線圖中。',
-    'public.feature.marketplace.title': '模板生態市場',
+    'public.feature.marketplace.title': '模板市場（預覽）',
     'public.feature.marketplace.description':
       '官方模板正在受控預覽，正式發佈、授權與交易能力開放前不會產生扣款。',
     'public.cta.title': '開啟智慧出海新時代',
@@ -539,9 +539,9 @@ const messages = {
     'public.preview.boundaries': 'Permission boundaries',
     'public.preview.runs': 'Run history',
     'public.preview.stepLabel': 'Step',
-    'public.features.title': 'One system. A complete AI operations team.',
+    'public.features.title': 'A workspace for cross-border commerce',
     'public.features.description':
-      'Covering the full path from planning and production to multilingual support and automation.',
+      'Draft multilingual content from product documents, check sources before export, and configure AI workers and workflows.',
     'public.feature.agents.title': 'AI workforce',
     'public.feature.agents.description':
       'Configure dedicated copy, support, and growth roles with controlled runs and usage visibility.',
@@ -557,7 +557,7 @@ const messages = {
     'public.feature.crm.title': 'Smart CRM',
     'public.feature.crm.description':
       'Keep customer conversations together and draft replies with AI; external channels remain on the roadmap.',
-    'public.feature.marketplace.title': 'Template marketplace',
+    'public.feature.marketplace.title': 'Template marketplace (preview)',
     'public.feature.marketplace.description':
       'Official templates are in controlled preview—no charges or transactions before the release is ready.',
     'public.cta.title': 'Build your intelligent growth engine',

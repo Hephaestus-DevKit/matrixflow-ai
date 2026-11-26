@@ -25,6 +25,14 @@ const GENERIC_ERROR_COPY: Record<
     quotaExceeded: string;
     planLimit: string;
     activeJobs: string;
+    specConflict: string;
+    translationMismatch: string;
+    noEvidence: string;
+    staleSource: string;
+    reviewConflict: string;
+    projectDeleting: string;
+    factsChanged: string;
+    writeUnconfirmed: string;
     secretUnavailable: string;
     organizationChanged: string;
   }
@@ -51,6 +59,14 @@ const GENERIC_ERROR_COPY: Record<
     quotaExceeded: '本月 AI 额度已用尽，请升级套餐或下月再试',
     planLimit: '已达到当前套餐的资源上限，请升级套餐后继续',
     activeJobs: '请先取消后台任务并等待执行结束，再删除数据',
+    specConflict: '资料中的容量或重量不一致，请核对型号、原文和手册。',
+    translationMismatch: '译文中的数字、HTML 标签或占位符有变化。请对照原文修正后审核。',
+    noEvidence: '未找到对应型号或问题的资料，请检查型号或补充手册。',
+    staleSource: '引用资料已更新或移除，请重新生成并审核。',
+    reviewConflict: '同事或其他标签页已修改此稿。请先载入最新稿，再合并自己的修改。',
+    projectDeleting: '项目正在删除，请刷新项目列表',
+    factsChanged: '商品资料已更新，请查看最新资料后重新操作。',
+    writeUnconfirmed: '暂时无法确认操作结果，请刷新并检查资源的当前状态',
     secretUnavailable: '密钥已创建，无法再次显示完整密钥；请撤销后重新创建',
     organizationChanged: '团队空间已切换，请重试',
   },
@@ -76,6 +92,14 @@ const GENERIC_ERROR_COPY: Record<
     quotaExceeded: '本月 AI 額度已用盡，請升級方案或下月再試',
     planLimit: '已達到目前方案的資源上限，請升級方案後繼續',
     activeJobs: '請先取消背景任務並等待執行結束，再刪除資料',
+    specConflict: '資料中的容量或重量不一致，請核對型號、原文和手冊。',
+    translationMismatch: '譯文中的數字、HTML 標籤或佔位符有變化。請對照原文修正後審核。',
+    noEvidence: '未找到對應型號或問題的資料，請檢查型號或補充手冊。',
+    staleSource: '引用資料已更新或移除，請重新產生並審核。',
+    reviewConflict: '其他人已修改此稿。請先載入最新稿，再合併修改。',
+    projectDeleting: '專案正在刪除，請重新整理專案清單',
+    factsChanged: '商品資料已更新，請查看最新資料後重新操作。',
+    writeUnconfirmed: '目前無法確認操作結果，請重新整理並查看資源的目前狀態',
     secretUnavailable: '密鑰已建立，無法再次顯示完整密鑰；請撤銷後重新建立',
     organizationChanged: '團隊空間已切換，請重試',
   },
@@ -103,6 +127,15 @@ const GENERIC_ERROR_COPY: Record<
     quotaExceeded: 'This month’s AI quota is used up. Upgrade the plan or try again next month.',
     planLimit: 'This plan has reached its resource limit. Upgrade to continue.',
     activeJobs: 'Cancel background jobs and wait for them to finish before deleting data.',
+    specConflict: 'Conflicting capacities or weights. Check the model, source text and manual.',
+    translationMismatch:
+      'Numbers, HTML or placeholders changed. Check the translation against the source before approval.',
+    noEvidence: 'No matching source. Check the model or add its manual.',
+    staleSource: 'A source has changed or was removed. Generate a fresh draft and review it.',
+    reviewConflict: 'This draft has changed. Load the saved revision and reconcile your edits.',
+    projectDeleting: 'The project is being deleted. Refresh the project list.',
+    factsChanged: 'Product facts have changed. Check the latest facts before trying again.',
+    writeUnconfirmed: 'The result could not be confirmed. Refresh to check the current state.',
     secretUnavailable:
       'The key was created and cannot be shown again. Revoke it and create a new key.',
     organizationChanged: 'The team workspace changed. Try again.',
@@ -119,6 +152,9 @@ const ERROR_COPY_BY_CODE: Record<string, keyof (typeof GENERIC_ERROR_COPY)['en']
   ROUTE_NOT_FOUND: 'notFound',
   CONFLICT: 'conflict',
   ACTIVE_JOBS_EXIST: 'activeJobs',
+  CONTENT_PROJECT_DELETING: 'projectDeleting',
+  CONTENT_FACTS_CHANGED: 'factsChanged',
+  CONTENT_WRITE_UNCONFIRMED: 'writeUnconfirmed',
   API_KEY_SECRET_UNAVAILABLE: 'secretUnavailable',
   ORGANIZATION_CHANGED: 'organizationChanged',
   IDEMPOTENCY_CONFLICT: 'conflict',
@@ -170,7 +206,14 @@ const ERROR_COPY_BY_CODE: Record<string, keyof (typeof GENERIC_ERROR_COPY)['en']
   BILLING_SIGNATURE_INVALID: 'forbidden',
   BILLING_EVENT_INVALID: 'invalidRequest',
   BILLING_EVENT_UNSUPPORTED: 'invalidRequest',
+  TRANSLATION_STRUCTURE_CHANGED: 'translationMismatch',
+  CONTENT_SPEC_CONFLICT: 'specConflict',
+  KNOWLEDGE_NO_MATCH: 'noEvidence',
+  REVIEW_SOURCE_CHANGED: 'staleSource',
+  REVIEW_CONFLICT: 'reviewConflict',
   KNOWLEDGE_BASE_EMPTY: 'invalidRequest',
+  KNOWLEDGE_INDEX_CHANGED: 'conflict',
+  KNOWLEDGE_INDEX_UNCONFIRMED: 'writeUnconfirmed',
   EMPTY_DOCUMENT: 'invalidRequest',
   AGENT_NOT_ACTIVE: 'conflict',
   AI_PROVIDER_UNAVAILABLE: 'aiUnavailable',

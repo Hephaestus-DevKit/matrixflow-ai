@@ -95,7 +95,7 @@ export function ErrorState({ message, onRetry }: { message?: string; onRetry?: (
         {message ?? t('common.dataLoadFailedDescription')}
       </p>
       {onRetry && (
-        <Button variant="outline" size="sm" onClick={onRetry} className="mt-5">
+        <Button type="button" variant="outline" size="sm" onClick={onRetry} className="mt-5">
           {t('common.retry')}
         </Button>
       )}

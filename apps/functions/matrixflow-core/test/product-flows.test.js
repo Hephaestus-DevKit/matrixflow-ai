@@ -97,7 +97,8 @@ test('content generation rejects a foreign linked knowledge base before quota or
     code: 'FORBIDDEN',
   });
 });
-test('content generation reports empty linked knowledge before inference', async () => {
+test('single and batch content generation report empty linked knowledge before reserving quota', async () => {
+  const reads = [];
   const services = {
     tables: {
       getRow: async ({ tableId }) => ({
@@ -107,10 +108,16 @@ test('content generation reports empty linked knowledge before inference', async
           ? { productData: JSON.stringify({ knowledgeBaseId: 'kb' }) }
           : {}),
       }),
-      listRows: async () => ({ rows: [], total: 0 }),
+      listRows: async ({ tableId }) => {
+        reads.push(tableId);
+        return { rows: [], total: 0 };
+      },
     },
   };
-  await assert.rejects(generateContent(services, context, { projectId: 'project' }), {
-    code: 'KNOWLEDGE_BASE_EMPTY',
-  });
+  for (const generate of [generateContent, generateAllContent]) {
+    await assert.rejects(generate(services, context, { projectId: 'project' }), {
+      code: 'KNOWLEDGE_BASE_EMPTY',
+    });
+  }
+  assert.deepEqual(reads, ['knowledge_documents', 'knowledge_documents']);
 });

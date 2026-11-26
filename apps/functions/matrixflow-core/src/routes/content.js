@@ -1,19 +1,31 @@
-import { Query } from 'node-appwrite';
 import {
   HttpError,
   TABLES,
   createRow,
   deleteOwned,
   getOwned,
-  listRows,
   recordAudit,
   requireCapability,
   releasePlanResourceLimit,
   reservePlanResourceLimit,
 } from '../runtime.js';
-import { generateAllContent, generateContent } from '../features.js';
+import {
+  deleteContentProject,
+  generateAllContent,
+  generateContent,
+  getActiveContentProject,
+  updateContentFacts,
+} from '../features.js';
 import { parse, schemas } from '../schemas.js';
 import { enqueueJob } from '../jobs.js';
+import {
+  saveContentReview,
+  importTranslations,
+  translateItem,
+  reviewedDelivery,
+  exportContentReview,
+  translationBatchPayload,
+} from '../content-delivery.js';
 import { HttpResult } from '../http.js';
 
 export async function handleContentRoute({
@@ -24,9 +36,60 @@ export async function handleContentRoute({
   method,
   body,
 }) {
+  if (segments[1] === 'items' && segments.length === 4 && segments[2]) {
+    requireCapability(membership, 'content.manage');
+    if (method === 'GET' && segments[3] === 'delivery')
+      return exportContentReview(services, context, segments[2]);
+    if (method === 'PUT' && segments[3] === 'review')
+      return saveContentReview(services, context, segments[2], parse(schemas.contentReview, body));
+    if (method === 'POST' && segments[3] === 'translate')
+      return translateItem(
+        services,
+        context,
+        segments[2],
+        parse(schemas.translationGenerate, body).revision,
+      );
+  }
+  if (segments[1] === 'projects' && segments[3] === 'translations' && segments[2]) {
+    requireCapability(membership, 'content.manage');
+    if (method === 'POST' && segments.length === 4)
+      return importTranslations(
+        services,
+        context,
+        segments[2],
+        parse(schemas.translationImport, body),
+      );
+    if (method === 'GET' && segments.length === 5)
+      return reviewedDelivery(services, context, segments[2], segments[4]);
+    if (method === 'POST' && segments.length === 5) {
+      const input = parse(schemas.translationBatch, body);
+      const payload = await translationBatchPayload(
+        services,
+        context,
+        segments[2],
+        segments[4],
+        input.items,
+      );
+      return new HttpResult(
+        await enqueueJob(services, context, 'content.translate-batch', payload),
+        202,
+      );
+    }
+  }
+  if (
+    method === 'PUT' &&
+    segments[1] === 'projects' &&
+    segments.length === 4 &&
+    segments[2] &&
+    segments[3] === 'facts'
+  ) {
+    requireCapability(membership, 'content.manage');
+    return updateContentFacts(services, context, segments[2], parse(schemas.contentFacts, body));
+  }
   if (method === 'POST' && segments.length === 2 && segments[1] === 'projects') {
     requireCapability(membership, 'content.manage');
     const input = parse(schemas.contentProject, body);
+    delete input.productData.factsRevision;
     if (input.productData.knowledgeBaseId) {
       if (typeof input.productData.knowledgeBaseId !== 'string')
         throw new HttpError('知识库标识无效', 400, 'INVALID_REQUEST');
@@ -82,7 +145,7 @@ export async function handleContentRoute({
     segments[3] === 'generate'
   ) {
     requireCapability(membership, 'content.manage');
-    await getOwned(services, TABLES.contentProjects, segments[2], context.teamId);
+    await getActiveContentProject(services, context.teamId, segments[2]);
     const input = parse(schemas.contentGenerate, body);
     if (input.mode === 'async')
       return new HttpResult(
@@ -108,7 +171,7 @@ export async function handleContentRoute({
     segments[3] === 'generate-all'
   ) {
     requireCapability(membership, 'content.manage');
-    await getOwned(services, TABLES.contentProjects, segments[2], context.teamId);
+    await getActiveContentProject(services, context.teamId, segments[2]);
     const input = parse(schemas.contentGenerate, body);
     if (input.mode === 'async')
       return new HttpResult(
@@ -128,25 +191,7 @@ export async function handleContentRoute({
 
   if (method === 'DELETE' && segments.length === 3 && segments[1] === 'projects' && segments[2]) {
     requireCapability(membership, 'content.manage');
-    const items = await listRows(services, TABLES.contentItems, context.teamId, [
-      Query.equal('projectId', segments[2]),
-    ]);
-    await Promise.all(
-      items.map((item) => deleteOwned(services, TABLES.contentItems, item.id, context.teamId)),
-    );
-    await deleteOwned(services, TABLES.contentProjects, segments[2], context.teamId);
-    await releasePlanResourceLimit(services, context.teamId, {
-      bucket: 'resource:contentProjectLimit',
-    }).catch(() => undefined);
-    await recordAudit(
-      services,
-      context,
-      'content_project.deleted',
-      'content_project',
-      segments[2],
-      { deletedItems: items.length },
-    );
-    return { deleted: true };
+    return deleteContentProject(services, context, segments[2]);
   }
 
   throw new HttpError('函数路由不存在', 404, 'ROUTE_NOT_FOUND');

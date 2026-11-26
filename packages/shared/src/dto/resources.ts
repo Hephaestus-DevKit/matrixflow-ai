@@ -141,13 +141,29 @@ export interface ContentProjectSummary {
   name: string;
 }
 
+export interface SavedContentReview {
+  text: string;
+  reviewed: boolean;
+  revision: number;
+  author: string;
+  savedAt: string;
+}
+export interface TranslationRow {
+  headers: string[];
+  values: string[];
+  batch: string;
+  filename: string;
+  position: number;
+}
 export interface ContentItemSummary {
   id: string;
   type: string;
-  body: { raw?: string; parsed?: unknown };
+  body: { raw?: string; parsed?: unknown; review?: SavedContentReview };
   metadata?: {
+    factsRevision?: number;
     usage?: unknown;
     cost?: number;
+    shopify?: TranslationRow;
     citations?: { title: string; snippet: string; reference: number }[];
   } | null;
 }

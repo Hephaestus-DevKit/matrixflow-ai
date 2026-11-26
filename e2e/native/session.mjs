@@ -1,8 +1,8 @@
 import { Builder, By, Key } from 'selenium-webdriver';
 import safari from 'selenium-webdriver/safari.js';
-import { readFile, writeFile, readdir, stat, unlink, mkdtemp, rm } from 'node:fs/promises';
+import { readFile, writeFile, readdir, stat, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { homedir, tmpdir } from 'node:os';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -15,17 +15,25 @@ const library = await readFile(
 
 export async function launchSafari(fixture) {
   const service = new safari.ServiceBuilder('/usr/bin/safaridriver').build();
-  const scratch = await mkdtemp(join(tmpdir(), 'matrixflow-safari-'));
+  const sessionDeadline = new AbortController();
   let driver;
   try {
-    driver = await new Builder()
-      .disableEnvironmentOverrides()
-      .usingServer(await service.start())
-      .forBrowser('safari')
-      .build();
+    const session = service
+      .start()
+      .then((url) =>
+        new Builder().disableEnvironmentOverrides().usingServer(url).forBrowser('safari').build(),
+      );
+    driver = await Promise.race([
+      session,
+      delay(20000, undefined, { signal: sessionDeadline.signal }).then(() => {
+        throw new Error('Safari WebDriver did not establish a browser session within 20 seconds');
+      }),
+    ]);
   } catch (err) {
-    await service.kill();
+    await service.kill().catch(() => {});
     throw err;
+  } finally {
+    sessionDeadline.abort();
   }
 
   async function newPage({ viewport }) {
@@ -164,10 +172,22 @@ export async function launchSafari(fixture) {
             value,
           );
         },
-        async setInputFiles({ name, buffer }) {
-          const file = join(scratch, name);
-          await writeFile(file, buffer);
-          await (await first()).sendKeys(file);
+        async setInputFiles({ name, mimeType, buffer }) {
+          // Set the file at the DOM boundary without driving the macOS file chooser.
+          await driver.executeScript(
+            (input, filename, type, encoded) => {
+              const bytes = Uint8Array.from(atob(encoded), (char) => char.charCodeAt(0));
+              const transfer = new DataTransfer();
+              transfer.items.add(new File([bytes], filename, { type }));
+              input.files = transfer.files;
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+              input.dispatchEvent(new Event('change', { bubbles: true }));
+            },
+            await first(),
+            name,
+            mimeType,
+            buffer.toString('base64'),
+          );
         },
         count: async () => (await matches()).length,
         textContent: async () => (await first()).getProperty('textContent'),
@@ -320,7 +340,6 @@ export async function launchSafari(fixture) {
         await driver.quit();
       } finally {
         await service.kill();
-        await rm(scratch, { recursive: true, force: true });
       }
     },
   };

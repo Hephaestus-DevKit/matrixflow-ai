@@ -1,5 +1,5 @@
 import { buildContentPrompt } from './content-prompts.js';
-import { Query } from 'node-appwrite';
+import { ID, Query } from 'node-appwrite';
 import { randomUUID } from 'node:crypto';
 import mammoth from 'mammoth';
 import { PDFParse } from 'pdf-parse';
@@ -9,19 +9,29 @@ import { validateWebhookConfig } from './connectors.js';
 import { validateKnowledgeFile } from './knowledge-files.js';
 import {
   BUCKET_ID,
+  DATABASE_ID,
   HttpError,
   TABLES,
   createRow,
+  decodeRow,
+  encodeData,
   enforceAiBudget,
   getOwned,
   listRows,
   recordAudit,
   recordUsage,
+  releasePlanResourceLimit,
+  rowPermissions,
   deleteOwned,
   updateOwned,
 } from './runtime.js';
 
 const MAX_KB_CONTEXT = 12_000;
+const MAX_KB_SOURCES = 8;
+const KNOWLEDGE_PASSAGE_CHARS = 1_500;
+const KNOWLEDGE_PASSAGE_OVERLAP = 300;
+const KNOWLEDGE_PREVIEW_CHARS = 2_000;
+const KNOWLEDGE_CHUNK_BATCH_SIZE = 10;
 const MAX_CHUNK_BYTES = 24_000;
 const CHUNK_OVERLAP_CHARS = 240;
 const MAX_INDEX_TEXT_CHARS = 1_000_000;
@@ -39,6 +49,7 @@ const CONTENT_TYPES = [
   'multilingual',
   'brand_voice',
 ];
+const CONTENT_DELETE_PAGE_SIZE = 100;
 
 export async function deleteAgent(services, context, agentId) {
   const runs = await listRows(services, TABLES.agentRuns, context.teamId, [
@@ -54,29 +65,302 @@ export async function deleteAgent(services, context, agentId) {
   return { deleted: true, deletedRuns: runs.length };
 }
 
-export async function generateContent(services, context, body, options = {}) {
-  const project = await getOwned(services, TABLES.contentProjects, body.projectId, context.teamId);
-  const type = String(body.type || 'listing').slice(0, 64);
-  if (!CONTENT_TYPES.includes(type))
-    throw new HttpError('不支持的内容类型', 400, 'INVALID_REQUEST');
-  const knowledge = project.productData?.knowledgeBaseId
-    ? await retrieveKnowledgeContext(services, context, {
-        knowledgeBaseId: project.productData.knowledgeBaseId,
-        question: `${project.name} ${JSON.stringify(project.productData)}`,
-      })
-    : null;
-  if (!options.quotaChecked) await enforceAiBudget(services, context.teamId);
+export async function commerceEvidence(services, context, knowledgeBaseId, question) {
+  if (!knowledgeBaseId) return null;
+  const knowledge = await retrieveKnowledgeContext(services, context, {
+    knowledgeBaseId,
+    question,
+  });
+  // Compare only explicitly labelled capacities and weights in equivalent
+  // metric units. General QA can still discuss several models and their specs.
+  const seen = new Map();
+  const facts =
+    /(?:\b(capacity|empty weight|net weight)\b|(容量|净重|淨重|空包重))\s*(?:(?:is|为|為)\s*)?[:：]?\s*(\d+(?:[.,]\d+)?)\s*(milliliters?|liters?|litres?|kilograms?|grams?|毫升|公斤|千克|公克|克|升|ml|kg|l|g)(?![a-z])/giu;
+  for (const match of (question + '\n' + knowledge.contextText).matchAll(facts)) {
+    const kind = /capacity|容量/i.test(match[1] ?? match[2])
+      ? 'capacity'
+      : /empty|空包/i.test(match[1] ?? match[2])
+        ? 'emptyWeight'
+        : 'netWeight';
+    const unit = match[4].toLowerCase();
+    const volume = /^(?:ml|milliliters?|毫升|升|l|liters?|litres?)$/.test(unit);
+    if ((kind === 'capacity') !== volume) continue;
+    const scale = /^(?:升|l|liters?|litres?|公斤|千克|kg|kilograms?)$/.test(unit) ? 1000 : 1;
+    const value = Number((Number(match[3].replace(',', '.')) * scale).toFixed(6));
+    if (seen.has(kind) && seen.get(kind) !== value)
+      throw new HttpError(
+        '商品资料中的容量或重量不一致，请核对型号与手册',
+        422,
+        'CONTENT_SPEC_CONFLICT',
+      );
+    seen.set(kind, value);
+  }
+  return knowledge;
+}
+
+function contentProjectKnowledge(services, context, project) {
+  const { knowledgeBaseId, ...facts } = project.productData ?? {};
+  delete facts.factsRevision;
+  return commerceEvidence(
+    services,
+    context,
+    knowledgeBaseId,
+    [
+      project.name,
+      ...Object.values(facts).map((value) =>
+        typeof value === 'string' ? value : JSON.stringify(value),
+      ),
+    ].join(' '),
+  );
+}
+
+export async function getActiveContentProject(services, teamId, projectId) {
+  const project = await getOwned(services, TABLES.contentProjects, projectId, teamId);
+  if (project.status === 'DELETING')
+    throw new HttpError('内容项目正在删除', 409, 'CONTENT_PROJECT_DELETING');
+  return project;
+}
+
+export function contentFactsRevision(project) {
+  const revision = project.productData?.factsRevision;
+  return Number.isSafeInteger(revision) && revision >= 0 ? revision : 0;
+}
+export function staleContentFacts() {
+  return new HttpError('商品资料已更新，请基于最新资料重新生成文案', 409, 'CONTENT_FACTS_CHANGED');
+}
+
+export async function updateContentFacts(services, context, projectId, input) {
+  const { tables } = services;
+  const { teamId } = context;
+  const project = await getActiveContentProject(services, teamId, projectId);
+  if (contentFactsRevision(project) !== input.revision) throw staleContentFacts();
+  if (project.productData?.description === input.description) return project;
+  const updated = {
+    ...project.productData,
+    description: input.description,
+    factsRevision: input.revision + 1,
+  };
+  const parent = { databaseId: DATABASE_ID, tableId: TABLES.contentProjects, rowId: projectId };
+  const read = () => readCommittedRow(tables, TABLES.contentProjects, teamId, projectId);
+  try {
+    return await contentTransaction(
+      tables,
+      async (transactionId) => {
+        await tables.updateRow({
+          ...parent,
+          data: encodeData({ productData: updated }),
+          transactionId,
+        });
+        const current = await read();
+        if (!current || current.status === 'DELETING')
+          throw new HttpError('内容项目正在删除', 409, 'CONTENT_PROJECT_DELETING');
+        if (contentFactsRevision(current) !== input.revision) throw staleContentFacts();
+        await recordAudit(
+          services,
+          context,
+          'content_project.facts_updated',
+          'content_project',
+          projectId,
+          { revision: updated.factsRevision },
+          transactionId,
+        );
+        return { ...current, productData: updated };
+      },
+      async () => {
+        const committed = (await read())?.productData;
+        return (
+          committed?.factsRevision === updated.factsRevision &&
+          committed?.description === updated.description
+        );
+      },
+    );
+  } catch (error) {
+    if (contentTransactionConflict(error)) throw staleContentFacts();
+    throw error;
+  }
+}
+
+export async function readCommittedRow(tables, tableId, teamId, rowId) {
+  const { rows } = await tables.listRows({
+    databaseId: DATABASE_ID,
+    tableId,
+    queries: [Query.equal('$id', rowId), Query.equal('organizationId', teamId), Query.limit(1)],
+    total: false,
+    ttl: 0,
+  });
+  return rows.length ? decodeRow(rows[0]) : null;
+}
+
+export function contentTransactionConflict(error) {
+  return (
+    error?.type === 'transaction_conflict' ||
+    (!error?.type && Number(error?.status || error?.code) === 409)
+  );
+}
+
+export async function contentTransaction(tables, stage, confirmCommit) {
+  const { $id: transactionId } = await tables.createTransaction();
+  let result;
+  let commitRequested = false;
+  try {
+    result = await stage(transactionId);
+    commitRequested = true;
+    await tables.updateTransaction({ transactionId, commit: true });
+    return result;
+  } catch (error) {
+    const conflict = contentTransactionConflict(error);
+    let receipt;
+    if (commitRequested && !conflict) {
+      receipt = await tables.getTransaction({ transactionId }).catch(() => null);
+      if (receipt?.status === 'committed' || (await confirmCommit().catch(() => false)))
+        return result;
+    }
+    const rollback = await tables
+      .updateTransaction({ transactionId, rollback: true })
+      .catch(() => null);
+    if (commitRequested && rollback?.status === 'committed') return result;
+    if (
+      commitRequested &&
+      !conflict &&
+      !['failed', 'rolled_back'].includes(receipt?.status) &&
+      rollback?.status !== 'rolled_back'
+    ) {
+      throw new HttpError('暂时无法确认内容写入状态', 503, 'CONTENT_WRITE_UNCONFIRMED');
+    }
+    throw error;
+  }
+}
+
+async function publishContentItem(services, context, project, data) {
+  const { tables } = services;
+  const itemId = ID.unique();
+  const parent = { databaseId: DATABASE_ID, tableId: TABLES.contentProjects, rowId: project.id };
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await contentTransaction(
+        tables,
+        async (transactionId) => {
+          // Include the parent in Appwrite's conflict check without changing its
+          // lifecycle state. Verify the committed state after staging the write.
+          await tables.updateRow({
+            ...parent,
+            data: { name: project.name },
+            transactionId,
+          });
+          const current = await readCommittedRow(
+            tables,
+            TABLES.contentProjects,
+            context.teamId,
+            project.id,
+          );
+          if (!current || current.status === 'DELETING')
+            throw new HttpError('内容项目正在删除', 409, 'CONTENT_PROJECT_DELETING');
+          if (contentFactsRevision(current) !== contentFactsRevision(project))
+            throw staleContentFacts();
+          const item = await tables.createRow({
+            databaseId: DATABASE_ID,
+            tableId: TABLES.contentItems,
+            rowId: itemId,
+            data: encodeData({ ...data, projectId: project.id, organizationId: context.teamId }),
+            permissions: rowPermissions(context.teamId, TABLES.contentItems),
+            transactionId,
+          });
+          await recordAudit(
+            services,
+            context,
+            'content.generated',
+            'content_item',
+            itemId,
+            { type: data.type },
+            transactionId,
+          );
+          return decodeRow(item);
+        },
+        async () =>
+          Boolean(await readCommittedRow(tables, TABLES.contentItems, context.teamId, itemId)),
+      );
+    } catch (error) {
+      if (error?.code === 'CONTENT_PROJECT_DELETING' || Number(error?.code) === 404)
+        throw new HttpError('内容项目已删除或正在删除', 409, 'CONTENT_PROJECT_DELETING');
+      if (attempt >= 3 || !contentTransactionConflict(error)) throw error;
+    }
+  }
+}
+
+export async function deleteContentProject(services, context, projectId) {
+  const { tables } = services;
+  const { teamId } = context;
+  const project = await getOwned(services, TABLES.contentProjects, projectId, teamId);
+  const parent = { databaseId: DATABASE_ID, tableId: TABLES.contentProjects, rowId: projectId };
+  const readProject = () => readCommittedRow(tables, TABLES.contentProjects, teamId, projectId);
+  if (project.status !== 'DELETING') {
+    try {
+      await tables.updateRow({ ...parent, data: { status: 'DELETING' } });
+    } catch (error) {
+      const marker = await readProject();
+      if (!marker) return { deleted: true };
+      if (marker.status !== 'DELETING') throw error;
+    }
+  }
+
+  let deletedItems = 0;
+  for (;;) {
+    const { total } = await tables.deleteRows({
+      databaseId: DATABASE_ID,
+      tableId: TABLES.contentItems,
+      queries: [
+        Query.equal('organizationId', teamId),
+        Query.equal('projectId', projectId),
+        Query.limit(CONTENT_DELETE_PAGE_SIZE),
+      ],
+    });
+    if (!total) break;
+    deletedItems += total;
+  }
+
+  try {
+    await contentTransaction(
+      tables,
+      async (transactionId) => {
+        await tables.deleteRow({ ...parent, transactionId });
+        await releasePlanResourceLimit(
+          services,
+          teamId,
+          { bucket: 'resource:contentProjectLimit' },
+          transactionId,
+        );
+        await recordAudit(
+          services,
+          context,
+          'content_project.deleted',
+          'content_project',
+          projectId,
+          { deletedItems },
+          transactionId,
+        );
+      },
+      async () => (await readProject()) === null,
+    );
+  } catch (error) {
+    if ((await readProject()) !== null) throw error;
+  }
+  return { deleted: true };
+}
+
+async function generateProjectContent(services, context, body, project, knowledge, type) {
+  const facts = { ...project.productData };
+  delete facts.factsRevision;
   const generated = await generateText({
-    ...buildContentPrompt(type, body, project.productData, knowledge?.contextText),
+    ...buildContentPrompt(type, body, facts, knowledge?.contextText),
     requestId: context.requestId,
     organizationId: context.teamId,
   });
-  const item = await createRow(services, TABLES.contentItems, context.teamId, {
-    projectId: project.id,
+  const item = await publishContentItem(services, context, project, {
     type,
     status: 'READY',
     body: { raw: generated.content },
     metadata: {
+      factsRevision: contentFactsRevision(project),
       citations: knowledge?.citations || [],
       language: body.language || body.variables?.language || 'en',
       targetMarket: String(body.variables?.targetMarket || '').slice(0, 160),
@@ -86,22 +370,30 @@ export async function generateContent(services, context, body, options = {}) {
       model: generated.model,
     },
   });
-  await Promise.all([
-    recordUsage(services, context.teamId, generated),
-    recordAudit(services, context, 'content.generated', 'content_item', item.id, { type }),
-  ]);
+  await recordUsage(services, context.teamId, generated);
   return { itemId: item.id, content: generated.content, usage: generated.usage };
 }
 
+export async function generateContent(services, context, body) {
+  const project = await getActiveContentProject(services, context.teamId, body.projectId);
+  const type = String(body.type || 'listing').slice(0, 64);
+  if (!CONTENT_TYPES.includes(type))
+    throw new HttpError('不支持的内容类型', 400, 'INVALID_REQUEST');
+  const knowledge = await contentProjectKnowledge(services, context, project);
+  await enforceAiBudget(services, context.teamId);
+  return generateProjectContent(services, context, body, project, knowledge, type);
+}
+
 export async function generateAllContent(services, context, body) {
-  await getOwned(services, TABLES.contentProjects, body.projectId, context.teamId);
+  const project = await getActiveContentProject(services, context.teamId, body.projectId);
+  const knowledge = await contentProjectKnowledge(services, context, project);
   await enforceAiBudget(services, context.teamId, CONTENT_TYPES.length);
   const results = [];
   for (let index = 0; index < CONTENT_TYPES.length; index += 3) {
     const batch = CONTENT_TYPES.slice(index, index + 3);
     const settled = await Promise.allSettled(
       batch.map((type) =>
-        generateContent(services, context, { ...body, type }, { quotaChecked: true }),
+        generateProjectContent(services, context, body, project, knowledge, type),
       ),
     );
     settled.forEach((result, resultIndex) => {
@@ -195,126 +487,196 @@ export async function runAgent(services, context, body) {
   }
 }
 
-export async function indexDocument(services, context, body) {
-  const document = await getOwned(
-    services,
-    TABLES.knowledgeDocuments,
-    body.documentId,
-    context.teamId,
+async function extractKnowledgeText(services, teamId, document) {
+  const file = await validateKnowledgeFile(services, teamId, document);
+  const buffer = Buffer.from(
+    await services.storage.getFileDownload({ bucketId: BUCKET_ID, fileId: file.fileId }),
   );
+  const title = file.title.toLowerCase();
+  if (file.mimeType === 'application/pdf' || title.endsWith('.pdf')) {
+    const parser = new PDFParse({ data: buffer });
+    try {
+      return (await parser.getText()).text;
+    } finally {
+      await parser.destroy().catch(() => undefined);
+    }
+  }
+  if (file.mimeType.includes('wordprocessingml') || title.endsWith('.docx'))
+    return (await mammoth.extractRawText({ buffer })).value;
+  return buffer.toString('utf8');
+}
+
+function readCommittedKnowledgeDocument(services, teamId, documentId) {
+  return readCommittedRow(services.tables, TABLES.knowledgeDocuments, teamId, documentId);
+}
+
+async function updateKnowledgeIndex(services, context, document, data, publication) {
+  const { tables } = services;
+  const { $id: transactionId } = await tables.createTransaction();
+  let updated;
+  let commitRequested = false;
   try {
-    const verifiedFile = await validateKnowledgeFile(services, context.teamId, document);
-    const file = await services.storage.getFileDownload({
-      bucketId: BUCKET_ID,
-      fileId: verifiedFile.fileId,
-    });
-    const buffer = Buffer.from(file);
-    let text = '';
-    const title = String(document.title || '').toLowerCase();
-    const mimeType = String(document.mimeType || '').toLowerCase();
-    if (mimeType === 'application/pdf' || title.endsWith('.pdf')) {
-      const parser = new PDFParse({ data: buffer });
-      try {
-        const result = await parser.getText();
-        text = result.text;
-      } finally {
-        await parser.destroy().catch(() => undefined);
-      }
-    } else if (mimeType.includes('wordprocessingml') || title.endsWith('.docx')) {
-      text = (await mammoth.extractRawText({ buffer })).value;
-    } else text = buffer.toString('utf8');
-    // eslint-disable-next-line no-control-regex -- Strip null bytes from extracted document text.
-    const normalizedText = text.replace(/\u0000/g, '').trim();
-    const truncated = normalizedText.length > MAX_INDEX_TEXT_CHARS;
-    text = normalizedText.slice(0, MAX_INDEX_TEXT_CHARS);
-    if (!text) throw new HttpError('文档中没有可索引的文字', 422, 'EMPTY_DOCUMENT');
-    const chunks = splitTextIntoChunks(text);
-    const oldChunks = await listRows(services, TABLES.knowledgeChunks, context.teamId, [
-      Query.equal('documentId', document.id),
-    ]);
-    const indexVersion = randomUUID();
-    const staged = [];
-    try {
-      for (let offset = 0; offset < chunks.length; offset += 10) {
-        const batch = await Promise.allSettled(
-          chunks.slice(offset, offset + 10).map((chunk, batchIndex) =>
-            createRow(services, TABLES.knowledgeChunks, context.teamId, {
-              knowledgeBaseId: document.knowledgeBaseId,
-              documentId: document.id,
-              indexVersion,
-              chunkIndex: offset + batchIndex,
-              content: chunk.content,
-              charStart: chunk.charStart,
-              charEnd: chunk.charEnd,
-              status: 'STAGING',
-            }),
-          ),
-        );
-        staged.push(
-          ...batch.filter((result) => result.status === 'fulfilled').map((result) => result.value),
-        );
-        const failed = batch.find((result) => result.status === 'rejected');
-        if (failed) throw failed.reason;
-      }
-      await Promise.all(
-        staged.map((chunk) =>
-          updateOwned(services, TABLES.knowledgeChunks, chunk.id, context.teamId, {
-            status: 'READY',
-          }),
-        ),
-      );
-    } catch (error) {
-      await Promise.allSettled(
-        staged.map((chunk) =>
-          deleteOwned(services, TABLES.knowledgeChunks, chunk.id, context.teamId),
-        ),
-      );
-      throw error;
-    }
-    let updated;
-    try {
-      updated = await updateOwned(
-        services,
-        TABLES.knowledgeDocuments,
-        document.id,
-        context.teamId,
-        {
-          // Keep only a small preview on the parent row. Full text lives in
-          // bounded chunk rows so Appwrite's byte-size row limit is respected.
-          extractedText: text.slice(0, 2_000),
-          chunkCount: chunks.length,
-          indexVersion,
-          status: 'READY',
-          error: truncated
-            ? `文档过长，已索引前 ${MAX_INDEX_TEXT_CHARS.toLocaleString()} 个字符`
-            : '',
-        },
-      );
-    } catch (error) {
-      await Promise.allSettled(
-        staged.map((chunk) =>
-          deleteOwned(services, TABLES.knowledgeChunks, chunk.id, context.teamId),
-        ),
-      );
-      throw error;
-    }
-    // Readers now select only the version referenced by the document, so old
-    // chunks can be removed after the switch without an availability gap.
-    await Promise.allSettled(
-      oldChunks.map((chunk) =>
-        deleteOwned(services, TABLES.knowledgeChunks, chunk.id, context.teamId),
-      ),
+    // Stage the patch before reading committed state. Changes after staging
+    // cause a transaction conflict, including a concurrent document deletion.
+    updated = decodeRow(
+      await tables.updateRow({
+        databaseId: DATABASE_ID,
+        tableId: TABLES.knowledgeDocuments,
+        rowId: document.id,
+        data,
+        transactionId,
+      }),
     );
-    await recordAudit(services, context, 'knowledge.indexed', 'knowledge_document', document.id, {
-      characters: text.length,
-      chunks: chunks.length,
-    });
+    const current = await readCommittedKnowledgeDocument(services, context.teamId, document.id);
+    if (
+      !chunkBelongsToCurrentIndex(current, document) ||
+      current.fileId !== document.fileId ||
+      (current.status === 'DELETING' && data.status !== 'DELETING') ||
+      (data.status === 'ERROR' && current.status === 'READY')
+    )
+      throw new HttpError('知识文档的索引已更新', 409, 'KNOWLEDGE_INDEX_CHANGED');
+    if (publication) {
+      const { chunks, characters } = publication;
+      const permissions = rowPermissions(context.teamId, TABLES.knowledgeChunks);
+      for (let offset = 0; offset < chunks.length; offset += KNOWLEDGE_CHUNK_BATCH_SIZE) {
+        await tables.createRows({
+          databaseId: DATABASE_ID,
+          tableId: TABLES.knowledgeChunks,
+          transactionId,
+          rows: chunks.slice(offset, offset + KNOWLEDGE_CHUNK_BATCH_SIZE).map((chunk, index) => ({
+            $id: ID.unique(),
+            $permissions: permissions,
+            ...chunk,
+            organizationId: context.teamId,
+            knowledgeBaseId: document.knowledgeBaseId,
+            documentId: document.id,
+            indexVersion: data.indexVersion,
+            chunkIndex: offset + index,
+            status: 'READY',
+          })),
+        });
+      }
+      await recordAudit(
+        services,
+        context,
+        'knowledge.indexed',
+        'knowledge_document',
+        document.id,
+        { characters, chunks: chunks.length },
+        transactionId,
+      );
+    }
+    commitRequested = true;
+    await tables.updateTransaction({ transactionId, commit: true });
     return updated;
   } catch (error) {
-    await updateOwned(services, TABLES.knowledgeDocuments, document.id, context.teamId, {
-      status: 'ERROR',
-      error: String(error?.message || '文档解析失败').slice(0, 1000),
-    });
+    const conflict = commitRequested && error?.type === 'transaction_conflict';
+    const result =
+      commitRequested && !conflict
+        ? await tables.getTransaction({ transactionId }).catch(() => null)
+        : null;
+    if (result?.status === 'committed') return updated;
+    if (commitRequested && !conflict && (data.indexVersion || data.status === 'DELETING')) {
+      // Appwrite may remove the transaction receipt once its commit is durable.
+      const current = await readCommittedKnowledgeDocument(
+        services,
+        context.teamId,
+        document.id,
+      ).catch(() => null);
+      if (
+        current &&
+        (data.indexVersion
+          ? current.indexVersion === data.indexVersion
+          : current.status === 'DELETING')
+      )
+        return current;
+    }
+    const rollback = await tables
+      .updateTransaction({ transactionId, rollback: true })
+      .catch(() => null);
+    if (rollback?.status === 'committed') return updated;
+    if (
+      commitRequested &&
+      !conflict &&
+      !['failed', 'rolled_back'].includes(result?.status) &&
+      rollback?.status !== 'rolled_back'
+    ) {
+      throw new HttpError('暂时无法确认知识文档索引的发布状态', 503, 'KNOWLEDGE_INDEX_UNCONFIRMED');
+    }
+    if (conflict) throw new HttpError('知识文档的索引已更新', 409, 'KNOWLEDGE_INDEX_CHANGED');
+    throw error;
+  }
+}
+
+export async function prepareKnowledgeDocumentDeletion(services, context, document) {
+  let current = document;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (!current || current.status === 'DELETING') return;
+    try {
+      await updateKnowledgeIndex(services, context, current, { status: 'DELETING' });
+      return;
+    } catch (error) {
+      if (error?.code !== 'KNOWLEDGE_INDEX_CHANGED') throw error;
+      current = await readCommittedKnowledgeDocument(services, context.teamId, document.id);
+    }
+  }
+  throw new HttpError('知识文档的索引已更新', 409, 'KNOWLEDGE_INDEX_CHANGED');
+}
+
+async function removeKnowledgeChunks(services, teamId, chunks) {
+  for (let offset = 0; offset < chunks.length; offset += KNOWLEDGE_CHUNK_BATCH_SIZE) {
+    await Promise.allSettled(
+      chunks
+        .slice(offset, offset + KNOWLEDGE_CHUNK_BATCH_SIZE)
+        .map((chunk) => deleteOwned(services, TABLES.knowledgeChunks, chunk.id, teamId)),
+    );
+  }
+}
+
+export async function indexDocument(services, context, body) {
+  const { teamId } = context;
+  const document = await getOwned(services, TABLES.knowledgeDocuments, body.documentId, teamId);
+  if (document.status === 'DELETING')
+    throw new HttpError('知识文档正在删除', 409, 'KNOWLEDGE_INDEX_CHANGED');
+  try {
+    const extracted = await extractKnowledgeText(services, teamId, document);
+    // eslint-disable-next-line no-control-regex -- Strip null bytes from extracted document text.
+    const normalized = extracted.replace(/\u0000/g, '').trim();
+    const text = normalized.slice(0, characterBoundary(normalized, MAX_INDEX_TEXT_CHARS));
+    if (!text) throw new HttpError('文档中没有可索引的文字', 422, 'EMPTY_DOCUMENT');
+    const chunks = splitTextIntoChunks(text);
+    const previous = await listRows(services, TABLES.knowledgeChunks, teamId, [
+      Query.equal('documentId', document.id),
+    ]);
+    const updated = await updateKnowledgeIndex(
+      services,
+      context,
+      document,
+      {
+        extractedText: text.slice(0, characterBoundary(text, KNOWLEDGE_PREVIEW_CHARS)),
+        chunkCount: chunks.length,
+        indexVersion: randomUUID(),
+        status: 'READY',
+        error:
+          normalized.length > MAX_INDEX_TEXT_CHARS
+            ? `文档过长，已索引前 ${MAX_INDEX_TEXT_CHARS.toLocaleString()} 个字符`
+            : '',
+      },
+      { characters: text.length, chunks },
+    );
+    // The committed version supersedes every chunk seen before staging.
+    await removeKnowledgeChunks(services, teamId, previous);
+    return updated;
+  } catch (error) {
+    if (
+      document.status !== 'READY' &&
+      !['KNOWLEDGE_INDEX_CHANGED', 'KNOWLEDGE_INDEX_UNCONFIRMED'].includes(error?.code)
+    ) {
+      await updateKnowledgeIndex(services, context, document, {
+        status: 'ERROR',
+        error: String(error?.message || '文档解析失败').slice(0, 1000),
+      }).catch(() => undefined);
+    }
     throw error;
   }
 }
@@ -326,32 +688,64 @@ export function chunkBelongsToCurrentIndex(chunk, document) {
   return current ? candidate === current : candidate === '';
 }
 
+function characterBoundary(text, offset) {
+  const next = text.charCodeAt(offset);
+  const previous = text.charCodeAt(offset - 1);
+  return next >= 0xdc00 && next <= 0xdfff && previous >= 0xd800 && previous <= 0xdbff
+    ? offset - 1
+    : offset;
+}
+
 export function splitTextIntoChunks(text, maxBytes = MAX_CHUNK_BYTES) {
   const chunks = [];
   let start = 0;
   while (start < text.length) {
     let low = start + 1;
-    let high = text.length;
+    let high = Math.min(text.length, start + maxBytes);
     while (low < high) {
       const middle = Math.ceil((low + high) / 2);
       if (Buffer.byteLength(text.slice(start, middle), 'utf8') <= maxBytes) low = middle;
       else high = middle - 1;
     }
-    let end = low;
-    if (end <= start) end = start + 1;
-    // A complete final chunk must not be cut again at its last newline.
+    let end = characterBoundary(text, low);
+    if (end <= start) end = start + String.fromCodePoint(text.codePointAt(start)).length;
+    // Prefer a nearby newline without paying for much smaller database rows.
     if (end < text.length) {
-      const boundary = text.lastIndexOf('\n', Math.min(end, start + 2_000));
-      if (boundary > start + 200) end = boundary;
+      const boundary = text.lastIndexOf('\n', end);
+      if (boundary >= end - 2_000 && boundary > start + (end - start) * 0.8) end = boundary;
     }
     const content = text.slice(start, end).trim();
     if (content) chunks.push({ content, charStart: start, charEnd: end });
     if (end >= text.length) break;
-    start = end - Math.min(CHUNK_OVERLAP_CHARS, Math.floor((end - start) / 4));
+    start = characterBoundary(
+      text,
+      end - Math.min(CHUNK_OVERLAP_CHARS, Math.floor((end - start) / 4)),
+    );
   }
   return chunks;
 }
 
+export function modelTokens(value) {
+  return (
+    String(value)
+      .normalize('NFKC')
+      .toLowerCase()
+      .match(/[a-z0-9]+(?:[-_][a-z0-9]+)*/g) ?? []
+  ).filter(
+    (token) =>
+      /[a-z]/.test(token) &&
+      /[0-9]/.test(token) &&
+      !/^\d+[-_]?(?:ml|mm|cm|kg|gb|tb|oz|lbs?|mah|hz|khz|mhz|ghz|inch(?:es)?|in|w|v|g|l)$/.test(
+        token,
+      ),
+  );
+}
+
+const QUERY_STOP_WORDS = new Set(
+  'the this that with for from are was what which how does did has have its and can you about please 的是 请问 这个 这款 請問 這款'.split(
+    ' ',
+  ),
+);
 export function searchTerms(question) {
   const normalized = String(question || '')
     .normalize('NFKC')
@@ -366,7 +760,9 @@ export function searchTerms(question) {
     for (let index = 0; index < value.length - 1; index += 1)
       terms.push(value.slice(index, index + 2));
   }
-  return [...new Set(terms)].filter((term) => term.length > 1).slice(0, 96);
+  return [...new Set(terms)]
+    .filter((term) => term.length > 1 && !QUERY_STOP_WORDS.has(term))
+    .slice(0, 96);
 }
 
 function occurrenceScore(text, terms) {
@@ -386,127 +782,172 @@ function occurrenceScore(text, terms) {
   }, 0);
 }
 
-function relevantChunks(document, terms) {
-  const text = String(document.extractedText || '');
-  const chunks = [];
-  for (let start = 0; start < text.length; start += 1_000) {
-    const value = text.slice(start, start + 1_300);
-    const score = occurrenceScore(value, terms);
-    chunks.push({ document, value, start, score });
+function knowledgeSnippet(value, terms) {
+  const length = 220;
+  if (value.length <= length) return value;
+  const lower = value.toLowerCase();
+  let bestLength = 0;
+  let hit = 0;
+  for (const term of terms) {
+    if (term.length <= bestLength) continue;
+    const index = lower.indexOf(term);
+    if (index < 0) continue;
+    hit = index;
+    bestLength = term.length;
   }
-  return chunks;
+  const start = characterBoundary(value, Math.min(Math.max(0, hit - 72), value.length - length));
+  return value.slice(start, characterBoundary(value, start + length));
+}
+
+function knowledgePassages(chunk) {
+  if (chunk.value.length <= KNOWLEDGE_PREVIEW_CHARS) return [chunk];
+  const passages = [];
+  const stride = KNOWLEDGE_PASSAGE_CHARS - KNOWLEDGE_PASSAGE_OVERLAP;
+  for (let offset = 0; offset < chunk.value.length; offset += stride) {
+    const from = characterBoundary(chunk.value, offset);
+    const end = characterBoundary(chunk.value, offset + KNOWLEDGE_PASSAGE_CHARS);
+    const value = chunk.value.slice(from, end);
+    if (value.trim())
+      passages.push({
+        ...chunk,
+        value,
+        start: chunk.start + from,
+        chunkId: `${chunk.chunkId}:${from}`,
+      });
+    if (end >= chunk.value.length) break;
+  }
+  return passages;
 }
 
 // Suppress redundant windows from older indexes without requiring re-upload.
 // Compare only within a document; unrelated documents remain independent evidence.
 export function distinctKnowledgeChunks(ranked) {
-  const selected = [];
+  const selected = new Set();
+  const byDocument = new Map();
   for (const chunk of ranked) {
     // Containment removes legacy shifted tails without dropping new facts in
     // genuinely overlapping passages. Keep the wider evidence window.
-    const covered = selected.some(
-      (previous) =>
-        previous.document.id === chunk.document.id && previous.value.includes(chunk.value),
-    );
-    if (covered) continue;
-    for (let index = selected.length - 1; index >= 0; index -= 1) {
-      if (
-        selected[index].document.id === chunk.document.id &&
-        chunk.value.includes(selected[index].value)
-      )
-        selected.splice(index, 1);
+    const sameDocument = byDocument.get(chunk.document.id) || new Set();
+    if ([...sameDocument].some((previous) => previous.value.includes(chunk.value))) continue;
+    for (const previous of sameDocument) {
+      if (chunk.value.includes(previous.value)) {
+        selected.delete(previous);
+        sameDocument.delete(previous);
+      }
     }
-    selected.push(chunk);
+    sameDocument.add(chunk);
+    byDocument.set(chunk.document.id, sameDocument);
+    selected.add(chunk);
   }
-  return selected;
+  return [...selected];
+}
+
+async function readKnowledgeSources(services, teamId, knowledgeBaseId) {
+  const filters = [Query.equal('knowledgeBaseId', knowledgeBaseId), Query.equal('status', 'READY')];
+  const documents = await listRows(services, TABLES.knowledgeDocuments, teamId, filters);
+  const chunksByDocument = new Map();
+  if (!documents.length) return { documents, chunksByDocument };
+  const chunks = await listRows(services, TABLES.knowledgeChunks, teamId, filters);
+  const documentsById = new Map(documents.map((document) => [document.id, document]));
+  for (const chunk of chunks) {
+    const document = documentsById.get(chunk.documentId);
+    const value = String(chunk.content || '');
+    if (!value.trim() || !chunkBelongsToCurrentIndex(chunk, document)) continue;
+    const stored = chunksByDocument.get(document.id) || [];
+    stored.push({ document, value, start: Number(chunk.charStart || 0), chunkId: chunk.id });
+    chunksByDocument.set(document.id, stored);
+  }
+  return { documents, chunksByDocument };
 }
 
 export async function retrieveKnowledgeContext(services, context, body) {
-  await getOwned(services, TABLES.knowledgeBases, body.knowledgeBaseId, context.teamId);
-  const documents = await listRows(services, TABLES.knowledgeDocuments, context.teamId, [
-    Query.equal('knowledgeBaseId', body.knowledgeBaseId),
-    Query.equal('status', 'READY'),
-  ]);
-  const chunks = await listRows(services, TABLES.knowledgeChunks, context.teamId, [
-    Query.equal('knowledgeBaseId', body.knowledgeBaseId),
-    Query.equal('status', 'READY'),
-  ]);
+  const { teamId } = context;
+  const { knowledgeBaseId } = body;
+  await getOwned(services, TABLES.knowledgeBases, knowledgeBaseId, teamId);
+  let { documents, chunksByDocument } = await readKnowledgeSources(
+    services,
+    teamId,
+    knowledgeBaseId,
+  );
+  if (
+    documents.some(
+      (document) =>
+        document.indexVersion &&
+        (chunksByDocument.get(document.id)?.length || 0) < document.chunkCount,
+    )
+  ) {
+    // A rebuild can switch and retire the previous version between these reads.
+    ({ documents, chunksByDocument } = await readKnowledgeSources(
+      services,
+      teamId,
+      knowledgeBaseId,
+    ));
+  }
   const terms = searchTerms(body.question);
-  const documentsById = new Map(documents.map((document) => [document.id, document]));
-  let storedChunks = chunks
-    .filter((chunk) => chunkBelongsToCurrentIndex(chunk, documentsById.get(chunk.documentId)))
-    .map((chunk) => ({
-      document: documentsById.get(chunk.documentId),
-      value: String(chunk.content || ''),
-      start: Number(chunk.charStart || 0),
-      chunkId: chunk.id,
-    }));
-  // Parent previews shorter than the 2,000-character cap contain the entire
-  // indexed document. Use that canonical text for old overlapping windows,
-  // but never replace long-document chunks with a truncated preview.
-  const completeDocuments = new Map(
-    documents
-      .filter((document) => {
-        const text = String(document.extractedText || '');
-        return (
-          text.length > 0 &&
-          text.length < 2_000 &&
-          storedChunks
-            .filter((chunk) => chunk.document.id === document.id)
-            .every((chunk) => chunk.start + chunk.value.length <= text.length)
-        );
-      })
-      .map((document) => [document.id, String(document.extractedText)]),
-  );
-  storedChunks = storedChunks.map((chunk) =>
-    completeDocuments.has(chunk.document.id)
-      ? {
-          ...chunk,
-          value: completeDocuments.get(chunk.document.id),
+  const titleScores = new Map();
+  const candidates = documents.flatMap((document) => {
+    titleScores.set(document.id, occurrenceScore(document.title, terms) * 2);
+    const stored = chunksByDocument.get(document.id) || [];
+    const value = String(document.extractedText || '');
+    // Short parent previews preserve the entire text of older overlapping indexes.
+    const complete =
+      value.length < KNOWLEDGE_PREVIEW_CHARS &&
+      stored.every((chunk) => chunk.start + chunk.value.length <= value.length);
+    if (stored.length && !complete) return stored.flatMap(knowledgePassages);
+    return value.trim()
+      ? knowledgePassages({
+          document,
+          value,
           start: 0,
-          chunkId: `${chunk.document.id}-complete-${chunk.document.indexVersion || 'legacy'}`,
-        }
-      : chunk,
-  );
-  const legacyChunks = documents.flatMap((document) => relevantChunks(document, terms));
-  const candidates = storedChunks.length ? storedChunks : legacyChunks;
+          chunkId: complete
+            ? `${document.id}-complete-${document.indexVersion || 'legacy'}`
+            : `${document.id}-0`,
+        })
+      : [];
+  });
+  if (!candidates.length)
+    throw new HttpError('知识库还没有完成索引的文档', 422, 'KNOWLEDGE_BASE_EMPTY');
+  // If the question names a model, generic overlap such as "warranty" must
+  // not admit a different model's manual.
+  const models = modelTokens(body.question);
+  const normalizedQuestion = String(body.question || '').toLowerCase();
   const ranked = distinctKnowledgeChunks(
     candidates
+      .filter((chunk) => {
+        if (!models.length) return true;
+        const identifiers = modelTokens(chunk.document.title + ' ' + chunk.value);
+        return models.some((model) => identifiers.includes(model));
+      })
       .map((chunk) => ({
         ...chunk,
         score:
           occurrenceScore(chunk.value, terms) +
-          occurrenceScore(chunk.document?.title, terms) * 2 +
-          (String(body.question).toLowerCase().includes(String(chunk.value).trim().toLowerCase())
-            ? 8
-            : 0),
+          titleScores.get(chunk.document.id) +
+          (terms.length && normalizedQuestion.includes(chunk.value.trim().toLowerCase()) ? 8 : 0),
       }))
-      .sort((a, b) => b.score - a.score || a.start - b.start)
-      .filter((chunk, index, all) => {
-        const key = chunk.chunkId || `${chunk.document.id}:${chunk.start}`;
-        return (
-          all.findIndex(
-            (candidate) =>
-              (candidate.chunkId || `${candidate.document.id}:${candidate.start}`) === key,
-          ) === index
-        );
-      }),
-  ).slice(0, 8);
-  const selected = ranked.some((chunk) => chunk.score > 0)
-    ? ranked.filter((chunk) => chunk.score > 0)
-    : ranked.slice(0, 3);
-  const contextText = selected
-    .map((chunk, index) => `[Source ${index + 1}: ${chunk.document.title}]\n${chunk.value}`)
-    .join('\n\n')
-    .slice(0, MAX_KB_CONTEXT);
-  if (!contextText) throw new HttpError('知识库还没有完成索引的文档', 422, 'KNOWLEDGE_BASE_EMPTY');
+      .sort((a, b) => b.score - a.score || a.start - b.start),
+  );
+
+  const selected = [];
+  let contextText = '';
+  for (const chunk of ranked) {
+    if (selected.length >= MAX_KB_SOURCES || chunk.score === 0) break;
+    const source = `[Source ${selected.length + 1}: ${chunk.document.title}]\n${chunk.value}`;
+    const separator = selected.length ? '\n\n' : '';
+    if (contextText.length + separator.length + source.length > MAX_KB_CONTEXT) continue;
+    contextText += separator + source;
+    selected.push(chunk);
+  }
+  if (!contextText)
+    throw new HttpError('没有匹配的资料，请核对型号或补充对应手册', 422, 'KNOWLEDGE_NO_MATCH');
   return {
     contextText,
     retrieval: { mode: 'lexical-hybrid', candidates: candidates.length, selected: selected.length },
     citations: selected.map((chunk, index) => ({
       docId: chunk.document.id,
+      indexVersion: chunk.document.indexVersion ?? null,
       chunkId: chunk.chunkId || `${chunk.document.id}-${chunk.start}`,
-      snippet: chunk.value.slice(0, 220),
+      snippet: knowledgeSnippet(chunk.value, terms),
       title: chunk.document.title,
       score: chunk.score,
       reference: index + 1,

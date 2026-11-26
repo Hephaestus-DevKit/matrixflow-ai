@@ -330,6 +330,13 @@ export default function JobsPage() {
                                   : locale === 'zh-TW'
                                     ? '內容產生'
                                     : '内容生成',
+                              'content.translate-batch':
+                                'Shopify ' +
+                                (locale === 'en'
+                                  ? 'translation'
+                                  : locale === 'zh-TW'
+                                    ? '翻譯'
+                                    : '翻译'),
                             } as Record<string, string>
                           )[job.type] || job.type}
                         </Link>

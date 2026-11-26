@@ -68,6 +68,30 @@ test('request failures release an active idempotency claim and preserve the inte
   assert.equal(calls[0].payload.error.code, 'BUSINESS_CONFLICT');
 });
 
+test('an unconfirmed database commit keeps the idempotency claim for recovery', async () => {
+  const { response, calls } = responseRecorder();
+  let releases = 0;
+  const handler = createRequestHandler({
+    readinessSnapshot: () => ({ ready: true, status: 'ok', checks: {} }),
+    handleRoute: async () => {
+      throw new HttpError('Write outcome unknown', 503, 'CONTENT_WRITE_UNCONFIRMED');
+    },
+    dependencies: baseDependencies({
+      releaseIdempotency: async () => {
+        releases++;
+        return true;
+      },
+    }),
+  });
+  await handler({
+    req: request({ value: 1 }, { 'idempotency-key': 'request-1234' }),
+    res: response,
+  });
+  assert.equal(calls[0].status, 503);
+  assert.equal(calls[0].payload.error.code, 'CONTENT_WRITE_UNCONFIRMED');
+  assert.equal(releases, 0);
+});
+
 test('idempotency fingerprints are stable across equivalent JSON key ordering', async () => {
   const fingerprints = [];
   const handler = createRequestHandler({

@@ -286,12 +286,16 @@ export function createRequestHandler({ handleRoute, readinessSnapshot, dependenc
       );
       return res.json(response, responseStatus);
     } catch (caught) {
+      const writeUnconfirmed =
+        caught?.code === 'CONTENT_WRITE_UNCONFIRMED' ||
+        caught?.code === 'KNOWLEDGE_INDEX_UNCONFIRMED';
       if (
         services &&
         idempotencyClaim &&
         idempotencyTeamId &&
         !idempotencyClaim.completed &&
-        !idempotencyClaim.uncertain
+        !idempotencyClaim.uncertain &&
+        !writeUnconfirmed
       )
         await deps
           .releaseIdempotency(services, idempotencyTeamId, idempotencyClaim.id)

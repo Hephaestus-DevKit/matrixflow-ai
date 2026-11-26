@@ -1,4 +1,14 @@
-import { Account, Client, ExecutionMethod, Functions, ID, TablesDB, Teams } from 'node-appwrite';
+import { setTimeout as delay } from 'node:timers/promises';
+import {
+  Account,
+  Client,
+  ExecutionMethod,
+  Functions,
+  ID,
+  Query,
+  TablesDB,
+  Teams,
+} from 'node-appwrite';
 
 const email = process.env.MATRIXFLOW_TEST_EMAIL;
 const password = process.env.MATRIXFLOW_TEST_PASSWORD;
@@ -25,6 +35,114 @@ const client = new Client()
   .setProject(projectId)
   .setSession(decodeURIComponent(sessionMatch[1]));
 const account = new Account(client);
+
+async function verifyTranslationDelivery(execute, tables) {
+  let contentProjectId;
+  let jobId;
+  let jobStatus;
+  const terminal = new Set(['SUCCEEDED', 'FAILED', 'CANCELED']);
+  async function call(path, payload = {}, method = ExecutionMethod.POST, status = 200) {
+    const execution = await execute(path, payload, method);
+    const response = JSON.parse(execution.responseBody || '{}');
+    if (execution.responseStatusCode !== status) {
+      throw new Error(
+        `Translation smoke: ${method} ${path} returned ${execution.responseStatusCode} (${response.error?.code || 'unknown'})`,
+      );
+    }
+    return response.data;
+  }
+  try {
+    const project = await call('/content/projects', {
+      name: 'MatrixFlow translation smoke',
+      productData: { description: 'Blue travel bag' },
+    });
+    contentProjectId = project.id;
+    const path = `/content/projects/${contentProjectId}`;
+    const updated = await call(
+      path + '/facts',
+      { description: 'Blue travel bag with product information', revision: 0 },
+      ExecutionMethod.PUT,
+    );
+    if (updated.productData?.factsRevision !== 1) throw new Error('Product facts revision failed');
+
+    const headers = [
+      'Type',
+      'Identification',
+      'Field',
+      'Locale',
+      'Market',
+      'Status',
+      'Default content',
+      'Translated content',
+    ];
+    const source = '<p>Blue travel bag.</p>';
+    const row = ['PRODUCT', '000071', 'body_html', 'de', '', '', source, ''];
+    const { batch } = await call(path + '/translations', {
+      filename: 'smoke.csv',
+      headers,
+      rows: [row],
+    });
+    const {
+      rows: [item],
+    } = await tables.listRows({
+      databaseId: 'matrixflow',
+      tableId: 'content_items',
+      queries: [Query.equal('projectId', contentProjectId), Query.limit(1)],
+    });
+    if (!item) throw new Error('Imported translation is missing');
+    const batchPath = path + '/translations/' + batch;
+    const job = await call(
+      batchPath,
+      { items: [{ id: item.$id, revision: JSON.parse(item.body).review.revision }] },
+      ExecutionMethod.POST,
+      202,
+    );
+    jobId = job.id;
+    jobStatus = job.status;
+    const deadline = Date.now() + 150_000;
+    let latest = job;
+    while (!terminal.has(jobStatus) && Date.now() < deadline) {
+      await delay(2_000);
+      latest = await call(`/jobs/${jobId}`, {}, ExecutionMethod.GET);
+      jobStatus = latest.status;
+    }
+    if (jobStatus !== 'SUCCEEDED' || latest.result?.completed !== 1) {
+      const code = latest.result?.errors?.[0]?.code || latest.error?.code || 'none';
+      throw new Error(`Translation job did not complete one field (${jobStatus}, ${code})`);
+    }
+    const result = await tables.getRow({
+      databaseId: 'matrixflow',
+      tableId: 'content_items',
+      rowId: item.$id,
+    });
+    const { text, revision, reviewed } = JSON.parse(result.body).review;
+    if (reviewed || text === source || !/^<p>.+<\/p>$/s.test(text)) {
+      throw new Error('Provider did not save the translated HTML as an unapproved draft');
+    }
+    await call(
+      `/content/items/${item.$id}/review`,
+      { text, revision, reviewed: true },
+      ExecutionMethod.PUT,
+    );
+    const delivery = await call(batchPath, {}, ExecutionMethod.GET);
+    if (
+      JSON.stringify(delivery.headers) !== JSON.stringify(headers) ||
+      JSON.stringify(delivery.rows) !== JSON.stringify([[...row.slice(0, -1), text]])
+    ) {
+      throw new Error('Approved delivery changed Shopify columns or row identifiers');
+    }
+  } finally {
+    try {
+      if (jobId && !terminal.has(jobStatus)) {
+        await call(`/jobs/${jobId}/cancel`, { reason: 'smoke_cleanup' });
+      }
+    } finally {
+      if (contentProjectId) {
+        await call(`/content/projects/${contentProjectId}`, {}, ExecutionMethod.DELETE);
+      }
+    }
+  }
+}
 
 try {
   const current = await account.get();
@@ -76,6 +194,10 @@ try {
   ) {
     throw new Error('Admin health response did not return a safe readiness snapshot');
   }
+  const expectedRelease = process.env.MATRIXFLOW_RELEASE;
+  if (expectedRelease && adminHealthPayload.release !== expectedRelease) {
+    throw new Error('Active Function release does not match the deployed commit');
+  }
   const serializedHealth = JSON.stringify(adminHealthPayload);
   if (/["'][^"']*(?:api[_-]?key|secret|token|password)[^"']*["']\s*:/i.test(serializedHealth)) {
     throw new Error('Admin health response leaked a secret-shaped field');
@@ -113,7 +235,11 @@ try {
     rowId = JSON.parse(created.responseBody)?.data?.id;
     if (!rowId) throw new Error('Secure agent creation did not return an id');
 
-    const listed = await tables.listRows({ databaseId: 'matrixflow', tableId: 'agents' });
+    const listed = await tables.listRows({
+      databaseId: 'matrixflow',
+      tableId: 'agents',
+      queries: [Query.equal('$id', rowId), Query.limit(1)],
+    });
     if (!listed.rows.some((candidate) => candidate.$id === rowId))
       throw new Error('Function-created row was not visible through team permissions');
 
@@ -138,14 +264,17 @@ try {
     }
   } finally {
     if (rowId) {
-      const deleted = await execute(`/agents/${rowId}`, {}, ExecutionMethod.DELETE).catch(
-        () => null,
-      );
-      if (deleted && deleted.responseStatusCode !== 200)
-        throw new Error('Secure agent deletion failed');
+      const deleted = await execute(`/agents/${rowId}`, {}, ExecutionMethod.DELETE);
+      if (deleted.responseStatusCode !== 200) throw new Error('Secure agent deletion failed');
     }
   }
 
+  if (aiReady) {
+    await verifyTranslationDelivery(execute, tables);
+    process.stdout.write(
+      'translation smoke passed: facts revision, background job, approval, delivery, cleanup\n',
+    );
+  }
   process.stdout.write(
     `smoke test passed: auth, team, server-only writes, row reads, function; ai=${aiSmoke}\n`,
   );

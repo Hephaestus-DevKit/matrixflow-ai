@@ -1,7 +1,41 @@
+import { Query } from 'appwrite';
 import { routeBackend } from '../src/lib/backend/router';
-import { executeCore, listRowsPage } from '../src/lib/backend/data';
+import { executeCore, getRow, listRows, listRowsPage } from '../src/lib/backend/data';
 
-jest.mock('../src/lib/backend/data', () => ({ listRowsPage: jest.fn(), executeCore: jest.fn() }));
+jest.mock('../src/lib/backend/data', () => ({
+  listRowsPage: jest.fn(),
+  listRows: jest.fn(),
+  executeCore: jest.fn(),
+  getRow: jest.fn(),
+}));
+
+test('a content project link resolves to the specific project', async () => {
+  const project = { id: 'project-1', name: 'Travel bag' };
+  jest.mocked(getRow).mockResolvedValue(project);
+  await expect(routeBackend('GET', '/content/projects/project-1')).resolves.toEqual(project);
+  expect(getRow).toHaveBeenCalledWith('content_projects', project.id);
+});
+
+test('knowledge base options load without querying knowledge documents', async () => {
+  const options = {
+    data: [{ id: 'kb-1', name: 'Product handbook' }],
+    total: 25,
+    limit: 10,
+    offset: 10,
+    nextOffset: 20,
+  };
+  jest.mocked(listRowsPage).mockResolvedValue(options);
+  await expect(routeBackend('GET', '/kb?view=options&limit=10&offset=10')).resolves.toEqual(
+    options,
+  );
+  expect(listRowsPage).toHaveBeenLastCalledWith(
+    'knowledge_bases',
+    [Query.select(['$id', 'name'])],
+    'organizationId',
+    { limit: 10, offset: 10 },
+  );
+  expect(listRows).not.toHaveBeenCalled();
+});
 
 test.each([
   ['/crm/customers', 50, 0],
