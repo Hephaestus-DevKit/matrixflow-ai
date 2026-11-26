@@ -31,6 +31,8 @@ API Key 只允许访问创建时授予的作用域：
 
 成功响应超过幂等记录大小上限时仍保留完成标记，同一请求重试返回 HTTP 409 和 `IDEMPOTENCY_REPLAY_UNAVAILABLE`，不会再次执行。此时应读取资源状态核实结果。
 
+数据库暂时无法确认提交结果时，`CONTENT_WRITE_UNCONFIRMED` 或 `KNOWLEDGE_INDEX_UNCONFIRMED` 会保留活动的幂等占用。重试前先读取项目、草稿或索引状态。
+
 ## 长任务
 
 Agent、工作流、内容生成、知识库索引和问答支持 `mode: "async"`。服务器返回 HTTP 202，任务 ID 位于响应的 `data.id`。用这个 ID 查询或取消任务：
@@ -41,6 +43,8 @@ POST /jobs/<job-id>/cancel
 ```
 
 后台任务状态包括 `QUEUED`、`RUNNING`、`RETRY_WAIT`、`SUCCEEDED`、`FAILED` 和 `CANCELED`。异步执行必须配置 `MATRIXFLOW_WORKER_SECRET` 与 Appwrite `executions.write` scope；缺少配置时会明确返回 `ASYNC_WORKER_NOT_CONFIGURED`。
+
+Shopify 批量翻译通过 `POST /content/projects/:id/translations/:batch` 提交，返回 HTTP 202。任务详情的 `progress` 提供 `processed` 和 `total`，结果包括 `completed`、`skipped`、`failed` 和对应字段的错误码。任务按字段持久化，跳过在等待期间被修改的草稿。
 
 工作台任务列表使用 `GET /jobs?limit=25&offset=0` 分页读取，只返回状态展示所需的脱敏字段；任务参数、结果、错误详情和 Worker 租约不会进入列表响应。任务详情与取消操作仍由 Function 执行授权与状态转换。
 
@@ -80,6 +84,20 @@ GET /workflows/<workflow-id>/logs?limit=25&offset=0
 `/admin/health` 仅允许 owner/admin 会话访问，返回发布版本、Function/Provider/异步 Worker/计费就绪状态和不含密钥的 AI 协议信息；API Key 即使拥有业务作用域也不能调用管理员接口。
 
 Stripe 供应商回调使用服务端地址 `/billing/stripe-webhook`，由 Stripe 签名验证后再进入内部账单事件流程；它不接受浏览器请求，也不应暴露在前端代码中。
+
+## 内容审核与 Shopify
+
+以下端点需要 `content.manage`。修改商品资料或草稿时携带读到的当前 `revision`，并发变更会返回 HTTP 409。
+
+| 方法与路径                                       | 请求或响应                                                   |
+| ------------------------------------------------ | ------------------------------------------------------------ |
+| `PUT /content/projects/:id/facts`                | 提交 `{ description, revision }`，返回更新后的项目。         |
+| `PUT /content/items/:id/review`                  | 提交 `{ text, reviewed, revision }`，返回保存后的审核版本。  |
+| `GET /content/items/:id/delivery`                | 返回已审正文、审核版本与检索引用。                           |
+| `POST /content/projects/:id/translations`        | 提交 `{ filename, headers, rows }`，返回批次 ID 与导入行数。 |
+| `POST /content/items/:id/translate`              | 提交 `{ revision }`，返回单字段译文草稿。                    |
+| `POST /content/projects/:id/translations/:batch` | 提交 `{ items: [{ id, revision }] }`，创建后台翻译任务。     |
+| `GET /content/projects/:id/translations/:batch`  | 返回已审字段的 `{ headers, rows, reviews }`。                |
 
 ## 版本与兼容性
 

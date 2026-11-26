@@ -80,6 +80,6 @@ MATRIXFLOW_PUBLIC_URL=https://matrixflow-ai-sycamore-tree.vercel.app
 ## 发布验收与回滚
 
 1. 核对 `main` 提交、CI、Vercel 发布状态与 Appwrite **active deployment ID**。
-2. 查看 Appwrite 工作流的 Smoke test：验证登录、邮箱、团队权限、浏览器禁写、函数写入及一次真实模型调用。CI 固定要求 AI smoke；脚本结束时会尝试清理测试 Agent 和会话，部署失败时也应核对清理结果。
+2. 查看 Appwrite 工作流的 Smoke test，核对运行中的 Function 版本与发布提交。脚本验证登录、团队读写权限和真实模型，并在测试团队中完成商品资料更新、后台翻译、审核和 CSV 行导出。验收后清理测试项目、Agent 和会话。
 3. Vercel 发布成功后，在 `main` 手动运行 [Production smoke](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/production-smoke.yml)，或运行 `pnpm smoke:production`，验证六个公开页面、三语服务端首屏、canonical 与安全响应头。
 4. 记录发布证据、上一个可用版本及必要的配置差异。回滚前端时恢复上一可用的 Vercel 生产部署；回滚后端时激活上一可用的 Appwrite 部署，再跑 smoke。数据表变更不会随函数回滚自动撤销，优先保持向后兼容。

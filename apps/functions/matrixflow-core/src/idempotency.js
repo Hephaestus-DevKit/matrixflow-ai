@@ -16,10 +16,10 @@ export async function claimIdempotency(services, teamId, { key, fingerprint, met
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const previous = await findIdempotency(services, teamId, key);
     if (previous) {
-      if (previous.fingerprint !== fingerprint)
-        throw new HttpError('幂等键已用于其他请求', 409, 'IDEMPOTENCY_CONFLICT');
       const expiresAt = new Date(previous.expiresAt).getTime();
       if (expiresAt > Date.now()) {
+        if (previous.fingerprint !== fingerprint)
+          throw new HttpError('幂等键已用于其他请求', 409, 'IDEMPOTENCY_CONFLICT');
         if (Number(previous.status) === IN_PROGRESS_STATUS || !previous.response)
           throw new HttpError('相同请求仍在处理中，请稍后重试', 409, 'IDEMPOTENCY_IN_PROGRESS');
         let replay;
@@ -31,7 +31,9 @@ export async function claimIdempotency(services, teamId, { key, fingerprint, met
         if (replay) return { replay, status: previous.status || 200 };
         throw new HttpError('幂等响应无法恢复，请稍后重试', 409, 'IDEMPOTENCY_REPLAY_UNAVAILABLE');
       }
-      await releaseIdempotency(services, teamId, previous.id, false);
+      // Another claim may already have removed this particular expired row.
+      // Its replacement still competes on the unique team/key index below.
+      await releaseIdempotency(services, teamId, previous.id);
     }
     try {
       const claim = await saveIdempotency(services, teamId, {
@@ -74,11 +76,11 @@ export async function completeIdempotency(services, teamId, claimId, response, s
   return true;
 }
 
-export async function releaseIdempotency(services, teamId, claimId, ignoreMissing = true) {
+export async function releaseIdempotency(services, teamId, claimId) {
   try {
     await deleteIdempotency(services, teamId, claimId);
   } catch (error) {
-    if (ignoreMissing && Number(error?.status || error?.code) === 404) return false;
+    if (Number(error?.status || error?.code) === 404) return false;
     throw error;
   }
   return true;

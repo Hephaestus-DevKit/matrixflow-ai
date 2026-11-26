@@ -16,16 +16,25 @@ const library = await readFile(
 export async function launchSafari(fixture) {
   const service = new safari.ServiceBuilder('/usr/bin/safaridriver').build();
   const scratch = await mkdtemp(join(tmpdir(), 'matrixflow-safari-'));
+  const sessionDeadline = new AbortController();
   let driver;
   try {
-    driver = await new Builder()
-      .disableEnvironmentOverrides()
-      .usingServer(await service.start())
-      .forBrowser('safari')
-      .build();
+    const session = service
+      .start()
+      .then((url) =>
+        new Builder().disableEnvironmentOverrides().usingServer(url).forBrowser('safari').build(),
+      );
+    driver = await Promise.race([
+      session,
+      delay(20000, undefined, { signal: sessionDeadline.signal }).then(() => {
+        throw new Error('Safari WebDriver did not establish a browser session within 20 seconds');
+      }),
+    ]);
   } catch (err) {
-    await service.kill();
+    await Promise.allSettled([service.kill(), rm(scratch, { recursive: true, force: true })]);
     throw err;
+  } finally {
+    sessionDeadline.abort();
   }
 
   async function newPage({ viewport }) {
@@ -319,8 +328,11 @@ export async function launchSafari(fixture) {
       try {
         await driver.quit();
       } finally {
-        await service.kill();
-        await rm(scratch, { recursive: true, force: true });
+        try {
+          await service.kill();
+        } finally {
+          await rm(scratch, { recursive: true, force: true });
+        }
       }
     },
   };

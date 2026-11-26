@@ -6,16 +6,53 @@ export async function mockWorkspace(
     slowIdentity?: boolean;
     identityUnavailable?: boolean;
     keepJobsRunning?: boolean;
+    extraContentProject?: boolean;
+    extraContentDraft?: boolean;
+    paginatedContentProjects?: boolean;
   } = {},
 ) {
   const calls: Array<{ path: string; method: string; body: Record<string, unknown> }> = [];
-  let items = [
+  const projects = [
+    {
+      $id: 'project-1',
+      name: 'Travel bag',
+      productData: JSON.stringify({ title: 'Travel bag', description: '20 L capacity' }),
+    },
+    ...(options.extraContentProject
+      ? [{ $id: 'project-2', name: 'Laptop sleeve', productData: '{}' }]
+      : []),
+    ...(options.paginatedContentProjects
+      ? [
+          ...Array.from({ length: 11 }, (_, index) => ({
+            $id: `archive-${index}`,
+            name: `Archive ${index + 1}`,
+            productData: '{}',
+          })),
+          { $id: 'packing-cubes', name: 'Packing cubes', productData: '{}' },
+        ]
+      : []),
+  ];
+  let items: Array<{ $id: string; type: string; body: string; metadata?: string }> = [
     {
       $id: 'new-title',
       type: 'product_title',
       body: JSON.stringify({ raw: 'Newest saved title' }),
     },
     { $id: 'old-title', type: 'product_title', body: JSON.stringify({ raw: 'Older saved title' }) },
+    ...(options.extraContentDraft
+      ? [
+          {
+            $id: 'product-listing',
+            type: 'listing',
+            body: JSON.stringify({ raw: 'Travel bag listing' }),
+            metadata: JSON.stringify({
+              citations: [
+                { reference: 1, title: 'Product guide', snippet: 'Capacity is 20 litres.' },
+              ],
+            }),
+          },
+        ]
+      : []),
   ];
   let agent = {
     $id: 'agent-1',
@@ -30,6 +67,8 @@ export async function mockWorkspace(
   let jobReads = 0;
   let canceled = false;
   let jobType = 'agent.run';
+  let translationWork: { id: string; revision: number }[] = [];
+  let translationReadyAt = 0;
   const row = (value: Record<string, unknown>, org = 'team-1') => ({
     $createdAt: '2026-10-10T01:00:00Z',
     $updatedAt: '2026-10-10T01:00:00Z',
@@ -84,6 +123,12 @@ export async function mockWorkspace(
       const id = path.split('/')[6];
       const teamTwo = url.search.includes('team-2');
       if (id) {
+        if (table === 'content_projects') {
+          const project = projects.find((item) => item.$id === id);
+          return project
+            ? respond(row(project))
+            : respond({ code: 404, type: 'row_not_found', message: 'Project not found' }, 404);
+        }
         if (table === 'agents') return respond(row(agent));
         if (table === 'knowledge_bases')
           return respond(
@@ -111,15 +156,8 @@ export async function mockWorkspace(
       }
       let rows: Record<string, unknown>[] = [];
       if (!teamTwo) {
-        if (table === 'content_projects')
-          rows = [
-            {
-              $id: 'project-1',
-              name: 'Travel bag',
-              productData: JSON.stringify({ title: 'Travel bag', description: '20 L capacity' }),
-            },
-          ];
-        if (table === 'content_items') rows = items;
+        if (table === 'content_projects') rows = projects;
+        if (table === 'content_items' && url.search.includes('project-1')) rows = items;
         if (table === 'agents') rows = [agent];
         if (table === 'knowledge_bases') rows = [{ $id: 'kb-1', name: 'Product handbook' }];
         if (table === 'knowledge_documents')
@@ -152,7 +190,16 @@ export async function mockWorkspace(
             },
           ];
       }
-      return respond({ total: rows.length, rows: rows.map((value) => row(value)) });
+      const total = rows.length;
+      if (table === 'content_projects') {
+        const queries = [...url.searchParams]
+          .filter(([key]) => key.startsWith('queries['))
+          .map(([, value]) => JSON.parse(value) as { method: string; values: number[] });
+        const offset = queries.find((query) => query.method === 'offset')?.values[0] ?? 0;
+        const limit = queries.find((query) => query.method === 'limit')?.values[0] ?? total;
+        rows = rows.slice(offset, offset + limit);
+      }
+      return respond({ total, rows: rows.map((value) => row(value)) });
     }
     if (path === '/functions/matrixflow-core/executions') {
       const request = req.postDataJSON() as { path: string; method: string; body: string };
@@ -162,6 +209,144 @@ export async function mockWorkspace(
       if (request.path === '/health')
         data = { ai: { ready: true, model: 'deepseek-flash' }, limits: { monthlyAiCalls: 500 } };
       if (request.path === '/billing/usage') data = { ai_call: 7 };
+      if (request.path === '/content/projects' && request.method === 'POST') {
+        const project = {
+          $id: `created-project-${projects.length + 1}`,
+          name: String(body.name),
+          productData: JSON.stringify(body.productData),
+        };
+        projects.unshift(project);
+        data = { id: project.$id, name: project.name, productData: body.productData };
+      }
+      if (request.path === '/content/projects/project-1/facts' && request.method === 'PUT') {
+        const project = projects.find(({ $id }) => $id === 'project-1')!;
+        const productData = {
+          ...JSON.parse(project.productData),
+          description: body.description,
+          factsRevision: Number(body.revision) + 1,
+        };
+        project.productData = JSON.stringify(productData);
+        data = { id: project.$id, name: project.name, productData };
+      }
+      const itemRoute = request.path.match(
+        /^\/content\/items\/([^/]+)\/(review|delivery|translate)$/,
+      );
+      if (itemRoute) {
+        const item = items.find((i) => i.$id === itemRoute[1]);
+        if (item) {
+          const content = JSON.parse(item.body);
+          if (itemRoute[2] === 'delivery') data = { review: content.review, citations: [] };
+          else {
+            const review = {
+              text: itemRoute[2] === 'translate' ? 'Reisetasche 23 L' : body.text,
+              reviewed: body.reviewed === true,
+              revision: (content.review?.revision ?? 0) + 1,
+              author: 'Test operator',
+              savedAt: new Date().toISOString(),
+            };
+            item.body = JSON.stringify({ ...content, review });
+            data = review;
+          }
+        }
+      }
+      if (
+        request.path === '/content/projects/project-1/translations' &&
+        request.method === 'POST'
+      ) {
+        const headers = body.headers as string[];
+        const values = body.rows as string[][];
+        values.forEach((cells, position) => {
+          const text = cells[headers.indexOf('Translated content')];
+          items.push({
+            $id: 'translation-' + position,
+            type: 'shopify_translation',
+            body: JSON.stringify({
+              raw: text,
+              review: {
+                text,
+                revision: 1,
+                reviewed: false,
+                author: 'Test operator',
+                savedAt: new Date().toISOString(),
+              },
+            }),
+            metadata: JSON.stringify({
+              shopify: {
+                headers,
+                values: cells,
+                batch: 'sheet',
+                filename: body.filename,
+                position,
+              },
+            }),
+          });
+        });
+        data = { batch: 'sheet', rows: values.length };
+      }
+      if (
+        request.path === '/content/projects/project-1/translations/sheet' &&
+        request.method === 'POST'
+      ) {
+        jobType = 'content.translate-batch';
+        translationWork = body.items;
+        translationReadyAt = Date.now() + 1800;
+        data = {
+          id: 'translation-job',
+          type: jobType,
+          status: 'QUEUED',
+          attempts: 0,
+          maxAttempts: 3,
+        };
+      }
+      if (request.path === '/jobs/translation-job') {
+        const finished = Date.now() >= translationReadyAt;
+        if (finished) {
+          for (const target of translationWork) {
+            const item = items.find(({ $id }) => $id === target.id)!;
+            const content = JSON.parse(item.body);
+            if (content.review.revision === target.revision) {
+              item.body = JSON.stringify({
+                ...content,
+                review: {
+                  ...content.review,
+                  text: 'Reisetasche 23 L',
+                  revision: target.revision + 1,
+                },
+              });
+            }
+          }
+        }
+        data = {
+          id: 'translation-job',
+          type: 'content.translate-batch',
+          status: finished ? 'SUCCEEDED' : 'RUNNING',
+          attempts: 1,
+          maxAttempts: 3,
+          progress: {
+            processed: finished ? translationWork.length : 0,
+            total: translationWork.length,
+          },
+          ...(finished && { result: { completed: translationWork.length, skipped: 0, failed: 0 } }),
+        };
+      }
+      if (
+        request.path === '/content/projects/project-1/translations/sheet' &&
+        request.method === 'GET'
+      ) {
+        const verified = items.filter(
+          (i) => i.type === 'shopify_translation' && JSON.parse(i.body).review.reviewed,
+        );
+        const headers = JSON.parse(verified[0].metadata!).shopify.headers as string[];
+        data = {
+          headers,
+          rows: verified.map((i) =>
+            JSON.parse(i.metadata!).shopify.values.map((v: string, index: number) =>
+              headers[index] === 'Translated content' ? JSON.parse(i.body).review.text : v,
+            ),
+          ),
+          reviews: verified.map((i) => JSON.parse(i.body).review),
+        };
+      }
       if (request.path === '/agents/agent-1' && request.method === 'PATCH') {
         agent = {
           ...agent,
@@ -263,6 +448,11 @@ export async function mockWorkspace(
             $id: 'fresh-title',
             type: 'product_title',
             body: JSON.stringify({ raw: 'Generated German title' }),
+            metadata: JSON.stringify({
+              factsRevision:
+                JSON.parse(projects.find(({ $id }) => $id === 'project-1')!.productData)
+                  .factsRevision ?? 0,
+            }),
           },
           ...items,
         ];

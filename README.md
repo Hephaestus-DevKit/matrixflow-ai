@@ -1,8 +1,8 @@
 # MatrixFlow AI
 
-为跨境电商团队制作可核对来源的多语言商品内容。把商品手册关联到内容项目，生成详情页、FAQ 或广告草稿，逐项核对规格后导出。
+跨境电商团队的商品文案和翻译工作台。把规格与手册关联到项目，生成多渠道文案，核对来源并保存审核记录。Shopify 译文可以按批次翻译、审核，再导出可回传的 CSV。
 
-[在线体验](https://matrixflow-ai-sycamore-tree.vercel.app) · [制作第一份商品详情页](docs/content-review-flow.md) · [本地开发](#本地开发) · [完整文档](docs/README.md)
+[在线体验](https://matrixflow-ai-sycamore-tree.vercel.app) · [商品文案与 Shopify 翻译](docs/content-review-flow.md) · [本地开发](#本地开发) · [完整文档](docs/README.md)
 
 ![MatrixFlow AI 首页示例：从 MF92 越野包手册中的容量、重量和材质生成英文详情，再核对护理和保修信息](docs/images/product-home.png)
 
@@ -15,23 +15,26 @@
 
 ## 可以做什么
 
-| 场景     | 当前能力                                                                               |
-| -------- | -------------------------------------------------------------------------------------- |
-| AI 员工  | 创建、编辑、暂停和启用员工；挂接团队知识库，查看带来源的回答和历史输出。               |
-| 内容制作 | 按语言、市场和文风生成商品文案等 12 类内容，支持单项或批量生成、复制和下载。           |
-| 知识库   | 上传 PDF、DOCX、TXT、Markdown 或 CSV，建立索引、提问并追溯引用片段。                   |
-| 工作流   | 可视化编排、条件分支、JSON 输入、版本记录与运行日志。                                  |
-| 任务中心 | 后台执行生成、索引和工作流；查看进度、取消任务、读取或导出结果。                       |
-| 团队协作 | 邮箱登录与验证、可选双重验证、团队角色、用量与审计；支持简体中文、繁體中文和 English。 |
+| 场景             | 当前能力                                                                                        |
+| ---------------- | ----------------------------------------------------------------------------------------------- |
+| 商品文案         | 按语言、市场和文风生成详情页、FAQ、广告等 12 类内容。团队可查看来源、编辑草稿、确认审核并导出。 |
+| Shopify 翻译     | 导入店铺语言 CSV，在后台翻译空白字段，逐项审核并导出通过审核的译文。                            |
+| 知识库与 AI 员工 | 索引 PDF、DOCX、TXT、Markdown 或 CSV。AI 员工可引用团队资料回答问题，保存运行历史。             |
+| 工作流与任务     | 可视化编排、条件分支、JSON 输入和版本记录。可跟踪、取消后台任务及导出结果。                     |
+| 团队协作         | 邮箱验证、可选双重验证、团队角色、用量和审计。界面支持简体中文、繁體中文与 English。            |
 
 ## 制作第一份商品详情页
 
-1. 注册并验证邮箱。在「内容工厂」点击「填入示例商品」，或填写自己的商品名称和已确认的规格。
-2. 需要引用手册时，在「知识库」上传文档，等状态变为「已就绪」，再在创建内容项目时选择该库。
-3. 选择目标语言和市场，在「商品详情页」点击「生成」。例如手册只确认容量为 23 L、空包重 640 g，审核时就应核对这两项，并将保修条款保留为待确认。
-4. 展开检索来源，对照原文编辑草稿，勾选审核后复制或下载。**编辑稿只在当前页面保留，请在离开前下载。** 下载文件包含审核后的文字及关联的来源摘录。
+1. 注册并验证邮箱。在「内容工厂」新建项目，填写已确认的规格，或点「填入示例商品」快速体验。
+2. 需要引用手册时，先在知识库上传并索引文档，再在创建项目时关联该知识库。
+3. 打开「商品详情页」，设置目标语言、市场和文风后生成草稿。对照商品资料和引用，核实规格与宣称。
+4. 通过「保存草稿」交接给同事，或「确认审核」后复制、下载正文和审核记录。商品资料更新后，旧稿会保留供参考，重新生成后可以审核。
 
-当前为 **Beta**。核心工作台已上线；模板市场、付费结账和外部消息发送仍是预览或需要额外配置。知识库使用关键词与片段检索，适合中小型资料集。[产品成熟度与边界](docs/product-readiness.md)
+## 交付 Shopify 译文
+
+在项目的「Shopify 翻译」中导入从 Shopify「设置 → 语言」导出的 UTF-8 CSV。每批支持 40 个商品字段，覆盖标题、详情、SEO 标题和 SEO 描述。后台任务完成后核对译文，导出已审核行，再到 Shopify 导入。 [示例 CSV](apps/web/public/examples/shopify-translations.csv) · [操作说明和支持范围](docs/content-review-flow.md#shopify-翻译表交付)
+
+当前为 **Beta**。模板市场仍在预览，付费结账和外部消息发送需要额外配置。知识库使用关键词与片段检索，适合中小型资料集。 [产品成熟度与边界](docs/product-readiness.md)
 
 ## 架构与目录
 
@@ -60,7 +63,7 @@ pnpm dev
 
 ```bash
 pnpm verify
-# 本地默认使用 WebKit，CI 同时验证 WebKit 和 Chromium。
+# 本地和 macOS CI 均运行原生 Safari 浏览器回归。
 /usr/bin/safaridriver --enable  # macOS, one-time setup
 pnpm test:e2e
 ```
@@ -70,7 +73,7 @@ pnpm test:e2e
 ## 发布与验收
 
 - **前端：** Vercel 从 `main` 发布。定时或手动运行的 [Production smoke](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/production-smoke.yml) 检查六个公开页面、三语首屏与安全响应头。
-- **后端：** `main` 的函数或 Appwrite 配置变更触发 [Appwrite deploy](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/appwrite.yml)。工作流同步资源、激活函数，并用专用账号验证登录、团队权限及真实模型调用。
+- **后端：** `main` 的函数或 Appwrite 配置变更触发 [Appwrite deploy](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/appwrite.yml)。工作流同步资源、激活函数，并用专用账号验证发布版本、团队读写权限、真实模型和翻译交付。
 - **运维：** 发布账号、Secrets、回滚及模型配置见[部署手册](docs/deployment.md)；监控与恢复目标见[生产运行基线](docs/operations.md)。
 
 安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。源代码公开可见，使用、修改或部署须遵守 [LICENSE](LICENSE)。

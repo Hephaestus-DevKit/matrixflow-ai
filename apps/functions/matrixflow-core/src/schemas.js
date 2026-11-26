@@ -56,6 +56,40 @@ export const schemas = {
     })
     .strict(),
   contentProject: z.object({ name: trimmed(180), productData: jsonRecord.default({}) }).strict(),
+  contentFacts: z
+    .object({ description: trimmed(24_000), revision: z.number().int().nonnegative() })
+    .strict(),
+  contentReview: z
+    .object({
+      text: z
+        .string()
+        .min(1)
+        .max(24000)
+        .refine((value) => Boolean(value.trim())),
+      reviewed: z.boolean(),
+      revision: z.number().int().nonnegative(),
+    })
+    .strict(),
+  translationImport: z
+    .object({
+      filename: trimmed(240),
+      headers: z.array(z.string().min(1).max(100)).min(8).max(32),
+      rows: z
+        .array(z.array(z.string().max(24000)).max(32))
+        .min(1)
+        .max(40),
+    })
+    .strict(),
+  translationGenerate: z.object({ revision: z.number().int().nonnegative() }).strict(),
+  translationBatch: z
+    .object({
+      items: z
+        .array(z.object({ id: trimmed(36), revision: z.number().int().nonnegative() }).strict())
+        .min(1)
+        .max(40)
+        .refine((items) => new Set(items.map(({ id }) => id)).size === items.length),
+    })
+    .strict(),
   contentGenerate: z
     .object({
       type: z.string().trim().min(1).max(64).optional(),

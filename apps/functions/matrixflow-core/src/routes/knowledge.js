@@ -11,7 +11,7 @@ import {
   releasePlanResourceLimit,
   reservePlanResourceLimit,
 } from '../runtime.js';
-import { askKnowledgeBase, indexDocument } from '../features.js';
+import { askKnowledgeBase, indexDocument, prepareKnowledgeDocumentDeletion } from '../features.js';
 import { parse, schemas } from '../schemas.js';
 import { enqueueJob } from '../jobs.js';
 import { deleteKnowledgeFile, validateKnowledgeFile } from '../knowledge-files.js';
@@ -21,10 +21,22 @@ async function deleteKnowledgeChunks(services, teamId, documentId) {
   const chunks = await listRows(services, TABLES.knowledgeChunks, teamId, [
     Query.equal('documentId', documentId),
   ]);
-  await Promise.all(
-    chunks.map((chunk) => deleteOwned(services, TABLES.knowledgeChunks, chunk.id, teamId)),
-  );
-  return chunks.length;
+  let deleted = 0;
+  for (let offset = 0; offset < chunks.length; offset += 10) {
+    const batch = await Promise.allSettled(
+      chunks
+        .slice(offset, offset + 10)
+        .map((chunk) => deleteOwned(services, TABLES.knowledgeChunks, chunk.id, teamId)),
+    );
+    const failure = batch.find(
+      (result) =>
+        result.status === 'rejected' &&
+        Number(result.reason?.status || result.reason?.code) !== 404,
+    );
+    if (failure) throw failure.reason;
+    deleted += batch.filter((result) => result.status === 'fulfilled').length;
+  }
+  return deleted;
 }
 
 async function cleanupStorageFile(services, context, document) {
@@ -48,6 +60,7 @@ async function cleanupStorageFile(services, context, document) {
 }
 
 async function deleteDocumentData(services, context, document) {
+  await prepareKnowledgeDocumentDeletion(services, context, document);
   const deletedChunks = await deleteKnowledgeChunks(services, context.teamId, document.id);
   await deleteOwned(services, TABLES.knowledgeDocuments, document.id, context.teamId);
   const storageDeleted = await cleanupStorageFile(services, context, document);

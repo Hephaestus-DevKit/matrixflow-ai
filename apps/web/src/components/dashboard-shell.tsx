@@ -94,15 +94,17 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           <span className="dashboard-navigation-progress block h-full bg-primary shadow-glow" />
         </div>
       )}
-      <div
-        className="dashboard-backdrop pointer-events-none fixed inset-y-0 right-0 z-0 left-0 lg:left-64"
-        aria-hidden="true"
-      >
-        <div className="dashboard-grid absolute inset-0" />
-        <div className="dashboard-glow dashboard-glow-violet" />
-        <div className="dashboard-glow dashboard-glow-blue" />
-        <div className="dashboard-sweep" />
-      </div>
+      {pathname !== '/dashboard/content' && (
+        <div
+          className="dashboard-backdrop pointer-events-none fixed inset-y-0 right-0 z-0 left-0 lg:left-64"
+          aria-hidden="true"
+        >
+          <div className="dashboard-grid absolute inset-0" />
+          <div className="dashboard-glow dashboard-glow-violet" />
+          <div className="dashboard-glow dashboard-glow-blue" />
+          <div className="dashboard-sweep" />
+        </div>
+      )}
       <Sidebar />
       {navigationOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">

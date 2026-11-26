@@ -11,6 +11,7 @@ export interface BackgroundJob {
   cancelRequested?: boolean;
   error?: { code?: string } | string | null;
   result?: Record<string, unknown>;
+  progress?: { processed: number; total: number };
   resourceHref?: string;
 }
 export function isActiveJob(job: Pick<BackgroundJob, 'status'> | undefined) {

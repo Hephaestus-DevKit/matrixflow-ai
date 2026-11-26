@@ -8,6 +8,10 @@ Changes shipped to production from `main` since the last version entry. A new ve
 
 ### Product
 
+- Added Shopify language CSV delivery with background translation, per-field review and approval-only export that preserves row identifiers and columns.
+- Added in-project product facts editing and versioned team drafts. Changes to facts or cited sources can require regeneration before approval and delivery.
+- Refined the content editor, review actions and team switching across desktop and narrow layouts.
+
 - Content projects can use a team knowledge base. Reviewers can inspect sources, edit drafts and download the reviewed text with citations. [#92](https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/92)
 - Short manuals yield a single source even with older overlapping indexes. Content instructions apply the selected language to headings, missing specifications and source notes. [#93](https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/93) · [#94](https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/94)
 - The home page illustrates a sample product. Desktop review places sources beside the editor, while mobile review stacks the draft, sources and export controls. [#95](https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/95)
@@ -18,6 +22,8 @@ Changes shipped to production from `main` since the last version entry. A new ve
 - Improved sign-in recovery, team switching, and small-screen layouts across the three supported languages.
 
 ### Deployment and maintenance
+
+- Added a production check for content facts revisions, background translation, approval and delivery on the active Appwrite release.
 
 - Resolved eight dependency alerts and removed the unused Faker development dependency. [#96](https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/96)
 

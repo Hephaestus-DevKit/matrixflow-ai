@@ -74,7 +74,7 @@ jobs:
       - name: Package function source
         if: steps.credential.outputs.enabled == 'true'
         working-directory: apps/functions/matrixflow-core
-        run: tar --exclude=node_modules --exclude='*.log' -czf "$MATRIXFLOW_FUNCTION_ARCHIVE" .
+        run: tar -czf "$MATRIXFLOW_FUNCTION_ARCHIVE" src package.json package-lock.json
       - name: Deploy function
         if: steps.credential.outputs.enabled == 'true'
         run: node apps/functions/matrixflow-core/scripts/deploy.mjs

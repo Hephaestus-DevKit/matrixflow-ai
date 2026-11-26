@@ -1,0 +1,4 @@
+Type,Identification,Field,Locale,Market,Status,Default content,Translated content
+PRODUCT,000123,title,de,,,Travel bag 23 L,
+PRODUCT,000123,body_html,de,,,<p>Capacity: 23 L.</p>,<p>Fassungsvermögen: 23 L.</p>
+PRODUCT,000124,title,de,,,Laptop sleeve 14 inch,

@@ -83,9 +83,19 @@ async function routeGet(path: string) {
     }
     return (await listRows(TABLES.agents)).map(summarizeAgent);
   }
+  if (
+    segments[0] === 'content' &&
+    segments[1] === 'items' &&
+    segments.length === 4 &&
+    segments[3] === 'delivery'
+  )
+    return executeCore(path, {}, ExecutionMethod.GET);
   if (segments[0] === 'content' && segments[1] === 'projects') {
+    if (segments.length === 5 && segments[3] === 'translations')
+      return executeCore(path, {}, ExecutionMethod.GET);
     if (segments[2] && segments[3] === 'items')
       return listRows(TABLES.contentItems, [Query.equal('projectId', segments[2])]);
+    if (segments[2] && segments.length === 3) return getRow(TABLES.contentProjects, segments[2]);
     if (wantsPage(search))
       return listRowsPage(TABLES.contentProjects, [], 'organizationId', {
         limit: pageLimit(search),
@@ -118,6 +128,16 @@ async function routeGet(path: string) {
       ]);
       return { ...base, documents, _count: { documents: documents.length } };
     }
+    if (search.get('view') === 'options')
+      return listRowsPage(
+        TABLES.knowledgeBases,
+        [Query.select(['$id', 'name'])],
+        'organizationId',
+        {
+          limit: pageLimit(search, 100),
+          offset: pageOffset(search),
+        },
+      );
     const basePage = wantsPage(search)
       ? await listRowsPage(TABLES.knowledgeBases, [], 'organizationId', {
           limit: pageLimit(search),
