@@ -214,6 +214,22 @@ test('request bodies must be JSON objects', () => {
   );
 });
 
+test('Appwrite request bodies use raw text before accessing its lazy JSON getter', () => {
+  const appwriteRequest = (bodyText) => ({
+    bodyText,
+    get bodyJson() {
+      return JSON.parse(bodyText);
+    },
+  });
+  assert.deepEqual(requestBody(appwriteRequest('')), {});
+  assert.deepEqual(requestBody(appwriteRequest('{"revision":1}')), { revision: 1 });
+  assert.throws(() => requestBody(appwriteRequest('{')), { status: 400, code: 'INVALID_JSON' });
+  assert.throws(() => requestBody(appwriteRequest(' '.repeat(128 * 1024 + 1))), {
+    status: 413,
+    code: 'BODY_TOO_LARGE',
+  });
+});
+
 test('owned rows cannot be moved to another team during update', async () => {
   const services = {
     tables: {

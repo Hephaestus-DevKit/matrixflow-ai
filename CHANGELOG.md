@@ -23,6 +23,7 @@ Changes shipped to production from `main` since the last version entry. A new ve
 
 ### Deployment and maintenance
 
+- Fixed direct API requests with empty bodies and added a translation draft endpoint for scoped team keys. Production checks now cover the direct API, translation delivery, permissions and key revocation.
 - Added a production check for content facts revisions, background translation, approval and delivery on the active Appwrite release.
 
 - Resolved eight dependency alerts and removed the unused Faker development dependency. [#96](https://github.com/Hephaestus-DevKit/matrixflow-ai/pull/96)

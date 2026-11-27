@@ -399,16 +399,44 @@ export async function translateBatchField(services, context, target, { id, revis
   return true;
 }
 
-export async function reviewedDelivery(services, context, projectId, batch) {
+async function listTranslationBatch(services, context, projectId, batch) {
   await getActiveContentProject(services, context.teamId, projectId);
-  const items = (
+  return (
     await listRows(services, TABLES.contentItems, context.teamId, [
       Query.equal('projectId', projectId),
       Query.equal('type', 'shopify_translation'),
     ])
   )
-    .filter((item) => item.metadata?.shopify?.batch === batch && item.body?.review?.reviewed)
+    .filter((item) => item.metadata?.shopify?.batch === batch)
     .sort((a, b) => a.metadata.shopify.position - b.metadata.shopify.position);
+}
+
+export async function listTranslationDrafts(services, context, projectId, batch) {
+  const items = await listTranslationBatch(services, context, projectId, batch);
+  if (!items.length) throw new HttpError('找不到翻译批次', 404, 'RESOURCE_NOT_FOUND');
+  return {
+    items: items.map((item) => {
+      const { headers, values } = item.metadata.shopify;
+      const value = (name) => values[headers.indexOf(name)];
+      return {
+        id: item.id,
+        identification: value('Identification'),
+        field: value('Field'),
+        locale: value('Locale'),
+        market: value('Market'),
+        source: value('Default content'),
+        text: item.body?.review?.text ?? item.body?.raw ?? '',
+        revision: revisionOf(item),
+        reviewed: item.body?.review?.reviewed === true,
+      };
+    }),
+  };
+}
+
+export async function reviewedDelivery(services, context, projectId, batch) {
+  const items = (await listTranslationBatch(services, context, projectId, batch)).filter(
+    (item) => item.body?.review?.reviewed,
+  );
   if (!items.length) throw conflict();
   await currentSources(
     services,

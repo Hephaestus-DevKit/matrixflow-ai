@@ -580,13 +580,37 @@ test('published product specifications survive translation and Shopify CSV deliv
     headers,
     rows: [row],
   });
-  const [id] = services.stagedItemIds;
-  const item = 'content/items/' + id;
+  const draftPath = route + '/' + batch + '/items';
+  const {
+    items: [initial],
+  } = await deliveryRoute(services, draftPath, 'GET');
+  assert.deepEqual(initial, {
+    id: services.stagedItemIds[0],
+    identification: '000492',
+    field: 'body_html',
+    locale: 'de',
+    market: '',
+    source,
+    text: '',
+    revision: 1,
+    reviewed: false,
+  });
+  await assert.rejects(deliveryRoute(services, route + '/unknown/items', 'GET'), {
+    code: 'RESOURCE_NOT_FOUND',
+  });
+  await assert.rejects(
+    deliveryRoute(services, draftPath, 'GET', {}, { ...context, teamId: 'foreign' }),
+    { code: 'FORBIDDEN' },
+  );
+  const item = 'content/items/' + initial.id;
   await assert.rejects(deliveryRoute(services, item + '/translate', 'POST', { revision: 1 }), {
     code: 'TRANSLATION_STRUCTURE_CHANGED',
   });
   const draft = await deliveryRoute(services, item + '/translate', 'POST', { revision: 1 });
   assert.equal(draft.text, translation);
+  assert.deepEqual((await deliveryRoute(services, draftPath, 'GET')).items, [
+    { ...initial, text: translation, revision: 2 },
+  ]);
   await deliveryRoute(services, item + '/review', 'PUT', {
     revision: draft.revision,
     text: draft.text,
