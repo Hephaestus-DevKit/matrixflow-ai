@@ -91,30 +91,30 @@ export class HttpError extends Error {
 }
 
 export function requestBody(req) {
-  if (req.bodyJson !== undefined) {
-    if (!req.bodyJson || typeof req.bodyJson !== 'object' || Array.isArray(req.bodyJson))
-      throw new HttpError('请求内容必须是 JSON 对象', 400, 'INVALID_JSON');
+  // Appwrite's bodyJson getter parses on access, including an empty body.
+  const text = req.bodyText;
+  const hasRawBody = typeof text === 'string';
+  if (hasRawBody && Buffer.byteLength(text, 'utf8') > MAX_REQUEST_BODY_BYTES)
+    throw new HttpError('请求内容过大', 413, 'BODY_TOO_LARGE');
+  let parsed;
+  try {
+    parsed = hasRawBody ? JSON.parse(text || '{}') : req.bodyJson;
+  } catch {
+    throw new HttpError('请求内容不是有效 JSON', 400, 'INVALID_JSON');
+  }
+  if (parsed === undefined) return {};
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+    throw new HttpError('请求内容必须是 JSON 对象', 400, 'INVALID_JSON');
+  if (!hasRawBody) {
     let serialized;
     try {
-      serialized = JSON.stringify(req.bodyJson);
+      serialized = JSON.stringify(parsed);
     } catch {
       throw new HttpError('请求内容不是有效 JSON', 400, 'INVALID_JSON');
     }
     if (Buffer.byteLength(serialized, 'utf8') > MAX_REQUEST_BODY_BYTES)
       throw new HttpError('请求内容过大', 413, 'BODY_TOO_LARGE');
-    return req.bodyJson;
   }
-  const text = typeof req.bodyText === 'string' ? req.bodyText : '';
-  if (Buffer.byteLength(text, 'utf8') > MAX_REQUEST_BODY_BYTES)
-    throw new HttpError('请求内容过大', 413, 'BODY_TOO_LARGE');
-  let parsed;
-  try {
-    parsed = text ? JSON.parse(text) : {};
-  } catch {
-    throw new HttpError('请求内容不是有效 JSON', 400, 'INVALID_JSON');
-  }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
-    throw new HttpError('请求内容必须是 JSON 对象', 400, 'INVALID_JSON');
   return parsed;
 }
 

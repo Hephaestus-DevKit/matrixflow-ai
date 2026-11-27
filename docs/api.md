@@ -2,6 +2,8 @@
 
 MatrixFlow 的业务 API 由 Appwrite Function `matrixflow-core` 提供。浏览器继续使用 Appwrite 会话；自动化脚本可以使用带作用域的 MatrixFlow API Key。
 
+生产业务入口为 `https://6a7b1d40001e62963eec.sgp.appwrite.run`。团队管理员可在「设置 → 企业设置与安全 → 数据与隐私」导出数据，从 JSON 的 `organizationId` 读取团队 ID。
+
 ## 认证
 
 创建 API Key：登录工作台后进入“设置 → 企业设置与安全 → API 访问”。只有组织 owner/admin 可以创建和撤销 Key。完整密钥只返回一次，服务端使用生产 pepper 保护的 PBKDF2-HMAC-SHA256（120,000 次迭代）保存派生值；生产缺少 `MATRIXFLOW_API_KEY_PEPPER` 时会安全拒绝 API Key 操作。
@@ -22,6 +24,16 @@ API Key 只允许访问创建时授予的作用域：
 - `billing.read`
 
 不要把 API Key 放进浏览器代码、日志、Issue 或 URL 查询参数。发现泄露时立即在设置中心撤销并重新创建。
+
+把 API Key 和团队 ID 放入调用环境后，可用无请求体的 `GET` 验证连接。
+
+```bash
+curl --fail-with-body https://6a7b1d40001e62963eec.sgp.appwrite.run/health \
+  -H "Authorization: Bearer $MATRIXFLOW_API_KEY" \
+  -H "X-MatrixFlow-Organization: $MATRIXFLOW_TEAM_ID"
+```
+
+请求体需要是 JSON 对象。非空且无效的 JSON 返回 HTTP 400 和 `INVALID_JSON`。
 
 ## 响应契约
 
@@ -87,17 +99,18 @@ Stripe 供应商回调使用服务端地址 `/billing/stripe-webhook`，由 Stri
 
 ## 内容审核与 Shopify
 
-以下端点需要 `content.manage`。修改商品资料或草稿时携带读到的当前 `revision`，并发变更会返回 HTTP 409。
+以下端点需要 `content.manage`。查询后台任务进度还需要 `workflows.manage`。外部系统可在导入后读取批次字段，提交翻译并轮询任务，完成后重新读取草稿和 `revision`，审核通过后导出。修改商品资料或草稿时携带读到的当前 `revision`，并发变更会返回 HTTP 409。
 
-| 方法与路径                                       | 请求或响应                                                   |
-| ------------------------------------------------ | ------------------------------------------------------------ |
-| `PUT /content/projects/:id/facts`                | 提交 `{ description, revision }`，返回更新后的项目。         |
-| `PUT /content/items/:id/review`                  | 提交 `{ text, reviewed, revision }`，返回保存后的审核版本。  |
-| `GET /content/items/:id/delivery`                | 返回已审正文、审核版本与检索引用。                           |
-| `POST /content/projects/:id/translations`        | 提交 `{ filename, headers, rows }`，返回批次 ID 与导入行数。 |
-| `POST /content/items/:id/translate`              | 提交 `{ revision }`，返回单字段译文草稿。                    |
-| `POST /content/projects/:id/translations/:batch` | 提交 `{ items: [{ id, revision }] }`，创建后台翻译任务。     |
-| `GET /content/projects/:id/translations/:batch`  | 返回已审字段的 `{ headers, rows, reviews }`。                |
+| 方法与路径                                            | 请求或响应                                                                                                                          |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `PUT /content/projects/:id/facts`                     | 提交 `{ description, revision }`，返回更新后的项目。                                                                                |
+| `PUT /content/items/:id/review`                       | 提交 `{ text, reviewed, revision }`，返回保存后的审核版本。                                                                         |
+| `GET /content/items/:id/delivery`                     | 返回已审正文、审核版本与检索引用。                                                                                                  |
+| `POST /content/projects/:id/translations`             | 提交 `{ filename, headers, rows }`，返回批次 ID 与导入行数。                                                                        |
+| `GET /content/projects/:id/translations/:batch/items` | 返回 `{ items }`，每项含 `id`、商品编号 `identification`、`field`、`locale`、`market`、`source`、`text`、`revision` 和 `reviewed`。 |
+| `POST /content/items/:id/translate`                   | 提交 `{ revision }`，返回单字段译文草稿。                                                                                           |
+| `POST /content/projects/:id/translations/:batch`      | 提交 `{ items: [{ id, revision }] }`，创建后台翻译任务。                                                                            |
+| `GET /content/projects/:id/translations/:batch`       | 返回已审字段的 `{ headers, rows, reviews }`。                                                                                       |
 
 ## 版本与兼容性
 

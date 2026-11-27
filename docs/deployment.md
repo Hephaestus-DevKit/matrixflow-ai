@@ -30,7 +30,7 @@ pnpm test:e2e
 | `MATRIXFLOW_TEST_EMAIL`    | 已验证邮箱的专用测试账号                      |
 | `MATRIXFLOW_TEST_PASSWORD` | 专用账号密码                                  |
 
-测试账号应只加入隔离的测试团队，脚本会使用该账号列表中的第一个团队。任何一项缺失都会在改动 Appwrite 前使工作流失败。
+脚本使用专用账号为每次验收创建隔离团队和短期 API Key。任何一项缺失都会在改动 Appwrite 前使工作流失败。
 
 部署密钥只需要下列资源的 `.read` 和 `.write` 权限：`databases`、`tables`、`columns`、`indexes`、`buckets`、`functions`。函数变量与代码部署使用 Functions 权限。给密钥设置有效期；轮换时先验证替换的 Secret，再撤销旧密钥。手动发布使用的临时密钥应在结束后撤销。不要将密钥写进终端历史、环境样例、源码或运行日志。
 
@@ -80,6 +80,6 @@ MATRIXFLOW_PUBLIC_URL=https://matrixflow-ai-sycamore-tree.vercel.app
 ## 发布验收与回滚
 
 1. 核对 `main` 提交、CI、Vercel 发布状态与 Appwrite **active deployment ID**。
-2. 查看 Appwrite 工作流的 Smoke test，核对运行中的 Function 版本与发布提交。脚本验证登录、团队读写权限和真实模型，并在测试团队中完成商品资料更新、后台翻译、审核和 CSV 行导出。验收后清理测试项目、Agent 和会话。
+2. 查看 Appwrite 工作流的 Smoke test，核对运行中的 Function 版本与发布提交。脚本用团队 API Key 直连生产域名，验证空请求体 GET、权限范围、团队隔离，并完成 Shopify 翻译、审核和导出。验收后验证 Key 已撤销，并清理测试团队、业务数据和会话。
 3. Vercel 发布成功后，在 `main` 手动运行 [Production smoke](https://github.com/Hephaestus-DevKit/matrixflow-ai/actions/workflows/production-smoke.yml)，或运行 `pnpm smoke:production`，验证六个公开页面、三语服务端首屏、canonical 与安全响应头。
 4. 记录发布证据、上一个可用版本及必要的配置差异。回滚前端时恢复上一可用的 Vercel 生产部署；回滚后端时激活上一可用的 Appwrite 部署，再跑 smoke。数据表变更不会随函数回滚自动撤销，优先保持向后兼容。

@@ -21,6 +21,7 @@ import { enqueueJob } from '../jobs.js';
 import {
   saveContentReview,
   importTranslations,
+  listTranslationDrafts,
   translateItem,
   reviewedDelivery,
   exportContentReview,
@@ -61,6 +62,8 @@ export async function handleContentRoute({
       );
     if (method === 'GET' && segments.length === 5)
       return reviewedDelivery(services, context, segments[2], segments[4]);
+    if (method === 'GET' && segments.length === 6 && segments[5] === 'items')
+      return listTranslationDrafts(services, context, segments[2], segments[4]);
     if (method === 'POST' && segments.length === 5) {
       const input = parse(schemas.translationBatch, body);
       const payload = await translationBatchPayload(

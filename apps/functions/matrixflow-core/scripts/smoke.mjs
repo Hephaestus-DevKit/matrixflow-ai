@@ -17,6 +17,7 @@ if (!email || !password) throw new Error('Smoke-test credentials are required');
 
 const endpoint = 'https://sgp.cloud.appwrite.io/v1';
 const projectId = '6a43f0af000862e7b0ef';
+const functionUrl = 'https://6a7b1d40001e62963eec.sgp.appwrite.run';
 const login = await fetch(`${endpoint}/account/sessions/email`, {
   method: 'POST',
   headers: {
@@ -36,21 +37,11 @@ const client = new Client()
   .setSession(decodeURIComponent(sessionMatch[1]));
 const account = new Account(client);
 
-async function verifyTranslationDelivery(execute, tables) {
+async function verifyTranslationDelivery(call) {
   let contentProjectId;
   let jobId;
   let jobStatus;
   const terminal = new Set(['SUCCEEDED', 'FAILED', 'CANCELED']);
-  async function call(path, payload = {}, method = ExecutionMethod.POST, status = 200) {
-    const execution = await execute(path, payload, method);
-    const response = JSON.parse(execution.responseBody || '{}');
-    if (execution.responseStatusCode !== status) {
-      throw new Error(
-        `Translation smoke: ${method} ${path} returned ${execution.responseStatusCode} (${response.error?.code || 'unknown'})`,
-      );
-    }
-    return response.data;
-  }
   try {
     const project = await call('/content/projects', {
       name: 'MatrixFlow translation smoke',
@@ -82,18 +73,15 @@ async function verifyTranslationDelivery(execute, tables) {
       headers,
       rows: [row],
     });
-    const {
-      rows: [item],
-    } = await tables.listRows({
-      databaseId: 'matrixflow',
-      tableId: 'content_items',
-      queries: [Query.equal('projectId', contentProjectId), Query.limit(1)],
-    });
-    if (!item) throw new Error('Imported translation is missing');
     const batchPath = path + '/translations/' + batch;
+    const {
+      items: [item],
+    } = await call(batchPath + '/items', undefined, ExecutionMethod.GET);
+    if (!item?.id || !Number.isInteger(item.revision) || item.identification !== row[1])
+      throw new Error('Imported translation is missing its field identity or revision');
     const job = await call(
       batchPath,
-      { items: [{ id: item.$id, revision: JSON.parse(item.body).review.revision }] },
+      { items: [{ id: item.id, revision: item.revision }] },
       ExecutionMethod.POST,
       202,
     );
@@ -103,28 +91,31 @@ async function verifyTranslationDelivery(execute, tables) {
     let latest = job;
     while (!terminal.has(jobStatus) && Date.now() < deadline) {
       await delay(2_000);
-      latest = await call(`/jobs/${jobId}`, {}, ExecutionMethod.GET);
+      latest = await call(`/jobs/${jobId}`, undefined, ExecutionMethod.GET);
       jobStatus = latest.status;
     }
     if (jobStatus !== 'SUCCEEDED' || latest.result?.completed !== 1) {
       const code = latest.result?.errors?.[0]?.code || latest.error?.code || 'none';
       throw new Error(`Translation job did not complete one field (${jobStatus}, ${code})`);
     }
-    const result = await tables.getRow({
-      databaseId: 'matrixflow',
-      tableId: 'content_items',
-      rowId: item.$id,
-    });
-    const { text, revision, reviewed } = JSON.parse(result.body).review;
-    if (reviewed || text === source || !/^<p>.+<\/p>$/s.test(text)) {
+    const { items } = await call(batchPath + '/items', undefined, ExecutionMethod.GET);
+    const draft = items[0];
+    if (
+      draft?.id !== item.id ||
+      draft.reviewed !== false ||
+      draft.revision !== item.revision + 1 ||
+      draft.text === source ||
+      !/^<p>.+<\/p>$/s.test(draft.text)
+    ) {
       throw new Error('Provider did not save the translated HTML as an unapproved draft');
     }
+    const { text, revision } = draft;
     await call(
-      `/content/items/${item.$id}/review`,
+      `/content/items/${item.id}/review`,
       { text, revision, reviewed: true },
       ExecutionMethod.PUT,
     );
-    const delivery = await call(batchPath, {}, ExecutionMethod.GET);
+    const delivery = await call(batchPath, undefined, ExecutionMethod.GET);
     if (
       JSON.stringify(delivery.headers) !== JSON.stringify(headers) ||
       JSON.stringify(delivery.rows) !== JSON.stringify([[...row.slice(0, -1), text]])
@@ -138,38 +129,109 @@ async function verifyTranslationDelivery(execute, tables) {
       }
     } finally {
       if (contentProjectId) {
-        await call(`/content/projects/${contentProjectId}`, {}, ExecutionMethod.DELETE);
+        await call(`/content/projects/${contentProjectId}`, undefined, ExecutionMethod.DELETE);
       }
     }
   }
 }
 
+async function verifyTeamApi(execute, teamId, expectedRelease, aiReady) {
+  const issued = await execute('/api-keys', {
+    name: 'MatrixFlow production API smoke',
+    scopes: ['content.manage', 'workflows.manage'],
+    expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
+  });
+  if (issued.responseStatusCode !== 200)
+    throw new Error(`Smoke API key creation failed with ${issued.responseStatusCode}`);
+  const { key, metadata } = JSON.parse(issued.responseBody).data;
+
+  async function call(
+    path,
+    payload,
+    method = ExecutionMethod.POST,
+    status = 200,
+    { team = teamId, token = key, code } = {},
+  ) {
+    const response = await fetch(functionUrl + path, {
+      method,
+      headers: {
+        'X-MatrixFlow-Organization': team,
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...(payload !== undefined && { 'Content-Type': 'application/json' }),
+      },
+      body: typeof payload === 'string' ? payload : JSON.stringify(payload),
+      redirect: 'error',
+      signal: AbortSignal.timeout(45_000),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (response.status !== status || (code && result.error?.code !== code))
+      throw new Error(
+        `Direct API smoke: ${method} ${path} returned ${response.status} (${result.error?.code || 'unknown'})`,
+      );
+    return result.data;
+  }
+
+  try {
+    if (!/^mf_live_[\w-]+$/.test(key ?? '') || !metadata?.id)
+      throw new Error('Smoke API key response was incomplete');
+    const health = await call('/health', undefined, ExecutionMethod.GET);
+    if (health.status !== 'ok' || health.version !== expectedRelease)
+      throw new Error('Direct API returned an unexpected health or release value');
+    await call('/health', undefined, ExecutionMethod.GET, 401, {
+      token: null,
+      code: 'UNAUTHENTICATED',
+    });
+    await call('/health', undefined, ExecutionMethod.GET, 401, {
+      team: ID.unique(),
+      code: 'API_KEY_INVALID',
+    });
+    await call('/admin/health', undefined, ExecutionMethod.GET, 403, { code: 'ADMIN_REQUIRED' });
+    await call('/billing/invoices', undefined, ExecutionMethod.GET, 403, {
+      code: 'API_KEY_SCOPE_REQUIRED',
+    });
+    await call('/content/projects', '{', ExecutionMethod.POST, 400, { code: 'INVALID_JSON' });
+    if (aiReady) await verifyTranslationDelivery(call);
+  } finally {
+    if (metadata?.id) {
+      const revoked = await execute(`/api-keys/${metadata.id}`, {}, ExecutionMethod.DELETE);
+      if (revoked.responseStatusCode !== 200)
+        throw new Error(`Smoke API key revocation failed with ${revoked.responseStatusCode}`);
+    }
+  }
+  await call('/health', undefined, ExecutionMethod.GET, 401, { code: 'API_KEY_INVALID' });
+  process.stdout.write(
+    'team API key smoke passed: empty GET, release, malformed JSON, authentication, team isolation, scopes, revocation\n',
+  );
+  if (aiReady)
+    process.stdout.write(
+      'direct translation API smoke passed: import, draft retrieval, background job, approval, export\n',
+    );
+}
+
+const teams = new Teams(client);
+const functions = new Functions(client);
+let teamId;
+const execute = (xpath, body = {}, method = ExecutionMethod.POST) =>
+  functions.createExecution({
+    functionId: 'matrixflow-core',
+    body: JSON.stringify({ ...body, organizationId: teamId }),
+    async: false,
+    xpath,
+    method,
+    headers: { 'content-type': 'application/json' },
+  });
+
 try {
   const current = await account.get();
   if (!current.emailVerification) throw new Error('Smoke-test account is not verified');
 
-  const teams = new Teams(client);
-  let teamList = await teams.list();
-  if (!teamList.teams.length) {
-    await teams.create({
-      teamId: ID.unique(),
-      name: `${current.name || 'MatrixFlow'} 的团队`,
-      roles: ['owner', 'admin'],
-    });
-    teamList = await teams.list();
-  }
-  const teamId = teamList.teams[0].$id;
+  const team = await teams.create({
+    teamId: ID.unique(),
+    name: 'MatrixFlow isolated production smoke',
+    roles: ['owner', 'admin'],
+  });
+  teamId = team.$id;
   const tables = new TablesDB(client);
-  const functions = new Functions(client);
-  const execute = (xpath, body = {}, method = ExecutionMethod.POST) =>
-    functions.createExecution({
-      functionId: 'matrixflow-core',
-      body: JSON.stringify({ ...body, organizationId: teamId }),
-      async: false,
-      xpath,
-      method,
-      headers: { 'content-type': 'application/json' },
-    });
   const health = await execute('/health', {}, ExecutionMethod.GET);
   if (health.responseStatusCode !== 200) {
     throw new Error(`Core health check failed with ${health.responseStatusCode}`);
@@ -269,15 +331,24 @@ try {
     }
   }
 
-  if (aiReady) {
-    await verifyTranslationDelivery(execute, tables);
-    process.stdout.write(
-      'translation smoke passed: facts revision, background job, approval, delivery, cleanup\n',
-    );
-  }
+  await verifyTeamApi(execute, teamId, expectedRelease || adminHealthPayload.release, aiReady);
   process.stdout.write(
     `smoke test passed: auth, team, server-only writes, row reads, function; ai=${aiSmoke}\n`,
   );
 } finally {
-  await account.deleteSession({ sessionId: 'current' }).catch(() => undefined);
+  try {
+    if (teamId) {
+      const cleanup = await execute(
+        '/account',
+        { confirmation: teamId, reason: 'isolated smoke cleanup' },
+        ExecutionMethod.DELETE,
+      );
+      if (cleanup.responseStatusCode !== 200)
+        throw new Error(`Isolated smoke data cleanup failed with ${cleanup.responseStatusCode}`);
+      await teams.delete({ teamId });
+      process.stdout.write('isolated smoke team and business data removed\n');
+    }
+  } finally {
+    await account.deleteSession({ sessionId: 'current' });
+  }
 }
